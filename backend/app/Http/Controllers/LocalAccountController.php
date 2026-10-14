@@ -16,6 +16,9 @@ final class LocalAccountController {
             if($raw!==''){try{$input=json_decode($raw,true,flags:JSON_THROW_ON_ERROR);}catch(\JsonException){throw new AcademicCommandFailure('invalid_input');}if(!str_starts_with($raw,'{')||!is_array($input))throw new AcademicCommandFailure('invalid_input');}
             if($request->isMethod('GET')&&$input===[]){
                 if($path==='/account'&&$request->query->all()===[])$data=$service->own($actor);
+                elseif($path==='/account/bootstrap'&&$request->query->all()===[])$data=['account'=>$service->own($actor),'role'=>$service->dashboardRole($actor)['role'],'navigation'=>(new \App\Application\Academic\Queries\AcademicNavigationQuery($this->db))->get($actor)];
+                elseif($path==='/account/role'&&$request->query->all()===[])$data=$service->dashboardRole($actor);
+                elseif($path==='/account/overview'&&$request->query->all()===[])$data=(new \App\Application\Academic\Queries\DashboardOverview($this->db))->get($actor);
                 elseif($path==='/users')$data=$service->directory($actor,$request->query->all());else throw new AcademicCommandFailure('not_found');
             }elseif($request->isMethod('POST')&&$request->query->all()===[]){
                 if($path==='/users')$data=$service->execute($actor,'created',null,$input);

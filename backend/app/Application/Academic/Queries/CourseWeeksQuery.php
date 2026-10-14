@@ -18,6 +18,15 @@ final class CourseWeeksQuery {
   $row=$this->db->table('school_calendar_revisions')->where('id',$id)->first();if(!$row)throw new AcademicCommandFailure('reference_unavailable');
   return ['id'=>(string)$row->id,'period_id'=>(string)$row->period_id,'source'=>$row->source,'recorded_at'=>$row->recorded_at,'blocks'=>json_decode($row->blocks,true,flags:JSON_THROW_ON_ERROR)];
  }
+ private function progress(AuthenticatedActor $actor,array $assignment,array $activity):array {
+  $teacher=(string)$assignment['teacher_id']===$actor->identityId&&in_array('teacher',$actor->roles,true);
+  $query=$this->db->table('activity_deliveries as d')->join('delivery_versions as v','v.id','=','d.current_version_id')->leftJoin('delivery_assessments as g','g.id','=','d.current_assessment_id')->where('d.activity_id',$activity['activity_id']);
+  if(!$teacher)$query->where('d.student_id',$actor->identityId);
+  $rows=$query->get(['d.current_assessment_id','v.recorded_at','g.grade','g.feedback']);$graded=$rows->filter(fn($r)=>$r->current_assessment_id!==null)->count();
+  $late=false;foreach($rows as $row)if(\App\Domain\Academic\DeliveryTiming::isLate($activity['due_on'],$row->recorded_at))$late=true;
+  $own=$teacher?null:$rows->first();
+  return ['state'=>$teacher?($rows->count()>$graded?'review':($rows->count()?'graded':'pending')):($graded?'graded':($rows->count()?'submitted':'pending')),'late'=>$late,'grade'=>$own?->grade,'feedback'=>$own?->feedback,'delivered'=>$rows->count(),'graded'=>$graded];
+ }
  /** A yielding scan avoids loading the complete course or hidden resources into a response. */
  private function resources(AuthenticatedActor $actor,string $course,string $kind):\Generator {
   $materials=new CourseMaterials($this->db,$this->storage);$activities=new ActivityDelivery($this->db,$this->storage);$associations=new ResourceWeekAssociations($this->db,$this->storage);
@@ -37,7 +46,7 @@ final class CourseWeeksQuery {
   return ['course_id'=>$course,'period_id'=>(string)$a['academic_period_id'],'current'=>$current,'retained'=>array_values($retained)];
  }
  public function content(AuthenticatedActor $actor,string $course,string $kind,string $bucket,?string $revision,?string $week,?string $after,string $term=''):array {
-  $a=$this->context($actor,$course);if(!in_array($kind,['material','activity'],true)||!in_array($bucket,['week','unassigned','earlier'],true))throw new AcademicCommandFailure('invalid_input');
+  $a=$this->context($actor,$course);if(!in_array($kind,['material','activity'],true)||!in_array($bucket,['week','unassigned','earlier','pending'],true))throw new AcademicCommandFailure('invalid_input');
   $term=trim($term);if(mb_strlen($term)>100||preg_match('/[\x00-\x1f\x7f]/u',$term))throw new AcademicCommandFailure('invalid_input');if($after!==null)$after=AcademicLockSet::id($after);
   if($bucket==='week'){
    if($revision===null||$week===null||!preg_match('/^[a-f0-9]{32}$/D',$week))throw new AcademicCommandFailure('invalid_input');$revision=AcademicLockSet::id($revision);
@@ -45,11 +54,11 @@ final class CourseWeeksQuery {
    $found=false;foreach(array_values($allowed)[0]['blocks'] as $block)foreach($block['weeks'] as $w)if($w['id']===$week)$found=true;if(!$found)throw new AcademicCommandFailure('not_found');
   }elseif($revision!==null||$week!==null)throw new AcademicCommandFailure('invalid_input');
   $items=[];$total=0;$more=false;$materials=new CourseMaterials($this->db,$this->storage);$activities=new ActivityDelivery($this->db,$this->storage);
-  foreach($this->resources($actor,$course,$kind) as $r){$association=$r['association'];$matches=match($bucket){'unassigned'=>$association['week_id']===null,'earlier'=>$association['earlier_calendar'],'week'=>$association['calendar_revision_id']===$revision&&$association['week_id']===$week};
+  foreach($this->resources($actor,$course,$kind) as $r){$association=$r['association'];$matches=match($bucket){'unassigned'=>$association['week_id']===null,'earlier'=>$association['earlier_calendar'],'week'=>$association['calendar_revision_id']===$revision&&$association['week_id']===$week,'pending'=>$kind==='activity'&&in_array($this->progress($actor,$a,$r['row'])['state'],['pending','review'],true)&&$r['row']['state']==='open'};
    if(!$matches)continue;$row=$r['row'];$search=$kind==='material'?$row['title'].' '.$row['description'].' '.$row['filename']:$row['title'].' '.$row['instructions'];if($term!==''&&mb_stripos($search,$term)===false)continue;$total++;
    // Canonical decimal BIGINT identities must never be narrowed to PHP integers.
    if($after!==null&&(strlen($r['id'])<=>strlen($after) ?: strcmp($r['id'],$after))<=0)continue;if(count($items)>=50){$more=true;continue;}
-   $view=$kind==='material'?$materials->view($row):$activities->view($actor,$row);$items[]=['resource'=>$view,'association'=>$association];
+   $view=$kind==='material'?$materials->view($row):$activities->view($actor,$row);$items[]=['resource'=>$view,'association'=>$association]+($kind==='activity'?['progress'=>$this->progress($actor,$a,$row)]:[]);
   }
   return ['course_id'=>$course,'kind'=>$kind,'bucket'=>$bucket,'total'=>$total,'items'=>$items,'next_after'=>$more?end($items)['resource']['id']:null];
  }

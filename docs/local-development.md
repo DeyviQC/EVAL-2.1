@@ -19,7 +19,7 @@ The fixed app origin is `https://127.0.0.1:8443`; PHP upstream is loopback-only 
 
 Accounts are `director`, `subdirector`, `docente` and `estudiante`. They have independently generated passwords encrypted for the current Windows user. The launchers resolve these internally and authenticate through the real login flow; account/session grants remain server-owned. These are synthetic development accounts, not institutional identities.
 
-Closing a browser keeps the app running. Close a role's existing window before opening the same role again. Different roles can be open simultaneously in separate profiles. Run launchers under the same Windows user that prepared the environment; no Windows administrator elevation is required for ordinary use.
+Closing a browser keeps the app running. Opening the same role again gracefully replaces its owned EVAL window and confirms authentication. Save unfinished form input before reopening; other roles and unrelated browser windows are retained. Different roles can be open simultaneously in separate profiles. Run launchers under the same Windows user that prepared the environment; no Windows administrator elevation is required for ordinary use.
 
 ## What is available
 
@@ -36,11 +36,11 @@ The initial course and accounts are provisioned once through existing academic c
 
 ## Data and maintenance
 
-MySQL database: `eval_dev` on the existing owned instance at `127.0.0.1:3307`, MySQL 8.4.9. It now has 27 tables and 15 migrations, including account audit, activity/delivery content, assessments, notifications and retained material revisions. `eval_dev_migration` has schema-scoped maintenance/grant privileges; `eval_dev_runtime` has reviewed table/column DML grants without CREATE, DROP, ALTER, DELETE, role updates, login updates or global account-management authority. A narrow accepted_at update privilege permits locking submission references, whose immutable trigger continues to reject actual updates. No older prerequisite schema or grant was broadened by development preparation.
+MySQL database: `eval_dev` on the existing owned instance at `127.0.0.1:3307`, MySQL 8.0.46 (restored on 2026-10-14). It now has 27 tables and 15 migrations, including account audit, activity/delivery content, assessments, notifications and retained material revisions. `eval_dev_migration` has schema-scoped maintenance/grant privileges; `eval_dev_runtime` has reviewed table/column DML grants without CREATE, DROP, ALTER, DELETE, role updates, login updates or global account-management authority. A narrow accepted_at update privilege permits locking submission references, whose immutable trigger continues to reject actual updates. No older prerequisite schema or grant was broadened by development preparation.
 
 Private state, user-protected encrypted credentials, persistent application key, browser profiles and material files live in ignored `/.local/eval-dev/`. Never publish, share or delete this directory as a routine cleanup operation. Do not copy its encrypted state to another Windows account.
 
-The reused MySQL datadir is still under `LOCALAPPDATA/Temp/opencode/eval-u1/mysql/data`. Retention across app start/stop has been proven; resistance to temporary-directory cleanup, institutional backups and production deployment have not. A future bounded migration should move the database/runtime to a durable location and prove backup/restore before institutional use. The app can start the previously verified owned MySQL runtime if it is stopped; this reboot recovery path has not yet been exercised.
+The active runtime and MySQL datadir are now permanent, ignored workspace paths: .local/runtime/mysql/data, .local/runtime/php and .local/runtime/vendor. On 2026-10-14 the previous Windows Temp runtime was unavailable and the user authorized reconstruction. MySQL 8.0.46 was copied from the installed local distribution and initialized as a distinct empty instance. Demo records were recreated; previous delivery and grade records were not recovered. Private old material files were retained. Start/stop never resets data. Institutional backup/restore acceptance remains pending.
 
 Supported commands from the repository root:
 

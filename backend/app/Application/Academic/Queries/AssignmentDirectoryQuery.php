@@ -12,7 +12,7 @@ use App\Application\Academic\Authorization\AcademicAuthorization;
 final class AssignmentDirectoryQuery
 {
     public function __construct(private Connection $db){}
-    public function page(AuthenticatedActor $actor,string $kind,?string $after):array
+    public function page(AuthenticatedActor $actor,string $kind,?string $after,array $filters=[]):array
     {
         FoundationCommandChecks::credentials($this->db,$actor);
         if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'
@@ -31,6 +31,8 @@ final class AssignmentDirectoryQuery
             $fields=match($kind){'periods'=>['id','name','start_on','end_on','state'],'entries'=>['id','name','kind','is_active'],'grades'=>['id','name','is_active'],'sections'=>['id','name','grade_id','is_active']};
             if($kind==='periods')$query->whereIn('state',['planned','active']);else $query->where('is_active',true);
         }
+        if($kind==='assignments')DirectoryFilters::apply($query,$filters,$kind);
+        elseif($filters)throw new AcademicCommandFailure('invalid_input');
         if($after!==null){try{$after=AcademicLockSet::id($after);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}$query->where($id,'>',$after);}
         $rows=$query->orderBy($id)->limit(51)->get($fields)->all();$more=count($rows)>50;$authorization=new AcademicAuthorization($this->db);
         $items=[];

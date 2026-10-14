@@ -12,8 +12,10 @@ final class ActivityDeliveryController {
  public function handle(Request $r,AuthenticatedActor $actor):Response {
   try{$service=new ActivityDelivery($this->db,$this->storage);$path=$r->getPathInfo();
    if($r->isMethod('GET')){
-    FoundationCommandChecks::fields($r->query->all(),['after']);if($r->getContent()!==''||$r->files->all()||$r->request->all())throw new AcademicCommandFailure('invalid_input');$after=$r->query->all()['after']??null;if($after!==null)$after=AcademicLockSet::id($after);
-    if($path==='/education/courses')$data=$service->courses($actor,$after);
+    FoundationCommandChecks::fields($r->query->all(),$path==='/education/courses'?['after','grade_id','section_id']:['after']);if($r->getContent()!==''||$r->files->all()||$r->request->all())throw new AcademicCommandFailure('invalid_input');$after=$r->query->all()['after']??null;if($after!==null)$after=AcademicLockSet::id($after);
+    if($path==='/education/courses')$data=$service->courses($actor,$after,array_diff_key($r->query->all(),['after'=>true]));
+    elseif($path==='/education/classrooms'){if($after!==null)throw new AcademicCommandFailure('invalid_input');$data=$service->classrooms($actor);}
+    elseif(preg_match('#^/education/activities/([1-9][0-9]*)/pending-students$#D',$path,$m))$data=$service->pendingStudents($actor,$m[1],$after);
     elseif(preg_match('#^/education/activities/([1-9][0-9]*)$#D',$path,$m)){if($after!==null)throw new AcademicCommandFailure('invalid_input');$data=$service->view($actor,$service->activity($actor,$m[1]));}
     elseif(preg_match('#^/education/courses/([1-9][0-9]*)/activities$#D',$path,$m))$data=$service->activities($actor,$m[1],$after);
     elseif(preg_match('#^/education/activities/([1-9][0-9]*)/deliveries$#D',$path,$m))$data=$service->deliveries($actor,$m[1],$after);

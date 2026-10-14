@@ -29,7 +29,7 @@ The development checkout now contains PHP/Laravel, MySQL, React/TypeScript and T
 
 ## Current status
 
-The repository has a real isolated development application with local authentication, academic foundation, Director period/catalog/enrollment UI, Director/Vice Principal assignment management, bounded teacher/student account management, course materials, and real activities/deliveries with retained versions and private evidence files. It is not a complete institutional MVP. OpenSpec approvals and remaining acceptance gates still govern new work.
+The repository has a real isolated development application with local authentication and four server-authorized dashboards. Director is strictly read-only; Vice Principal manages periods, catalog, enrollments, assignments and accounts. Teacher/student access remains assignment/enrollment scoped. Course materials and activities/deliveries retain versions and private evidence files. It is not a complete institutional MVP. The human-approved integral implementation inventory and remaining phases are recorded in [the implementation plan](docs/integral-implementation-plan.md).
 
 Double-click `Abrir EVAL.cmd` in the repository root. Teacher, student and Vice Principal launchers open separate role sessions. The app uses persistent `eval_dev` data at `https://127.0.0.1:8443`, not a prototype or a PHPUnit preview. See [local development](docs/local-development.md) for commands, credentials access, verified behavior and storage limitations.
 

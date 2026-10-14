@@ -13,7 +13,7 @@ final class SchoolCalendarCommands
  private function authorize(AuthenticatedActor $actor):void {
   FoundationCommandChecks::credentials($this->db,$actor);
   if(!$this->db->table('retained_identities')->where('id',$actor->identityId)->where('credential_status','active')->exists()
-   ||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists())throw new AcademicCommandFailure('forbidden');
+   ||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');
  }
  private function row(string $table,string $id):array {
   $row=$this->db->table($table)->where('id',$id)->first();if(!$row)throw new AcademicCommandFailure('not_found');return (array)$row;
@@ -22,7 +22,7 @@ final class SchoolCalendarCommands
   if(!is_array($blocks)||count($blocks)>100)throw new AcademicCommandFailure('invalid_input');
   $weekCount=0;foreach($blocks as $block){if(!is_array($block)||!is_array($block['weeks']??null))throw new AcademicCommandFailure('invalid_input');$weekCount+=count($block['weeks']);}
   if($weekCount>366)throw new AcademicCommandFailure('invalid_input');
-  try{return new SchoolCalendarPlan(new DeclaredDateRange($period['start_on'],$period['end_on']),$blocks);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_interval');}
+  try{$plan=new SchoolCalendarPlan(new DeclaredDateRange($period['start_on'],$period['end_on']),$blocks);$plan->assertFourBimesters();return $plan;}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_interval');}
  }
  private function pointer(string $period):?string {$id=$this->db->table('school_calendar_states')->where('period_id',$period)->value('revision_id');return $id===null?null:(string)$id;}
  private function draftView(array $row):array {return ['id'=>(string)$row['id'],'period_id'=>(string)$row['period_id'],'base_revision_id'=>$row['base_revision_id']===null?null:(string)$row['base_revision_id'],'version'=>(int)$row['version'],'state'=>$row['state'],'blocks'=>json_decode($row['blocks'],true,flags:JSON_THROW_ON_ERROR)];}
@@ -43,7 +43,7 @@ final class SchoolCalendarCommands
   FoundationCommandChecks::fields($input,['blocks'],['blocks']);$this->authorize($actor);$period=AcademicLockSet::id($period);
   return (new AcademicWriteTransaction($this->db))->execute($actor->identityId,
    fn()=>new AcademicLockSet(['academic_periods'=>[$period]]),
-   function($context)use($actor,$period,$input){FoundationCommandChecks::director($this->db,$context,$actor);$row=$context->row('academic_periods',$period);if($row['state']==='closed')throw new AcademicCommandFailure('calendar_period_closed');$this->plan($row,$input['blocks']);return true;},
+   function($context)use($actor,$period,$input){FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);$row=$context->row('academic_periods',$period);if($row['state']==='closed')throw new AcademicCommandFailure('calendar_period_closed');$this->plan($row,$input['blocks']);return true;},
    function()use($actor,$period,$input){$id=(string)$this->db->table('school_calendar_drafts')->insertGetId(['period_id'=>$period,'actor_id'=>$actor->identityId,'base_revision_id'=>$this->pointer($period),'blocks'=>json_encode($input['blocks'],JSON_THROW_ON_ERROR),'version'=>1,'state'=>'draft']);return new AcademicMutationResult($this->draft($actor,$id),[new LifecycleEvent('period',$period,'calendar_draft_created',null,null,['draft_id'=>$id])]);});
  }
  public function edit(AuthenticatedActor $actor,string $id,array $input):array {return $this->change($actor,$id,$input,false);}
@@ -56,7 +56,7 @@ final class SchoolCalendarCommands
   return (new AcademicWriteTransaction($this->db))->execute($actor->identityId,
    fn()=>new AcademicLockSet(['academic_periods'=>[$period]]),
    function($context)use($actor,$period,$id,$input,$publish,&$draft){
-    FoundationCommandChecks::director($this->db,$context,$actor);$row=$context->row('academic_periods',$period);
+    FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);$row=$context->row('academic_periods',$period);
     if($row['state']==='closed')throw new AcademicCommandFailure('calendar_period_closed');
     $draft=(array)$this->db->table('school_calendar_drafts')->where('id',$id)->lockForUpdate()->first();
     if($draft['state']!=='draft')throw new AcademicCommandFailure('calendar_already_published');

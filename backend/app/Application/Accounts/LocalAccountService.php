@@ -9,18 +9,24 @@ use App\Infrastructure\Persistence\Academic\{AcademicWriteTransaction,AcademicLo
 
 final class LocalAccountService {
     public function __construct(private Connection $db){}
-    private function authority(AuthenticatedActor $actor,bool $director):void {
+    private function authority(AuthenticatedActor $actor,bool $manager):void {
         Checks::credentials($this->db,$actor);
         if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active')throw new AcademicCommandFailure('actor_inactive');
-        if($director&&!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists())throw new AcademicCommandFailure('forbidden');
+        if($manager&&!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','vice_principal')->exists())throw new AcademicCommandFailure('forbidden');
     }
     public function own(AuthenticatedActor $actor):array {
         $this->authority($actor,false);$profile=$this->db->table('retained_identity_profiles')->where('identity_id',$actor->identityId)->value('display_name');
         return ['id'=>$actor->identityId,'name'=>$profile??'Cuenta institucional','username'=>$this->db->table('local_credentials')->where('id',$actor->identityId)->value('login'),
-            'can_manage'=>$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists()];
+            'can_manage'=>$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','vice_principal')->exists()];
+    }
+    public function dashboardRole(AuthenticatedActor $actor):array {
+        $this->authority($actor,false);
+        $roles=$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->pluck('role')->all();
+        if(count($roles)!==1||!in_array($roles[0],['director_admin','vice_principal','teacher','student'],true))throw new AcademicCommandFailure('forbidden');
+        return ['role'=>$roles[0]];
     }
     public function directory(AuthenticatedActor $actor,array $query):array {
-        $this->authority($actor,true);Checks::fields($query,['after','username']);$after=$query['after']??null;
+        $this->authority($actor,false);if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');Checks::fields($query,['after','username']);$after=$query['after']??null;
         if($after!==null){try{$after=AcademicLockSet::id($after);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}}
         if(isset($query['username'])&&(!is_string($query['username'])||strlen($query['username'])>64))throw new AcademicCommandFailure('invalid_input');
         $rows=$this->db->table('retained_identities as i')->join('local_credentials as c','c.id','=','i.id')->join('retained_identity_profiles as p','p.identity_id','=','i.id')
@@ -33,6 +39,7 @@ final class LocalAccountService {
         return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];
     }
     public function execute(AuthenticatedActor $actor,string $operation,?string $target,array $input):array {
+        $this->authority($actor,false);if($this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists())throw new AcademicCommandFailure('forbidden');
         $self=$operation==='password_changed';$create=$operation==='created';$secret=null;$hash=null;$name=null;$username=null;$role=null;
         if($create){
             Checks::fields($input,['name','username','role'],['name','username','role']);

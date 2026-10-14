@@ -28,7 +28,7 @@ final class EnrollmentCommands
                 'students'=>[$input['student_id']],
                 'student_enrollments'=>$history->history($input['academic_period_id'],$input['student_id'])->pluck('id')->all(),
             ]),function($context,$key)use($actor,$input,$history){
-                FoundationCommandChecks::director($this->db,$context,$actor);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);
                 if($context->row('academic_periods',$input['academic_period_id'])['state']!=='active'){
                     throw new AcademicCommandFailure('period_not_active');
                 }
@@ -56,7 +56,7 @@ final class EnrollmentCommands
                     'student_enrollments'=>$history->history($row['academic_period_id'],$row['student_id'])->pluck('id')->all(),
                 ]);
             },function($context,$key)use($id,$end,$actor){
-                FoundationCommandChecks::director($this->db,$context,$actor);$row=$context->row('student_enrollments',$id);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);$row=$context->row('student_enrollments',$id);
                 if($row['state']!=='active'){throw new AcademicCommandFailure('invalid_transition');}
                 $this->dates($row['effective_from'],$end);
                 $today=(new \DateTimeImmutable('now',new \DateTimeZone('America/Lima')))->format('Y-m-d');

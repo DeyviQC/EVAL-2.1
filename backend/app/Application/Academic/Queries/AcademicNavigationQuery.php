@@ -15,7 +15,7 @@ final class AcademicNavigationQuery
             throw new AcademicCommandFailure('actor_inactive');
         }
         $roles=$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->pluck('role')->all();
-        $map=['periods'=>['director_admin'],'catalog'=>['director_admin'],'enrollments'=>['director_admin'],
+        $map=['periods'=>['director_admin','vice_principal'],'catalog'=>['director_admin','vice_principal'],'enrollments'=>['director_admin','vice_principal'],
             'assignments'=>['director_admin','vice_principal'],'my_assignments'=>['teacher'],'my_enrollments'=>['student']];
         return ['sections'=>array_keys(array_filter($map,static fn($required)=>count(array_intersect($roles,$required))>0))];
     }

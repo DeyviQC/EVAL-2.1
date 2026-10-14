@@ -1,0 +1,7 @@
+# User-authorized test-data cleanup — 2026-10-14
+The user explicitly requested deleting all test records and additional accounts while retaining only the four original roles/accounts. The user then declined backups and requested permanent deletion to free disk space.
+The local EVAL server and its owned browser were stopped. Only the disposable eval_dev database was cleared and its schema recreated (19 migrations, 38 tables). Original identity IDs, login names, profile names, roles, actual stored password hashes and credential states were preserved for director, subdirector, docente and estudiante. The temporary four-account preservation file was removed immediately after verification; no deleted-record backup was kept.
+All academic tables were verified empty before restarting: periods, grades, sections, subjects, enrollments, assignments, materials, activities, deliveries, assessments, history and notifications. Technical migration/guard/account rows remain required infrastructure.
+Material/delivery files, test browser profiles, obsolete sample summaries and the retired incorrect installation were permanently removed from verified workspace paths. Active source/runtime were excluded.
+Accounts-only preparation is persisted in private configuration to avoid regenerating initial academic examples on future preparation; normal starts do not seed.
+The runtime snapshot confirmed four accounts, zero periods/assignments/enrollments/materials and ordinal zero. Four-login API verification checks empty academic modules and notice feeds.

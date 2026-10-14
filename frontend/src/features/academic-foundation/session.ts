@@ -7,19 +7,23 @@ export function sessionSnapshot(value:unknown):SessionSnapshot {
   return {authenticated:row.authenticated,csrf_token:text(row.csrf_token)};
 }
 /** Opaque cookie is browser-managed; token exists only in this client's memory. */
-export function createSessionClient(transport:typeof fetch=fetch) {
+export function createSessionClient(transport:typeof fetch=fetch,timeoutMs=10000) {
+  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>60000)throw Error('Invalid session timeout');
   let csrf:string|null=null;
   async function request(path:'session'|'login'|'logout',input?:{login:string;password:string}):Promise<SessionSnapshot> {
+    const abort=new AbortController();let timer:ReturnType<typeof setTimeout>;
+    const deadline=new Promise<never>((_,reject)=>{timer=setTimeout(()=>{abort.abort();reject(new Error('Session request timed out'));},timeoutMs);});
+    try {
     const unsafe=path!=='session';const headers:Record<string,string>={Accept:'application/json'};
     if(unsafe) {
       if(csrf===null)throw new AcademicApiError('session_not_initialized',419);
       headers['X-CSRF-TOKEN']=csrf;headers['Content-Type']='application/json';
     }
     let response:Response;
-    try { response=await transport('/auth/'+path,{method:unsafe?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',headers,...(unsafe?{body:JSON.stringify(input??{})}:{})}); }
+    try { response=await Promise.race([transport('/auth/'+path,{method:unsafe?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:abort.signal,headers,...(unsafe?{body:JSON.stringify(input??{})}:{})}),deadline]); }
     catch { csrf=null;throw new AcademicApiError('transport_unavailable',null,null,unsafe); }
     let wire:unknown;
-    try { wire=await response.json(); } catch { csrf=null;throw new AcademicApiError('invalid_response',response.status,null,unsafe); }
+    try { wire=await Promise.race([response.json(),deadline]); } catch { csrf=null;throw new AcademicApiError('invalid_response',response.status,null,unsafe); }
     if(!response.ok) {
       csrf=null;
       try {
@@ -33,6 +37,7 @@ export function createSessionClient(transport:typeof fetch=fetch) {
     }
     try { const snapshot=sessionSnapshot(wire);csrf=snapshot.csrf_token;return snapshot; }
     catch { csrf=null;throw new AcademicApiError('invalid_response',response.status,null,unsafe); }
+    }finally{clearTimeout(timer!);}
   }
   return {
     refresh:()=>request('session'),
@@ -47,14 +52,19 @@ const checking:SessionView={phase:'checking',message:'Verificando sesión…'};
 export function createSessionController(client:SessionClient) {
   let view=checking;let generation=0;let busy=false;const listeners=new Set<()=>void>();
   const publish=(next:SessionView)=>{view=next;for(const listener of listeners)listener();};
-  async function run(action:()=>Promise<SessionSnapshot>) {
-    if(busy)return;busy=true;const current=++generation;publish({phase:'busy',message:'Un momento…'});
+  async function run(action:()=>Promise<SessionSnapshot>,kind:'refresh'|'login'|'logout') {
+    if(busy)return;busy=true;const current=++generation;publish(kind==='login'?{phase:'busy',message:'Iniciando sesión…'}:checking);
     try {
       const snapshot=await action();if(current!==generation)return;
       publish(snapshot.authenticated?{phase:'authenticated',message:'Sesión iniciada.'}:{phase:'anonymous',message:'Ingresa con tu cuenta institucional.'});
     }catch(error) {
       if(current!==generation)return;
-      if(error instanceof AcademicApiError&&(error.status===401||error.status===419))publish({phase:'expired',message:error.category==='invalid_credentials'?'Revisa tu usuario y contraseña.':'Tu sesión debe verificarse nuevamente.'});
+      if(error instanceof AcademicApiError&&(error.category==='invalid_credentials'||error.status===419)){
+        // Refresh CSRF/session facts after a confirmed rejection; never replay a POST.
+        try{const restored=await client.refresh();if(current!==generation)return;publish(restored.authenticated?{phase:'authenticated',message:'Sesión restaurada.'}:{phase:'anonymous',message:error.category==='invalid_credentials'?'Revisa tu usuario y contraseña.':'Sesión verificada. Puedes volver a ingresar.'});}
+        catch{if(current===generation)publish({phase:'unavailable',message:'No se pudo verificar la conexión. Intenta reconectar.'});}
+      }
+      else if(error instanceof AcademicApiError&&error.status===401)publish({phase:'expired',message:'Tu sesión debe verificarse nuevamente.'});
       else if(error instanceof AcademicApiError&&error.status===429)publish({phase:'unavailable',message:'Demasiados intentos. Espera antes de volver a ingresar.'});
       else publish({phase:'unavailable',message:'No se pudo confirmar la sesión. Verifica la conexión y consulta de nuevo antes de repetir una acción.'});
     }finally{if(current===generation)busy=false;}
@@ -62,7 +72,7 @@ export function createSessionController(client:SessionClient) {
   return {
     snapshot:()=>view,
     subscribe:(listener:()=>void)=>{listeners.add(listener);return ()=>{listeners.delete(listener);};},
-    refresh:()=>run(client.refresh),login:(input:{login:string;password:string})=>run(()=>client.login(input)),logout:()=>run(client.logout),
+    refresh:()=>run(client.refresh,'refresh'),login:(input:{login:string;password:string})=>run(()=>client.login(input),'login'),logout:()=>run(client.logout,'logout'),
     invalidate:()=>{generation++;busy=false;publish({phase:'expired',message:'Tu sesión debe verificarse nuevamente.'});}
   };
 }

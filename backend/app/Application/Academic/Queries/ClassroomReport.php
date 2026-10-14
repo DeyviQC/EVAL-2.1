@@ -10,7 +10,7 @@ final class ClassroomReport {
  public function __construct(private Connection $db){}
  private function authorize(AuthenticatedActor $actor):void {
   FoundationCommandChecks::credentials($this->db,$actor);
-  if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists())throw new AcademicCommandFailure('forbidden');
+  if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');
  }
  private function count(mixed $value):int {$value=(int)$value;if($value<0||$value>9007199254740991)throw new AcademicCommandFailure('reference_unavailable');return $value;}
  public function read(AuthenticatedActor $actor,string $period,string $grade,string $section,?string $after=null):array {

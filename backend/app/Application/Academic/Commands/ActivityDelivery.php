@@ -18,11 +18,20 @@ final class ActivityDelivery {
   $activePeriod=$this->db->table('academic_periods')->where('id',$a['academic_period_id'])->value('state')==='active';
   foreach($this->enrollments($actor,$a) as $e){if($activePeriod&&$e['state']==='active')return true;if($e['operational_start_key']!==null&&(int)$activity['publication_key']>=(int)$e['operational_start_key']&&($e['operational_end_key']===null||(int)$activity['publication_key']<(int)$e['operational_end_key']))return true;}return false;
  }
- public function courses(AuthenticatedActor $actor,?string $after):array {
+ private function courseQuery(AuthenticatedActor $actor) {
   $roles=$this->roles($actor);if(!array_intersect($roles,['teacher','student']))throw new AcademicCommandFailure('forbidden');
   $query=$this->db->table('teaching_assignments as a')->join('instructional_entries as e','e.id','=','a.instructional_entry_id')->join('grades as g','g.id','=','a.grade_id')->join('sections as s','s.id','=','a.section_id')->join('academic_periods as p','p.id','=','a.academic_period_id')
    ->where(function($q)use($actor,$roles){if(in_array('teacher',$roles,true))$q->where('a.teacher_id',$actor->identityId);if(in_array('student',$roles,true))$q->orWhereExists(function($en)use($actor){$en->selectRaw('1')->from('student_enrollments as en')->where('en.student_id',$actor->identityId)->whereColumn('en.academic_period_id','a.academic_period_id')->whereColumn('en.grade_id','a.grade_id')->whereColumn('en.section_id','a.section_id')->where(function($elig){$elig->where(function($current){$current->where('en.state','active')->where('p.state','active');})->orWhereExists(function($hist){$hist->selectRaw('1')->from('activity_references as r')->join('activity_contents as c','c.activity_id','=','r.id')->whereColumn('r.teaching_assignment_id','a.id')->whereColumn('c.publication_key','>=','en.operational_start_key')->where(function($end){$end->whereNull('en.operational_end_key')->orWhereColumn('c.publication_key','<','en.operational_end_key');});});});});});
-  if($after!==null)$query->where('a.id','>',AcademicLockSet::id($after));$rows=$query->orderBy('a.id')->limit(51)->get(['a.id','a.teacher_id','a.state','p.state as period_state','e.name','g.name as grade','s.name as section','p.name as period']);$more=$rows->count()>50;
+  return $query;
+ }
+ public function classrooms(AuthenticatedActor $actor):array {
+  $rows=$this->courseQuery($actor)->distinct()->orderBy('g.id')->orderBy('s.id')->get(['g.id as grade_id','g.name as grade','s.id as section_id','s.name as section']);
+  return ['items'=>$rows->map(fn($r)=>['grade_id'=>(string)$r->grade_id,'grade'=>$r->grade,'section_id'=>(string)$r->section_id,'section'=>$r->section])->all()];
+ }
+ public function courses(AuthenticatedActor $actor,?string $after,array $scope=[]):array {
+  $roles=$this->roles($actor);$query=$this->courseQuery($actor);
+  FoundationCommandChecks::fields($scope,['grade_id','section_id']);
+  foreach($scope as $key=>$value)$query->where('a.'.$key,AcademicLockSet::id($value));  if($after!==null)$query->where('a.id','>',AcademicLockSet::id($after));$rows=$query->orderBy('a.id')->limit(51)->get(['a.id','a.teacher_id','a.state','p.state as period_state','e.name','g.name as grade','s.name as section','p.name as period']);$more=$rows->count()>50;
   $items=$rows->take(50)->map(fn($r)=>['id'=>(string)$r->id,'label'=>$r->name.' · '.$r->grade.' '.$r->section.' · '.$r->period,'can_publish'=>(string)$r->teacher_id===$actor->identityId&&in_array('teacher',$roles,true)&&$r->state==='active'&&$r->period_state==='active'])->values()->all();return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];
  }
  public function activity(AuthenticatedActor $actor,string $id):array {$row=$this->content($id);if(!$this->canRead($actor,$row))throw new AcademicCommandFailure('not_found');return $row;}
@@ -41,7 +50,23 @@ final class ActivityDelivery {
   $q=$this->db->table('activity_deliveries as d')->join('submission_references as r','r.id','=','d.submission_id')->join('retained_identity_profiles as p','p.identity_id','=','d.student_id')->where('d.activity_id',$activity);if(!$teacher)$q->where('d.student_id',$actor->identityId);if($after!==null)$q->where('d.submission_id','>',AcademicLockSet::id($after));$rows=$q->orderBy('d.submission_id')->limit(51)->get(['d.*','r.accepted_under_enrollment_id','r.accepted_at','p.display_name']);$more=$rows->count()>50;
   $items=[];foreach($rows->take(50) as $r){$v=$this->db->table('delivery_versions')->where('id',$r->current_version_id)->where('submission_id',$r->submission_id)->first();if(!$v)throw new AcademicCommandFailure('reference_unavailable');$items[]=['id'=>(string)$r->submission_id,'student_name'=>$r->display_name,'accepted_at'=>$r->accepted_at,'version'=>$this->version((array)$v)]+(new DeliveryAssessment($this->db))->projection($actor,(string)$r->submission_id);}return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];
  }
- private function version(array $r):array {return ['id'=>(string)$r['id'],'answer'=>$r['answer'],'filename'=>$r['filename'],'bytes'=>$r['bytes']===null?null:(int)$r['bytes'],'recorded_at'=>$r['recorded_at']];}
+ public function pendingStudents(AuthenticatedActor $actor,string $id,?string $after):array {
+  $activity=$this->activity($actor,$id);$a=$this->assignment((string)$activity['teaching_assignment_id']);
+  if((string)$a['teacher_id']!==$actor->identityId||!in_array('teacher',$this->roles($actor),true))throw new AcademicCommandFailure('forbidden');
+  $active=$this->db->table('academic_periods')->where('id',$a['academic_period_id'])->value('state')==='active';
+  $query=$this->db->table('retained_identity_profiles as p')->whereExists(function($q)use($a,$activity,$active){
+   $q->selectRaw('1')->from('student_enrollments as en')->whereColumn('en.student_id','p.identity_id');
+   foreach(['academic_period_id','grade_id','section_id'] as $key)$q->where('en.'.$key,$a[$key]);
+   $q->where(function($eligible)use($activity,$active){
+    if($active)$eligible->where('en.state','active');
+    $eligible->orWhere(function($historical)use($activity){$historical->where('en.operational_start_key','<=',$activity['publication_key'])->where(function($end)use($activity){$end->whereNull('en.operational_end_key')->orWhere('en.operational_end_key','>',$activity['publication_key']);});});
+   });
+  })->whereNotExists(function($q)use($id){$q->selectRaw('1')->from('activity_deliveries as d')->whereColumn('d.student_id','p.identity_id')->where('d.activity_id',$id);});
+  if($after!==null)$query->where('p.identity_id','>',AcademicLockSet::id($after));
+  $rows=$query->orderBy('p.identity_id')->limit(51)->get(['p.identity_id','p.display_name']);$more=$rows->count()>50;
+  $items=$rows->take(50)->map(fn($r)=>['id'=>(string)$r->identity_id,'student_name'=>$r->display_name])->all();
+  return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];
+ } private function version(array $r):array {return ['id'=>(string)$r['id'],'answer'=>$r['answer'],'filename'=>$r['filename'],'bytes'=>$r['bytes']===null?null:(int)$r['bytes'],'recorded_at'=>$r['recorded_at']];}
  private function authorizedDelivery(AuthenticatedActor $actor,string $id):array {$r=$this->db->table('activity_deliveries as d')->join('submission_references as s','s.id','=','d.submission_id')->where('d.submission_id',AcademicLockSet::id($id))->first(['d.*','s.teaching_assignment_id']);if(!$r)throw new AcademicCommandFailure('not_found');$roles=$this->roles($actor);$a=$this->assignment((string)$r->teaching_assignment_id);if(!((string)$r->student_id===$actor->identityId&&in_array('student',$roles,true)||(string)$a['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)))throw new AcademicCommandFailure('not_found');return (array)$r;}
  public function versions(AuthenticatedActor $actor,string $id,?string $after):array {$this->authorizedDelivery($actor,$id);$q=$this->db->table('delivery_versions')->where('submission_id',$id);if($after!==null)$q->where('id','>',AcademicLockSet::id($after));$rows=$q->orderBy('id')->limit(51)->get();$more=$rows->count()>50;$items=$rows->take(50)->map(fn($r)=>$this->version((array)$r))->values()->all();return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];}
  public function file(AuthenticatedActor $actor,string $version):array {$v=$this->db->table('delivery_versions')->where('id',AcademicLockSet::id($version))->first();if(!$v||$v->storage_key===null)throw new AcademicCommandFailure('not_found');$this->authorizedDelivery($actor,(string)$v->submission_id);return [$this->storage->verify((array)$v),(array)$v];}

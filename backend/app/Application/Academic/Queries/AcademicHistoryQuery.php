@@ -13,7 +13,7 @@ final class AcademicHistoryQuery {
   if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active')throw new AcademicCommandFailure('forbidden');
   $roles=$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->pluck('role')->all();
   if($kind==='enrollments'){
-   if(in_array('director_admin',$roles,true))return (new EnrollmentDirectoryQuery($this->db))->page($actor,'enrollments',$after);
+   if(array_intersect($roles,['director_admin','vice_principal']))return (new EnrollmentDirectoryQuery($this->db))->page($actor,'enrollments',$after);
    if(!in_array('student',$roles,true))throw new AcademicCommandFailure('forbidden');
    $q=$this->db->table('student_enrollments as e')->join('academic_periods as p','p.id','=','e.academic_period_id')->join('grades as g','g.id','=','e.grade_id')->join('sections as s','s.id','=','e.section_id')->leftJoin('retained_identity_profiles as n','n.identity_id','=','e.student_id')->where('e.student_id',$actor->identityId);
    $id='e.id';$fields=['e.id','e.student_id','n.display_name as student_name','e.academic_period_id','p.name as period_name','e.grade_id','g.name as grade_name','e.section_id','s.name as section_name','e.state','e.effective_from','e.effective_until'];$name='student_name';

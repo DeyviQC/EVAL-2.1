@@ -34,8 +34,14 @@ final class MyCoursesQuery {
             'can_publish'=>(string)$row->teacher_id===$actor->identityId&&$row->state==='active'&&$row->period_state==='active'
                 &&$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','teacher')->exists()];
     }
-    public function page(AuthenticatedActor $actor,?string $after):array {
-        $query=$this->allowed($actor)->orderBy('a.id');if($after!==null)$query->where('a.id','>',AcademicLockSet::id($after));
+    public function classrooms(AuthenticatedActor $actor):array {
+        $rows=$this->allowed($actor)->select(['g.id as grade_id','g.name as grade','s.id as section_id','s.name as section'])->distinct()->orderBy('g.id')->orderBy('s.id')->get();
+        return ['items'=>$rows->map(static fn($row)=>['grade_id'=>(string)$row->grade_id,'grade'=>$row->grade,'section_id'=>(string)$row->section_id,'section'=>$row->section])->all()];
+    }
+    public function page(AuthenticatedActor $actor,?string $after,array $filters=[]):array {
+        $query=$this->allowed($actor)->orderBy('a.id');
+        foreach($filters as $key=>$value){if(!in_array($key,['grade_id','section_id'],true))throw new AcademicCommandFailure('invalid_input');try{$id=AcademicLockSet::id($value);}catch(\InvalidArgumentException|\TypeError){throw new AcademicCommandFailure('invalid_input');}$query->where('a.'.$key,$id);}
+        if($after!==null)$query->where('a.id','>',AcademicLockSet::id($after));
         $rows=$query->limit(51)->get($this->fields())->all();$more=count($rows)>50;$rows=array_slice($rows,0,50);
         $items=array_map(fn($row)=>$this->project($row,$actor),$rows);return ['items'=>$items,'next_after'=>$more?$items[49]['id']:null];
     }

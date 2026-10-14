@@ -31,7 +31,7 @@ final class ReplaceTeacher
                     'teaching_assignments'=>array_merge($history->history($row)->pluck('id')->all(),$history->history($next)->pluck('id')->all())]);
             },function($context,$key)use($actor,$id,$teacher,$destination,$history,&$date){
                 FoundationCommandChecks::credentials($this->db,$actor);
-                if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists()){
+                if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','vice_principal')->exists()){
                     throw new AcademicCommandFailure('forbidden');
                 }
                 $row=$context->row('teaching_assignments',$id);$period=$context->row('academic_periods',$row['academic_period_id']);

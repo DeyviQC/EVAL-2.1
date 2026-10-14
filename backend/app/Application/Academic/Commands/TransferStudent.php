@@ -33,7 +33,7 @@ final class TransferStudent
                     'student_enrollments'=>$history->history($row['academic_period_id'],$row['student_id'])->pluck('id')->all(),
                 ]);
             },function($context,$key)use($actor,$id,$grade,$section,$history){
-                FoundationCommandChecks::director($this->db,$context,$actor);$row=$context->row('student_enrollments',$id);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);$row=$context->row('student_enrollments',$id);
                 if($row['state']!=='active'){throw new AcademicCommandFailure('invalid_transition');}
                 if($context->row('academic_periods',$row['academic_period_id'])['state']!=='active'){
                     throw new AcademicCommandFailure('period_not_active');

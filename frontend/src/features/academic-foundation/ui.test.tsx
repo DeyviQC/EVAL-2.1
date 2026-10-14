@@ -20,7 +20,7 @@ function harness(wires:readonly {body:unknown;status?:number}[]) {
 }
 const noAction=async()=>{};
 export const uiCases:readonly Case[]=[
-  ['session shell has accessible credential controls',()=>{const html=renderToStaticMarkup(<SessionShell />).toLowerCase();assert(html.includes('autocomplete="username"')&&html.includes('type="password"')&&html.includes('aria-live="polite"'));}],
+  ['confirmed anonymous session has accessible credential controls',()=>{const html=renderToStaticMarkup(<SessionPanel view={{phase:'anonymous',message:'Ingresa'}} onLogin={noAction} onLogout={noAction} onRefresh={noAction}/>).toLowerCase();assert(html.includes('autocomplete="username"')&&html.includes('type="password"')&&html.includes('aria-live="polite"'));}],
   ['validated period preserves visible name and closed state',()=>{const html=markup('period',periodRow);assert(html.includes('  ÁREA  ')&&html.includes('Cerrado'));}],
   ['session client is established',()=>assert(createSessionClient(fetch))],
   ['all read renderers fail closed without partial field leakage',()=>{for(const kind of ['period','enrollment','assignment','history'] as const){const html=markup(kind,{displayName:'PRIVATE'});assert(html.includes('No se pudo validar')&&!html.includes('PRIVATE'));}}],
@@ -50,14 +50,14 @@ export const uiCases:readonly Case[]=[
     const {client,calls}=harness([{body:{authenticated:true,csrf_token:'first'}},{body:{authenticated:false,csrf_token:'next'}}]);
     await client.refresh();assert(!(await client.logout()).authenticated);assert(client.csrfToken()==='next');assert(calls[1]?.url==='/auth/logout'&&calls[1].init.body==='{}');
   }],
-  ['credential failure clears CSRF and requires explicit verification',async()=>{
-    const {client,calls}=harness([{body:{authenticated:false,csrf_token:'first'}},{body:{error:'invalid_credentials'},status:401}]);const controller=createSessionController(client);
-    await controller.refresh();await controller.login({login:'fixture',password:'wrong'});assert(controller.snapshot().phase==='expired');assert(client.csrfToken()===null);assert(calls.length===2);
+  ['credential rejection refreshes CSRF without replaying the login',async()=>{
+    const {client,calls}=harness([{body:{authenticated:false,csrf_token:'first'}},{body:{error:'invalid_credentials'},status:401},{body:{authenticated:false,csrf_token:'recovered'}}]);const controller=createSessionController(client);
+    await controller.refresh();await controller.login({login:'fixture',password:'wrong'});assert(controller.snapshot().phase==='anonymous');assert(client.csrfToken()==='recovered');assert(calls.length===3);assert(calls[2]?.url==='/auth/session');
   }],
   ['busy session operations do not issue duplicate requests',async()=>{
     let resolve!:(response:Response)=>void;let calls=0;
     const client=createSessionClient((()=>{calls++;return new Promise<Response>(done=>{resolve=done;});}) as typeof fetch);
-    const controller=createSessionController(client);const pending=controller.refresh();assert(controller.snapshot().phase==='busy');await controller.refresh();assert(calls===1);
+    const controller=createSessionController(client);const pending=controller.refresh();assert(controller.snapshot().phase==='checking');await controller.refresh();assert(calls===1);
     resolve(new Response(JSON.stringify({authenticated:false,csrf_token:'first'})));await pending;assert(controller.snapshot().phase==='anonymous');
   }],
   ['late response cannot restore invalidated UI authorization state',async()=>{

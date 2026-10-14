@@ -1,15 +1,17 @@
 import { chromium } from '../../frontend/node_modules/playwright-core/index.mjs';
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { certificateOptions } from './browser-options.mjs';
+import { certificateOptions,loopbackCertificate } from './browser-options.mjs';
 const root=process.env.EVAL_DEV_ROOT;
 const input=[];for await(const chunk of process.stdin)input.push(chunk);
 const account=JSON.parse(Buffer.concat(input).toString());
 if(!root||!['director_admin','vice_principal','teacher','student'].includes(account.role))throw new Error('Invalid dev browser binding.');
-const options=certificateOptions(readFileSync(resolve(root,'cert.pem')));
+const options=certificateOptions(await loopbackCertificate(readFileSync(resolve(root,'cert.pem'))));
+// Prefer an installed browser; temporary Playwright downloads may have been cleaned.
+const installedBrowser=[process.env.ProgramFiles&&resolve(process.env.ProgramFiles,'Google/Chrome/Application/chrome.exe'),'C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(path=>path&&existsSync(path));
 const stopPath=resolve(root,`browser-stop-${account.role}`);
 if(existsSync(stopPath))unlinkSync(stopPath);
-const context=await chromium.launchPersistentContext(resolve(root,`browser-${account.role}`),{...options,headless:false,viewport:null});
+const context=await chromium.launchPersistentContext(resolve(root,`browser-${account.role}`),{...options,...(installedBrowser?{executablePath:installedBrowser}:{}),headless:false,viewport:null});
 const timer=setInterval(()=>{if(existsSync(stopPath))void context.close();},500);
 const page=context.pages()[0]??await context.newPage();
 await page.goto('https://127.0.0.1:8443/');
@@ -21,6 +23,7 @@ if(await page.getByLabel('Usuario',{exact:true}).isVisible()){
   await page.getByRole('heading',{name:'Tu espacio académico'}).waitFor();
 }
 account.password='';
+await page.bringToFront();
 if(process.env.EVAL_OPEN_SAMPLE==='1'&&['teacher','student'].includes(account.role)){
   await page.getByRole('button',{name:'Materiales',exact:true}).click();
   await page.getByRole('article',{name:'Matemática · 2.º B',exact:true}).getByRole('button',{name:'Consultar materiales del curso'}).click();

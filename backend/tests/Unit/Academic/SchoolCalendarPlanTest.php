@@ -10,6 +10,25 @@ use PHPUnit\Framework\TestCase;
 
 final class SchoolCalendarPlanTest extends TestCase
 {
+    public function testNewCalendarsRequireExactlyFourBimestersWithoutCountingManagement(): void
+    {
+        $blocks=[];
+        foreach([1,2,3,4] as $number){
+            $month=sprintf('%02d',$number);
+            $blocks[]=['kind'=>'teaching','start_on'=>"2026-$month-12",'end_on'=>"2026-$month-16",'weeks'=>[
+                ['number'=>$number,'start_on'=>"2026-$month-12",'end_on'=>"2026-$month-16"],
+            ]];
+        }
+        array_unshift($blocks,['kind'=>'management','start_on'=>'2026-01-01','end_on'=>'2026-01-09','weeks'=>[]]);
+        $plan=new SchoolCalendarPlan(new DeclaredDateRange('2026-01-01','2026-12-31'),$blocks);
+        $plan->assertFourBimesters();
+        $this->assertSame(4,$plan->teachingWeekCount());
+        array_pop($blocks);
+        $retained=new SchoolCalendarPlan(new DeclaredDateRange('2026-01-01','2026-12-31'),$blocks);
+        $this->assertSame(3,$retained->teachingWeekCount());
+        $this->expectException(InvalidArgumentException::class);
+        $retained->assertFourBimesters();
+    }
     private static function plan(): array
     {
         return [

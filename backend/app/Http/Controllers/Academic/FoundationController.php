@@ -33,11 +33,16 @@ final class FoundationController
             if(!$actor){throw new AcademicCommandFailure('unauthenticated');}
             $authorization=new AcademicAuthorization($this->db,$this->references);$policy=new AcademicPolicy($authorization);
             $path=$request->getPathInfo();$method=$request->getMethod();$input=$this->input($request);
+            if($method==='GET'&&$path==='/academic/my-course-classrooms'){
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),[]);
+                return $this->ok((new \App\Application\Academic\Queries\MyCoursesQuery($this->db,new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db)))->classrooms($actor));
+            }
             if($method==='GET'&&($path==='/academic/my-courses'||preg_match('#^/academic/my-courses/([0-9]+)$#',$path,$courseMatch))){
-                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),$path==='/academic/my-courses'?['after']:[]);
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),$path==='/academic/my-courses'?['after','grade_id','section_id']:[]);
                 $courses=new \App\Application\Academic\Queries\MyCoursesQuery($this->db,new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db));
                 $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
-                return $this->ok($path==='/academic/my-courses'?$courses->page($actor,$after):$courses->detail($actor,$this->locator($courseMatch[1])));
+                $filters=$request->query->all();unset($filters['after']);
+                return $this->ok($path==='/academic/my-courses'?$courses->page($actor,$after,$filters):$courses->detail($actor,$this->locator($courseMatch[1])));
             }
             if($method==='GET'&&$path==='/academic/history'){
                 FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['kind','after'],['kind']);
@@ -46,15 +51,19 @@ final class FoundationController
                 return $this->ok((new \App\Application\Academic\Queries\AcademicHistoryQuery($this->db))->page($actor,$kind,$after));
             }
             if($method==='GET'&&$path==='/academic/assignment-workspace'){
-                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['kind','after'],['kind']);
-                $kind=$request->query->all()['kind'];if(!is_string($kind))throw new AcademicCommandFailure('invalid_input');
-                $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
-                return $this->ok((new \App\Application\Academic\Queries\AssignmentDirectoryQuery($this->db))->page($actor,$kind,$after));
+                $query=$request->query->all();
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($query,['kind','after','academic_period_id','grade_id','section_id','teacher_id','instructional_entry_id','state','search'],['kind']);
+                $kind=$query['kind'];if(!is_string($kind))throw new AcademicCommandFailure('invalid_input');
+                $after=$query['after']??null;if($after!==null)$after=$this->locator($after);
+                unset($query['kind'],$query['after']);
+                return $this->ok((new \App\Application\Academic\Queries\AssignmentDirectoryQuery($this->db))->page($actor,$kind,$after,$query));
             }
             if($method==='GET'&&in_array($path,['/academic/enrollments','/academic/enrollment-students'],true)){
-                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['after']);
-                $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
-                return $this->ok((new \App\Application\Academic\Queries\EnrollmentDirectoryQuery($this->db))->page($actor,$path==='/academic/enrollments'?'enrollments':'students',$after));
+                $query=$request->query->all();
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($query,['after','academic_period_id','grade_id','section_id','state','search']);
+                $after=$query['after']??null;if($after!==null)$after=$this->locator($after);
+                unset($query['after']);
+                return $this->ok((new \App\Application\Academic\Queries\EnrollmentDirectoryQuery($this->db))->page($actor,$path==='/academic/enrollments'?'enrollments':'students',$after,$query));
             }
             $directory=$method==='GET' && ($path==='/academic/periods'||preg_match('#^/academic/catalog/(entry|grade|section)$#',$path));
             if($directory){

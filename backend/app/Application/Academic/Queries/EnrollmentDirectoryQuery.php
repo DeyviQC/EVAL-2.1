@@ -10,11 +10,11 @@ use App\Infrastructure\Persistence\Academic\AcademicLockSet;
 final class EnrollmentDirectoryQuery
 {
     public function __construct(private Connection $db){}
-    public function page(AuthenticatedActor $actor,string $kind,?string $after):array
+    public function page(AuthenticatedActor $actor,string $kind,?string $after,array $filters=[]):array
     {
         FoundationCommandChecks::credentials($this->db,$actor);
         if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'
-            ||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists())throw new AcademicCommandFailure('forbidden');
+            ||!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');
         if($kind==='students'){
             $query=$this->db->table('retained_identities as i')->join('local_role_grants as r','r.identity_id','=','i.id')
                 ->leftJoin('retained_identity_profiles as p','p.identity_id','=','i.id')->where('r.role','student')->where('i.credential_status','active');
@@ -25,6 +25,8 @@ final class EnrollmentDirectoryQuery
                 ->leftJoin('retained_identity_profiles as n','n.identity_id','=','e.student_id');
             $idColumn='e.id';$fields=['e.id','e.student_id','n.display_name as student_name','e.academic_period_id','p.name as period_name','e.grade_id','g.name as grade_name','e.section_id','s.name as section_name','e.state','e.effective_from','e.effective_until'];
         }else{throw new AcademicCommandFailure('invalid_kind');}
+        if($kind==='enrollments')DirectoryFilters::apply($query,$filters,$kind);
+        elseif($filters)throw new AcademicCommandFailure('invalid_input');
         if($after!==null){try{$after=AcademicLockSet::id($after);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}$query->where($idColumn,'>',$after);}
         $rows=$query->orderBy($idColumn)->limit(51)->get($fields)->all();$more=count($rows)>50;
         $items=array_map(static function($row)use($kind){

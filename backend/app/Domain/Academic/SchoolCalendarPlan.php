@@ -60,6 +60,14 @@ final readonly class SchoolCalendarPlan
         return array_sum(array_map(static fn(array $block):int=>count($block['weeks']),$this->blocks));
     }
 
+    /** New institutional calendars have four bimesters; retained snapshots remain readable. */
+    public function assertFourBimesters(): void
+    {
+        if (count(array_filter($this->blocks, static fn(array $block): bool => $block['kind'] === 'teaching')) !== 4) {
+            throw new InvalidArgumentException('An academic year requires exactly four teaching bimesters.');
+        }
+    }
+
     private static function fields(mixed $value,array $keys): void
     {
         if (!is_array($value) || array_diff(array_keys($value),$keys) || array_diff($keys,array_keys($value))) {

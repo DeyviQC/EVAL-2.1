@@ -37,7 +37,7 @@ final class AcademicCatalogCommands
                 $set=[$table=>$this->conflicts($table,$scope,$name['name_key'])->pluck('id')->all()];
                 if(isset($scope['grade_id'])){$set['grades'][]=$scope['grade_id'];}return new AcademicLockSet($set);
             },function($context)use($table,$scope,$name,$active,$actor){
-                FoundationCommandChecks::director($this->db,$context,$actor);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);
                 if($active && $this->conflicts($table,$scope,$name['name_key'])->exists()){throw new AcademicCommandFailure('duplicate_name');}return true;
             },function()use($table,$type,$scope,$name,$active){
                 $this->db->table($table)->insert($name+$scope+['is_active'=>$active]);
@@ -60,7 +60,7 @@ final class AcademicCatalogCommands
         };
         return (new AcademicWriteTransaction($this->db))->execute($actor->identityId,$discover,
             function($context)use($table,$id,$name,$active,$actor){
-                FoundationCommandChecks::director($this->db,$context,$actor);$row=$context->row($table,$id);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);$row=$context->row($table,$id);
                 $scope=array_intersect_key($row,array_flip(['kind','grade_id']));
                 if(($active??(bool)$row['is_active']) && $this->conflicts($table,$scope,$name['name_key']??$row['name_key'],$id)->exists()){
                     throw new AcademicCommandFailure('duplicate_name');

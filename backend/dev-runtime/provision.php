@@ -68,8 +68,12 @@ try {
             $actors[$role]=new App\Infrastructure\Authentication\AuthenticatedActor((string)$id,[$role],hash('sha256',$storedHash));
         }
     });
+    if(getenv('EVAL_SEED_ACCOUNTS_ONLY')==='1'){
+        echo json_encode(['database'=>'eval_dev','migrations'=>$db->table('migrations')->count(),'accounts'=>count($actors),'accounts_only'=>true],JSON_THROW_ON_ERROR).PHP_EOL;
+        return;
+    }
     $stage='academic_foundation';
-    $director=$actors['director_admin'];$periods=new App\Application\Academic\Commands\AcademicPeriodCommands($db);
+    $director=$actors['vice_principal'];$periods=new App\Application\Academic\Commands\AcademicPeriodCommands($db);
     $catalog=new App\Application\Academic\Commands\AcademicCatalogCommands($db);
     $period=$db->table('academic_periods')->where('name','EVAL desarrollo 2026')->value('id');
     if($period===null){$period=$periods->create($director,['name'=>'EVAL desarrollo 2026','start_on'=>'2026-01-01','end_on'=>'2026-12-31']);$periods->activate($director,$period);}

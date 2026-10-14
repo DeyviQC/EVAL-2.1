@@ -22,5 +22,5 @@ export function createNavigationController(transport:typeof fetch=fetch) {
       if(current===generation)publish({phase:'ready',sections});
     }catch{if(current===generation)publish({phase:'unavailable',sections:[]});}
   }
-  return {snapshot:()=>view,subscribe:(listener:()=>void)=>{listeners.add(listener);return ()=>{listeners.delete(listener);};},clear,refresh};
+  return {snapshot:()=>view,subscribe:(listener:()=>void)=>{listeners.add(listener);return ()=>{listeners.delete(listener);};},clear,refresh,hydrate:(sections:Section[])=>{generation++;publish({phase:'ready',sections});}};
 }

@@ -6,9 +6,9 @@ export function Icon({name='grid',className=''}:{name?:string;className?:string}
  return <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]??paths.grid}/></svg>;
 }
 export function SchoolBrand({large=false}:{large?:boolean}) {return <div className={large?'eval-school-brand eval-school-brand-large':'eval-school-brand'}><img src={crest} width="140" height="200" alt="Escudo de I.E. Nuestra Señora de las Mercedes"/><div><h1>EVAL</h1><p>I.E. Nuestra Señora de las Mercedes</p><small>Ayacucho · Plataforma educativa institucional</small></div></div>;}
-export function NavButton({children,...props}:ButtonHTMLAttributes<HTMLButtonElement>) {
+export function NavButton({children,icon,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{icon?:string}) {
  const label=typeof children==='string'?children:'';
  const name=label==='Inicio'?'home':/Calendario|Período/.test(label)?'calendar':/cuenta|Usuarios|Estudiantes/.test(label)?'user':/Notificaciones/.test(label)?'bell':/Reportes|calificaciones|Calificaciones/.test(label)?'chart':/Material|Biblioteca|Entregas|Actividades|Historial|historial/.test(label)?'file':'grid';
- return <button title={label||undefined} {...props}><Icon name={name}/><span className="eval-nav-label">{children}</span></button>;
+ return <button title={label||undefined} {...props}><Icon name={icon??name}/><span className="eval-nav-label">{children}</span></button>;
 }
 export function Spinner(){return <svg className="eval-spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity=".25"/><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>;}

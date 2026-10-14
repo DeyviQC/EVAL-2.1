@@ -1,6 +1,6 @@
 param([switch]$ConfigureRuntime, [ValidateSet('U1','U2','U3','U4','U5','U6','U7', 'U8','U9','U10','U11','Auth')][string]$Unit = 'U1')
 $ErrorActionPreference = 'Stop'
-$evalRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u1'))
+$evalRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path (Split-Path $PSScriptRoot)) '.local\runtime'))
 $evalStatePath = Join-Path $evalRoot 'database-state.json'
 $evalState = Get-Content -LiteralPath $evalStatePath -Raw | ConvertFrom-Json
 $evalExecutable = [IO.Path]::GetFullPath($evalState.executable)

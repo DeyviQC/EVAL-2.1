@@ -6,6 +6,9 @@ use Symfony\Component\HttpFoundation\Request;
 /** Explicit composition port for the isolated adapter; no Laravel kernel/listener is installed. */
 return static function(LocalSessionAuthentication $authentication,FoundationController $controller):Closure {
     return static fn(Request $request)=>$authentication->handle($request,function($actor)use($request,$controller){
+        // The director is an observer. Authentication is handled outside this
+        // dispatch; every business mutation is denied before any controller runs.
+        if(!in_array($request->getMethod(),['GET','HEAD'],true)&&in_array('director_admin',$actor->roles,true))return FoundationController::failure(new \App\Application\Academic\AcademicCommandFailure('forbidden'));
         if(preg_match('#^/academic/my-courses/[1-9][0-9]*/weeks(?:/(?:material|activity))?$#',$request->getPathInfo())){
             $root=getenv('EVAL_MATERIAL_ROOT');if(!$root)return FoundationController::failure(new \App\Infrastructure\Persistence\Academic\AcademicTransactionFailure('storage_unavailable',bin2hex(random_bytes(16))));
             try{return (new \App\Http\Controllers\Academic\CourseWeeksController(\Illuminate\Database\Capsule\Manager::connection(),new \App\Infrastructure\Persistence\Academic\LocalMaterialStorage($root)))->handle($request,$actor);}catch(\Throwable){return FoundationController::failure(new \App\Infrastructure\Persistence\Academic\AcademicTransactionFailure('storage_unavailable',bin2hex(random_bytes(16))));}

@@ -13,7 +13,7 @@ final class FoundationDirectoryQuery
     {
         FoundationCommandChecks::credentials($this->db,$actor);
         if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'
-            || !$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists()){
+            || !$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists()){
             throw new AcademicCommandFailure('forbidden');
         }
         $table=match($kind){'period'=>'academic_periods','entry'=>'instructional_entries','grade'=>'grades','section'=>'sections',default=>throw new AcademicCommandFailure('invalid_kind')};

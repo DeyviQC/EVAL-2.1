@@ -3,6 +3,8 @@ import {AcademicApiError,type AcademicClient} from './api.js';
 import {catalogPage,periodPage,type CatalogRow} from './directory.js';
 import {enrollmentPage,studentPage,type enrollmentRow,type studentRow} from './enrollments.js';
 import type {period} from './contracts.js';
+import {ClassroomFilters} from './ClassroomFilters.js';
+import type {DirectoryFilters} from './directory-filters.js';
 
 type Enrollment=ReturnType<typeof enrollmentRow>;
 type Student=ReturnType<typeof studentRow>;
@@ -14,6 +16,8 @@ const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
   const [rows,setRows]=useState<Enrollment[]>([]);
+  const [filters,setFilters]=useState<DirectoryFilters>({state:'active'});
+  const scopeReady=!!(filters.academic_period_id&&filters.grade_id&&filters.section_id);
   const [cursor,setCursor]=useState<string|null>(null);
   const [options,setOptions]=useState<Options>({students:[],periods:[],grades:[],sections:[]});
   const [optionCursors,setOptionCursors]=useState<Record<OptionKind,string|null>>({students:null,periods:null,grades:null,sections:null});
@@ -40,8 +44,9 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
   }
   async function load(after:string|null=null){
     const request=++generation.current;setPhase('loading');
+    if(!scopeReady){setRows([]);setCursor(null);setPhase('ready');return;}
     try{
-      const result=await client.enrollmentDirectory('enrollments',enrollmentPage,after);
+      const result=await client.enrollmentDirectory('enrollments',enrollmentPage,after,filters);
       if(!mounted.current||request!==generation.current)return;
       setRows(old=>after?[...old,...result.items]:result.items);setCursor(result.next_after);setPhase('ready');return result;
     }catch(error){if(mounted.current&&request===generation.current){setRows([]);setPhase('error');failed(error);}}
@@ -61,6 +66,7 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{if(mounted.current)setBusy(false);}
   }
   useEffect(()=>{mounted.current=true;void refresh();return()=>{mounted.current=false;generation.current++;};},[client]);
+  useEffect(()=>{setAction(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
@@ -72,7 +78,7 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
       const changedId=result.successor_id??result.id;
       if(changedId&&!page.items.some(row=>row.id===changedId)){
         const prior=(BigInt(changedId)-1n).toString();
-        const changed=await client.enrollmentDirectory('enrollments',enrollmentPage,prior==='0'?null:prior);
+        const changed=await client.enrollmentDirectory('enrollments',enrollmentPage,prior==='0'?null:prior,filters);
         if(!mounted.current)return;
         const row=changed.items.find(item=>item.id===changedId);
         if(row)setRows(old=>old.some(item=>item.id===row.id)?old:[...old,row]);
@@ -95,6 +101,8 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
   return <section aria-label="Gestión de matrículas" aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">Estudiantes por aula</h3>
     <p className="my-3">Administra matrículas y conserva el historial de cada estudiante. Los traslados se aplican inmediatamente después de la confirmación del servidor.</p>
+    <ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} disabled={busy}/>
+    {!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar un aula.</p>}
     <button className={control} disabled={busy} onClick={()=>void refresh()}>Actualizar matrículas</button>
     {phase==='loading'&&<p role="status">Consultando matrículas…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
@@ -112,12 +120,7 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
       </fieldset>
     </form>
     <div className="my-3 flex flex-wrap gap-3">{(['students','periods','grades','sections'] as const).map(kind=>optionCursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,optionCursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({students:'estudiantes',periods:'períodos',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
-    {phase==='ready'&&rows.length===0&&<p>No hay matrículas para mostrar.</p>}
-    {phase==='ready'&&rows.map(row=><article key={row.id} aria-label={row.student_name+' · '+row.grade_name+' '+row.section_name} className="my-4 rounded-xl border p-5">
-      <h4 className="font-semibold">{row.student_name}</h4><p>{row.period_name} · {row.grade_name} {row.section_name}</p>
-      <p>Estado: {({active:'Activa',transferred:'Trasladada',closed:'Cerrada'})[row.state]}</p><p>Inicio: {row.effective_from} · Fin: {row.effective_until??'Sin fecha de fin'}</p>
-      {row.state==='active'&&<div className="mt-3 flex gap-3"><button className={control} disabled={disabled} onClick={()=>{setDestinationGrade(row.grade_id);setDestinationSection('');setAction({row,kind:'transfer'});}}>Trasladar</button><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar matrícula</button></div>}
-    </article>)}
+    {scopeReady&&phase==='ready'&&<><p role="status">{rows.length} matrículas mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay matrículas que coincidan con esta aula y búsqueda.</p>:<div className="eval-directory-table"><table><caption>{filters.state==='history'?'Historial de matrículas':'Estudiantes con matrícula actual'}</caption><thead><tr><th scope="col">Estudiante</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Fechas</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{row.student_name}</th><td>{row.grade_name} {row.section_name}</td><td>{({active:'Activa',transferred:'Trasladada',closed:'Cerrada'})[row.state]}</td><td>{row.effective_from}<small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td>{row.state==='active'?<div className="flex flex-wrap gap-2"><button className={control} disabled={disabled} onClick={()=>{setDestinationGrade(row.grade_id);setDestinationSection('');setAction({row,kind:'transfer'});}}>Trasladar</button><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar matrícula</button></div>:<span>Registro histórico</span>}</td></tr>)}</tbody></table></div>}</>}
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de matrícula" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{action.kind==='close'?'Cerrar matrícula':'Traslado inmediato'}: {action.row.student_name}</legend>
         <p className="w-full">{action.kind==='close'?'El cierre conserva esta matrícula en el historial.':'El traslado cierra el contexto actual y crea la matrícula de destino; no cambia las entregas anteriores.'}</p>

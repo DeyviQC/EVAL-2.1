@@ -4,6 +4,8 @@ import {assignmentPage,type assignmentRow} from './assignments.js';
 import {studentPage,type studentRow} from './enrollments.js';
 import {periodPage,catalogPage,type CatalogRow} from './directory.js';
 import type {period} from './contracts.js';
+import {ClassroomFilters} from './ClassroomFilters.js';
+import type {DirectoryFilters} from './directory-filters.js';
 type Assignment=ReturnType<typeof assignmentRow>;
 type Teacher=ReturnType<typeof studentRow>;
 type Period=ReturnType<typeof period>;
@@ -15,6 +17,8 @@ const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
   const [rows,setRows]=useState<Assignment[]>([]);
+  const [filters,setFilters]=useState<DirectoryFilters>({});
+  const scopeReady=!!(filters.academic_period_id&&filters.grade_id&&filters.section_id);
   const [cursor,setCursor]=useState<string|null>(null);
   const [options,setOptions]=useState<Options>({teachers:[],periods:[],entries:[],grades:[],sections:[]});
   const [cursors,setCursors]=useState<Record<Kind,string|null>>({teachers:null,periods:null,entries:null,grades:null,sections:null});
@@ -36,8 +40,9 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   }
   async function load(after:string|null=null){
     const request=++generation.current;setPhase('loading');
+    if(!scopeReady){setRows([]);setCursor(null);setPhase('ready');return;}
     try{
-      const page=await client.assignmentDirectory('assignments',assignmentPage,after);
+      const page=await client.assignmentDirectory('assignments',assignmentPage,after,filters);
       if(!mounted.current||request!==generation.current)return;
       setRows(old=>after?[...old,...page.items]:page.items);setCursor(page.next_after);setPhase('ready');return page;
     }catch(error){if(mounted.current&&request===generation.current){setRows([]);setPhase('error');failed(error);}}
@@ -56,6 +61,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{if(mounted.current)setBusy(false);}
   }
   useEffect(()=>{mounted.current=true;void refresh();return()=>{mounted.current=false;generation.current++;};},[client]);
+  useEffect(()=>{setAction(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
@@ -66,7 +72,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
       if(!page){setMessage('Operación confirmada. No se pudo actualizar el listado; vuelve a consultar.');return;}
       const changedId=result.successor_id??result.id;
       if(changedId&&!page.items.some(row=>row.id===changedId)){
-        const prior=(BigInt(changedId)-1n).toString();const changed=await client.assignmentDirectory('assignments',assignmentPage,prior==='0'?null:prior);
+        const prior=(BigInt(changedId)-1n).toString();const changed=await client.assignmentDirectory('assignments',assignmentPage,prior==='0'?null:prior,filters);
         if(!mounted.current)return;const row=changed.items.find(item=>item.id===changedId);if(row)setRows(old=>old.some(item=>item.id===row.id)?old:[...old,row]);
       }
       setMessage('Operación confirmada. Asignaciones actualizadas.');
@@ -85,6 +91,8 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   return <section aria-label="Gestión de asignaciones" aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">Organización docente</h3>
     <p className="my-3">Planifica y activa asignaciones por docente, materia o área y aula. Un reemplazo conserva la asignación y autoría anteriores.</p>
+    <ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} teachers={options.teachers} entries={options.entries} disabled={busy}/>
+    {!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar las asignaciones del aula.</p>}
     <button className={control} disabled={busy} onClick={()=>void refresh()}>Actualizar asignaciones</button>
     {phase==='loading'&&<p role="status">Consultando asignaciones…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
@@ -101,16 +109,10 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
       </fieldset>
     </form>
     <div className="my-3 flex flex-wrap gap-3">{kinds.map(kind=>cursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,cursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({teachers:'docentes',periods:'períodos',entries:'materias y áreas',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
-    {phase==='ready'&&rows.length===0&&<p>No hay asignaciones para mostrar.</p>}
-    {phase==='ready'&&rows.map(row=><article key={row.id} aria-label={row.teacher_name+' · '+row.entry_name+' · '+row.grade_name+' '+row.section_name} className="my-4 rounded-xl border p-5">
-      <h4 className="font-semibold">{row.teacher_name}</h4><p>{row.entry_name} · {row.grade_name} {row.section_name} · {row.period_name}</p>
-      <p>Estado: {({planned:'Planificada',active:'Activa',closed:'Cerrada'})[row.state]}</p><p>Inicio: {row.effective_from} · Fin: {row.effective_until??'Sin fecha de fin'}</p>
-      {row.replaces_assignment_id&&<p>Asignación de reemplazo; el contexto anterior se conserva en el historial.</p>}
-      <div className="mt-3 flex flex-wrap gap-3">
+    {scopeReady&&phase==='ready'&&<><p role="status">{rows.length} asignaciones mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay asignaciones que coincidan con los filtros de esta aula.</p>:<div className="eval-directory-table"><table><caption>Asignaciones docentes del aula</caption><thead><tr><th scope="col">Docente</th><th scope="col">Área o materia</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{row.teacher_name}</th><td>{row.entry_name}{row.replaces_assignment_id&&<small className="block">Reemplazo con historial conservado</small>}</td><td>{row.grade_name} {row.section_name}</td><td>{({planned:'Planificada',active:'Activa',closed:'Cerrada'})[row.state]}<small className="block">Desde {row.effective_from}</small><small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td><div className="flex flex-wrap gap-2">
         {row.state==='planned'&&row.period_state==='active'&&<button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'activate'})}>Activar asignación</button>}
         {row.state==='active'&&<><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar asignación</button>{row.period_state==='active'&&<button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'replace'})}>Reemplazar docente</button>}</>}
-      </div>
-    </article>)}
+      </div></td></tr>)}</tbody></table></div>}</>}
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{({activate:'Activar asignación',close:'Cerrar asignación',replace:'Reemplazar docente'})[action.kind]}: {action.row.teacher_name}</legend>
         <p className="w-full">{action.kind==='replace'?'El reemplazo se aplica al confirmar el servidor y conserva la autoría anterior.':action.kind==='close'?'El cierre conserva la asignación y sus recursos históricos.':'El servidor comprobará el período, fechas y conflictos antes de activar.'}</p>

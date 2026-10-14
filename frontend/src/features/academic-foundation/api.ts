@@ -1,4 +1,5 @@
 import { exact, text, decimalId, date, identityResult, period, enrollment, assignment, activityReference, historicalSubmission, confirmedTransition, relationshipInput, type EnrollmentInput, type AssignmentInput } from './contracts.js';
+import {filterQuery,type DirectoryFilters} from './directory-filters.js';
 export class AcademicApiError extends Error {
   readonly automaticRetry=false;
   constructor(readonly category:string,readonly status:number|null,readonly correlationId:string|null=null,readonly outcomeUnknown=false) { super(category); }
@@ -28,13 +29,15 @@ export function createAcademicClient(transport:typeof fetch,csrf:()=>string) {
   const locator=decimalId;
   return {
     history:<T>(kind:'enrollments'|'assignments',decode:(value:unknown)=>T,after:string|null=null)=>{if(!['enrollments','assignments'].includes(kind))throw new Error('Invalid history');return request('history?kind='+kind+(after?'&after='+locator(after):''),decode);},
-    assignmentDirectory:<T>(kind:'assignments'|'teachers'|'periods'|'entries'|'grades'|'sections',decode:(value:unknown)=>T,after:string|null=null)=>{
+    assignmentDirectory:<T>(kind:'assignments'|'teachers'|'periods'|'entries'|'grades'|'sections',decode:(value:unknown)=>T,after:string|null=null,filters:DirectoryFilters={})=>{
       if(!['assignments','teachers','periods','entries','grades','sections'].includes(kind))throw new Error('Invalid assignment directory');
-      return request('assignment-workspace?kind='+kind+(after?'&after='+locator(after):''),decode);
+      const query=filterQuery(filters,true);
+      return request('assignment-workspace?kind='+kind+(after?'&after='+locator(after):'')+(query?'&'+query:''),decode);
     },
     replaceTeacher:(id:string,teacherId:string)=>request('assignments/'+locator(id)+'/replace',confirmedTransition,{teacher_id:locator(teacherId)}),
-    enrollmentDirectory:<T>(kind:'enrollments'|'enrollment-students',decode:(value:unknown)=>T,after:string|null=null)=>{if(!['enrollments','enrollment-students'].includes(kind))throw new Error('Invalid directory');return request(kind+(after?'?after='+locator(after):''),decode);},
-    myCourses:<T>(decode:(value:unknown)=>T,after:string|null=null)=>request('my-courses'+(after?'?after='+locator(after):''),decode),
+    enrollmentDirectory:<T>(kind:'enrollments'|'enrollment-students',decode:(value:unknown)=>T,after:string|null=null,filters:DirectoryFilters={})=>{if(!['enrollments','enrollment-students'].includes(kind))throw new Error('Invalid directory');const query=[after?'after='+locator(after):'',filterQuery(filters)].filter(Boolean).join('&');return request(kind+(query?'?'+query:''),decode);},
+    courseClassrooms:<T>(decode:(value:unknown)=>T)=>request('my-course-classrooms',decode),
+    myCourses:<T>(decode:(value:unknown)=>T,after:string|null=null,scope:{grade_id?:string;section_id?:string}={})=>{const row=exact(scope,[],['grade_id','section_id']);const params=new URLSearchParams();if(after)params.set('after',locator(after));for(const key of ['grade_id','section_id'])if(row[key]!==undefined)params.set(key,locator(row[key]));return request('my-courses'+(params.size?'?'+params.toString():''),decode);},
     course:<T>(id:string,decode:(value:unknown)=>T)=>request('my-courses/'+locator(id),decode),
     directory:<T>(path:'periods'|'catalog/entry'|'catalog/grade'|'catalog/section',decode:(value:unknown)=>T,after:string|null=null)=>request(path+(after===null?'':'?after='+locator(after)),decode),
     createPeriod:(input:{name:string;start_on:string;end_on:string})=>{const row=exact(input,['name','start_on','end_on']);return request('periods',identityResult,{name:text(row.name),start_on:date(row.start_on),end_on:date(row.end_on)});},

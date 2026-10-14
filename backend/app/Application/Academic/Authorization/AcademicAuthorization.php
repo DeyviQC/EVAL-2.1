@@ -16,7 +16,7 @@ final class AcademicAuthorization
         catch(AcademicCommandFailure){return false;}
         if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active'){return false;}
         $roles=$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->pluck('role')->all();
-        $director=in_array('director_admin',$roles,true);$manager=$director || in_array('vice_principal',$roles,true);
+        $director=in_array('director_admin',$roles,true);$manager=in_array('vice_principal',$roles,true);
         $teacher=in_array('teacher',$roles,true);$student=in_array('student',$roles,true);
         $field=match($operation){
             'catalog.manage','period.create'=>null,
@@ -27,7 +27,7 @@ final class AcademicAuthorization
             'submission.read'=>'submission_id',default=>false,
         };
         if($field===false || array_keys($locators)!==($field===null?[]:[$field])){return false;}
-        if($field===null){return $director;}
+        if($field===null){return $manager;}
         try{$id=AcademicLockSet::id($locators[$field]);}catch(\InvalidArgumentException){return false;}
         $row=match($field){
             'period_id'=>$this->record('academic_periods',$id),'enrollment_id'=>$this->record('student_enrollments',$id),
@@ -37,20 +37,20 @@ final class AcademicAuthorization
         if(!$row){return false;}
         if($field==='period_id'){
             return match($operation){
-                'period.read'=>$director,'period.activate'=>$director && $row['state']==='planned',
-                'period.close'=>$director && $row['state']==='active',
-                'enrollment.create'=>$director && $row['state']==='active',
+                'period.read'=>$director||$manager,'period.activate'=>$manager && $row['state']==='planned',
+                'period.close'=>$manager && $row['state']==='active',
+                'enrollment.create'=>$manager && $row['state']==='active',
                 'assignment.create'=>$manager && in_array($row['state'],['planned','active'],true),default=>false,
             };
         }
         if($field==='enrollment_id'){
-            if($operation==='enrollment.read'){return $director || ($student && (string)$row['student_id']===$actor->identityId);}
-            return $director && $row['state']==='active' && ($operation==='enrollment.close' || $this->activeParent($row));
+            if($operation==='enrollment.read'){return $director || $manager || ($student && (string)$row['student_id']===$actor->identityId);}
+            return $manager && $row['state']==='active' && ($operation==='enrollment.close' || $this->activeParent($row));
         }
         if($field==='assignment_id'){
             $owned=$teacher && (string)$row['teacher_id']===$actor->identityId;
             return match($operation){
-                'assignment.read'=>$manager || $owned,
+                'assignment.read'=>$director || $manager || $owned,
                 'assignment.close'=>$manager && $row['state']==='active',
                 'assignment.activate'=>$manager && $row['state']==='planned' && $this->activeParent($row),
                 'assignment.replace'=>$manager && $row['state']==='active' && $this->activeParent($row),

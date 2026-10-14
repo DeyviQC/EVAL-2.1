@@ -24,7 +24,7 @@ final class AcademicPeriodCommands
         return (new AcademicWriteTransaction($this->db))->execute($actor->identityId,
             fn()=>new AcademicLockSet(['academic_periods'=>$conflicts()->pluck('id')->all()]),
             function($context)use($conflicts,$actor){
-                FoundationCommandChecks::director($this->db,$context,$actor);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);
                 if($conflicts()->exists()){throw new AcademicCommandFailure('duplicate_name');}return true;
             },function()use($input,$name){
                 $this->db->table('academic_periods')->insert($name+['start_on'=>$input['start_on'],'end_on'=>$input['end_on'],'state'=>'planned']);
@@ -43,7 +43,7 @@ final class AcademicPeriodCommands
                 $ids=[$id];if($to==='active'){$ids=array_merge($ids,$this->db->table('academic_periods')->where('state','active')->pluck('id')->all());}
                 return new AcademicLockSet(['academic_periods'=>$ids]);
             },function($context)use($id,$from,$to,$actor){
-                FoundationCommandChecks::director($this->db,$context,$actor);
+                FoundationCommandChecks::vicePrincipal($this->db,$context,$actor);
                 $row=$context->row('academic_periods',$id);
                 if($row['state']!==$from){throw new AcademicCommandFailure('invalid_transition');}
                 new DeclaredDateRange($row['start_on'],$row['end_on']);
@@ -71,7 +71,7 @@ final class AcademicPeriodCommands
     {
         FoundationCommandChecks::credentials($this->db,$actor);
         if(!$this->db->table('retained_identities as i')->join('local_role_grants as r','r.identity_id','=','i.id')
-            ->where('i.id',$actor->identityId)->where('i.credential_status','active')->where('r.role','director_admin')->exists()){
+            ->where('i.id',$actor->identityId)->where('i.credential_status','active')->whereIn('r.role',['director_admin','vice_principal'])->exists()){
             throw new AcademicCommandFailure('forbidden');
         }
     }

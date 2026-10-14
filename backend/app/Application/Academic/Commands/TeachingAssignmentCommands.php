@@ -80,7 +80,7 @@ final class TeachingAssignmentCommands
     }
     private function manager(AuthenticatedActor $actor):void
     {FoundationCommandChecks::credentials($this->db,$actor);
-        if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists()){
+        if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','vice_principal')->exists()){
             throw new AcademicCommandFailure('forbidden');
         }}
     private function range(array $row):DeclaredDateRange

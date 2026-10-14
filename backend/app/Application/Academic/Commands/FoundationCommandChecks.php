@@ -9,10 +9,10 @@ use App\Infrastructure\Authentication\AuthenticatedActor;
 
 final class FoundationCommandChecks
 {
-    public static function director(Connection $db,LockedAcademicContext $context,AuthenticatedActor $actor):void
+    public static function vicePrincipal(Connection $db,LockedAcademicContext $context,AuthenticatedActor $actor):void
     {
         self::credentials($db,$actor);
-        if(!$db->table('local_role_grants')->where('identity_id',$context->actorId)->where('role','director_admin')->exists()){
+        if(!$db->table('local_role_grants')->where('identity_id',$context->actorId)->where('role','vice_principal')->exists()){
             throw new AcademicCommandFailure('forbidden');
         }
     }

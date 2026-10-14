@@ -1,6 +1,7 @@
 param(
-    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo')][string]$Command='status',
+    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo')][string]$Command='status',
     [switch]$Maintenance,
+    [switch]$AccountsOnly,
     [switch]$BrowserOnly,
     [switch]$Sample,
     [ValidateSet('director_admin','vice_principal','teacher','student')][string]$Role='director_admin'
@@ -8,7 +9,7 @@ param(
 $ErrorActionPreference='Stop'
 if($BrowserOnly -and $Command -notin @('verify-reports','verify-notifications','verify-library','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample')){throw 'BrowserOnly is supported only for reports, notifications, library, material maintenance, observations and file replacement.'}
 $repo=[IO.Path]::GetFullPath((Split-Path (Split-Path $PSScriptRoot)))
-$ownedRoot=[IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u1'))
+$ownedRoot=[IO.Path]::GetFullPath((Join-Path $repo '.local\runtime'))
 $devRoot=Join-Path $repo '.local\eval-dev'
 $stage='private_paths'
 $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
@@ -175,8 +176,11 @@ try {
             $null=Verify-MySQL
         }
         $stage='provision'
+        if($AccountsOnly){$state|Add-Member -NotePropertyName accountsOnly -NotePropertyValue $true -Force}
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
-        $result=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\provision.php')+'"') (Db-Environment 'migration') '' ($passwords|ConvertTo-Json -Compress) $true
+        $provisionEnvironment=Db-Environment 'migration'
+        if($state.accountsOnly){$provisionEnvironment['EVAL_SEED_ACCOUNTS_ONLY']='1'}
+        $result=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\provision.php')+'"') $provisionEnvironment '' ($passwords|ConvertTo-Json -Compress) $true
         if(Test-Path -LiteralPath (Join-Path $devRoot 'maintenance.sql')){Remove-Item -LiteralPath (Join-Path $devRoot 'maintenance.sql')}
         $state.prepared=$true;Save-State $state;Write-Output $result.Trim()
     } elseif(!$state -or !$state.prepared){throw 'Run prepare -Maintenance first.'}
@@ -195,13 +199,24 @@ try {
         $stage='calendar_runtime_check';$null=Verify-MySQL
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before calendar verification.'}
         $passwords=@{};foreach($role in @('director_admin','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
-        $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u12-browser')}
+        $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}
         $stage='calendar_browser_verification'
         Write-Output (Start-Child $node ('"'+(Join-Path $repo $(if($Command -eq 'configure-calendar-demo'){'backend\dev-runtime\configure-calendar-demo.mjs'}elseif($Command -eq 'verify-week-reads'){'backend\dev-runtime\verify-week-reads.mjs'}elseif($Command -eq 'verify-weeks'){'backend\dev-runtime\verify-weeks.mjs'}else{'backend\dev-runtime\verify-calendar.mjs'}))+'"') $verifyEnvironment '' ($passwords|ConvertTo-Json -Compress) $true).Trim()
     }
     elseif($Command -eq 'snapshot'){
         $stage='schema_verification';$null=Verify-MySQL
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\inspect.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
+    } elseif($Command -eq 'normalize-demo-names'){
+        $stage='original_fictional_profile_names';$null=Verify-MySQL
+        $nameEnvironment=Db-Environment 'migration';$nameEnvironment.EVAL_NORMALIZE_DEMO_NAMES='1'
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\normalize-demo-names.php')+'"') $nameEnvironment '' $null $true).Trim()
+    } elseif($Command -eq 'verify-integral-demo'){
+        $stage='integral_demo_validation';$null=Verify-MySQL
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-integral-demo.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
+    } elseif($Command -eq 'seed-integral-demo'){
+        $stage='integral_demo';$null=Verify-MySQL
+        $demoEnvironment=Db-Environment 'runtime';$demoEnvironment.EVAL_INTEGRAL_DEMO='1'
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\seed-integral-demo.php')+'"') $demoEnvironment '' $null $true).Trim()
     } elseif($Command -eq 'seed-school-sample'){
         $stage='school_sample';$null=Verify-MySQL
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\seed-school-sample.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
@@ -239,9 +254,15 @@ try {
         $stage='browser_open';$helper=Join-Path $repo 'backend\dev-runtime\open-browser.mjs'
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before opening.'}
         foreach($browserRecord in @($state.browsers)){
-            if($browserRecord -and $browserRecord.role -eq $Role -and (Owned-Process $browserRecord)){throw 'An EVAL browser for this role is already open.'}
+            if($browserRecord -and $browserRecord.role -eq $Role){
+                $browserProcess=Owned-Process $browserRecord
+                if($browserProcess){
+                    [IO.File]::WriteAllText((Join-Path $devRoot ('browser-stop-'+$Role)), 'stop')
+                    if(!$browserProcess.WaitForExit(10000)){throw 'Existing EVAL window did not close; it is retained.'}
+                }
+            }
         }
-        $browserEnvironment=@{EVAL_DEV_ROOT=$devRoot;EVAL_OPEN_SAMPLE=$(if($Sample){'1'}else{'0'});PLAYWRIGHT_BROWSERS_PATH=(Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u12-browser')}
+        $browserEnvironment=@{EVAL_DEV_ROOT=$devRoot;EVAL_OPEN_SAMPLE=$(if($Sample){'1'}else{'0'});PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}
         $login= switch($Role){'director_admin'{'director'} 'vice_principal'{'subdirector'} 'teacher'{'docente'} 'student'{'estudiante'}}
         $account=@{role=$Role;login=$login;password=(Decrypt $state.passwords.$Role)}|ConvertTo-Json -Compress
         $readyPath=Join-Path $devRoot ('browser-ready-'+$Role)
@@ -303,7 +324,7 @@ try {
         }
         $stage='browser_verification';$helper=Join-Path $repo $(if($Command -eq 'verify-enrollments'){'backend\dev-runtime\verify-enrollments.mjs'}elseif($Command -eq 'verify-assignments'){'backend\dev-runtime\verify-assignments.mjs'}elseif($Command -eq 'verify-users'){'backend\dev-runtime\verify-users.mjs'}elseif($Command -eq 'verify-activities'){'backend\dev-runtime\verify-activities.mjs'}elseif($Command -eq 'verify-assessments'){'backend\dev-runtime\verify-assessments.mjs'}elseif($Command -eq 'verify-reports'){'backend\dev-runtime\verify-reports.mjs'}elseif($Command -eq 'verify-notifications'){'backend\dev-runtime\verify-notifications.mjs'}elseif($Command -eq 'verify-history'){'backend\dev-runtime\verify-history.mjs'}elseif($Command -eq 'verify-activity-recovery'){'backend\dev-runtime\verify-activity-recovery.mjs'}elseif($Command -eq 'verify-delivery-context'){'backend\dev-runtime\verify-delivery-context.mjs'}elseif($Command -eq 'verify-library'){'backend\dev-runtime\verify-library.mjs'}elseif($Command -eq 'verify-write-recovery'){'backend\dev-runtime\verify-write-recovery.mjs'}elseif($Command -eq 'verify-recorded-time'){'backend\dev-runtime\verify-recorded-time.mjs'}elseif($Command -eq 'verify-material-maintenance'){'backend\dev-runtime\verify-material-maintenance.mjs'}elseif($Command -eq 'verify-observations'){'backend\dev-runtime\verify-observations.mjs'}elseif($Command -eq 'verify-file-replacement'){'backend\dev-runtime\verify-file-replacement.mjs'}elseif($Command -eq 'verify-tablet-interface'){'backend\dev-runtime\verify-tablet-interface.mjs'}elseif($Command -eq 'verify-school-sample'){'backend\dev-runtime\verify-school-sample.mjs'}else{'backend\dev-runtime\verify-dev.mjs'})
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
-        $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u12-browser')}
+        $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}
         Write-Output (Start-Child $node ('"'+$helper+'"') $verifyEnvironment '' ($passwords|ConvertTo-Json -Compress) $true).Trim()
     } elseif($Command -eq 'accounts'){
         # This read-only dialog must not retain the maintenance lock while the human reads it.
