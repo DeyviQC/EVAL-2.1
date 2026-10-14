@@ -89,4 +89,15 @@ try {
         $assignment=$commands->create($director,['teacher_id'=>$actors['teacher']->identityId,'academic_period_id'=>(string)$period,'instructional_entry_id'=>(string)$entry,'grade_id'=>(string)$grade,'section_id'=>(string)$section,'effective_from'=>'2026-01-01','effective_until'=>'2026-12-31']);$commands->activate($director,$assignment);
     }
     echo json_encode(['database'=>'eval_dev','migrations'=>$db->table('migrations')->count(),'accounts'=>count($actors),'materials'=>$db->table('course_materials')->count()],JSON_THROW_ON_ERROR).PHP_EOL;
-}catch(Throwable $e){$category=$e instanceof App\Application\Academic\AcademicCommandFailure?$e->category:get_class($e);fwrite(STDERR,"Development preparation failed at $stage ($category). Retained data was not deleted.\n");exit(2);}
+}catch(Throwable $e){
+    $category=$e instanceof App\Application\Academic\AcademicCommandFailure?$e->category:get_class($e);
+    $diagnostic='';
+    if($e instanceof Illuminate\Database\QueryException){
+        $sqlState=(string)($e->errorInfo[0]??'unknown');
+        $driverCode=(string)($e->errorInfo[1]??'unknown');
+        if(!preg_match('/^[A-Z0-9]{5}$/',$sqlState))$sqlState='unknown';
+        if(!preg_match('/^[0-9]{1,5}$/',$driverCode))$driverCode='unknown';
+        $diagnostic="; sqlstate=$sqlState; driver=$driverCode";
+    }
+    fwrite(STDERR,"Development preparation failed at $stage ($category$diagnostic). Retained data was not deleted.\n");exit(2);
+}

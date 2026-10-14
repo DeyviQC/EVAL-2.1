@@ -32,7 +32,7 @@ $config = [
     'timezone' => '+00:00',
     'options' => [
         PDO::MYSQL_ATTR_SSL_CA => getenv('EVAL_DB_CA'),
-        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => getenv('EVAL_DB_SSL_VERIFY') !== '0',
     ],
 ];
 $database->addConnection($config);

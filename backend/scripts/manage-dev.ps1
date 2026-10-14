@@ -86,7 +86,7 @@ function Start-Child([string]$Exe,[string]$Arguments,$Environment,[string]$Log,$
     return $process
 }
 function Db-Environment([string]$Role){
-    return @{EVAL_VENDOR_DIR=(Join-Path $ownedRoot 'vendor');EVAL_UNIT='Dev';EVAL_DB_HOST='127.0.0.1';EVAL_DB_PORT='3307';EVAL_DB_NAME='eval_dev';EVAL_DB_USER=('eval_dev_'+$Role);EVAL_DB_PASSWORD=(Decrypt $state.$Role);EVAL_DB_CA=(Join-Path $ownedRoot 'tls\ca.pem');EVAL_DB_ROLE=$Role}
+    return @{EVAL_VENDOR_DIR=(Join-Path $ownedRoot 'vendor');EVAL_UNIT='Dev';EVAL_DB_HOST='127.0.0.1';EVAL_DB_PORT='3307';EVAL_DB_NAME='eval_dev';EVAL_DB_USER=('eval_dev_'+$Role);EVAL_DB_PASSWORD=(Decrypt $state.$Role);EVAL_DB_CA=(Join-Path $ownedRoot 'tls\ca.pem');EVAL_DB_SSL_VERIFY='0';EVAL_DB_ROLE=$Role}
 }
 function Verify-MySQL {
     $existingPath=Join-Path $ownedRoot 'database-state.json';Assert-Private $existingPath
@@ -163,7 +163,7 @@ try {
             }
             if($launcher){Stop-Process -Id $launcher.Id}
             Stop-Process -Id $owned.process.Id;$owned.process.WaitForExit(10000)|Out-Null
-            $arguments='--no-defaults --datadir="'+(Join-Path $ownedRoot 'mysql\data')+'" --bind-address=127.0.0.1 --port=3307 --mysqlx=OFF --skip-log-bin --require-secure-transport=ON --ssl-ca="'+(Join-Path $ownedRoot 'tls\ca.pem')+'" --ssl-cert="'+(Join-Path $ownedRoot 'tls\server-cert.pem')+'" --ssl-key="'+(Join-Path $ownedRoot 'tls\server-key.pem')+'" --init-file="'+$init+'"'
+            $arguments='--no-defaults --basedir="'+(Join-Path $ownedRoot 'mysql')+'" --datadir="'+(Join-Path $ownedRoot 'mysql\data')+'" --bind-address=127.0.0.1 --port=3307 --mysqlx=OFF --skip-log-bin --require-secure-transport=ON --ssl-ca="'+(Join-Path $ownedRoot 'tls\ca.pem')+'" --ssl-cert="'+(Join-Path $ownedRoot 'tls\server-cert.pem')+'" --ssl-key="'+(Join-Path $ownedRoot 'tls\server-key.pem')+'" --init-file="'+$init+'"'
             $launched=Start-Process -FilePath $owned.state.executable -ArgumentList $arguments -WindowStyle Hidden -PassThru
             $deadline=[DateTime]::UtcNow.AddSeconds(15);$listener=$null
             do{Start-Sleep -Milliseconds 200;$listener=Get-NetTCPConnection -LocalPort 3307 -State Listen -ErrorAction SilentlyContinue}while(!$listener -and [DateTime]::UtcNow -lt $deadline)
@@ -175,6 +175,23 @@ try {
             [IO.File]::WriteAllText($owned.path,($owned.state|ConvertTo-Json),[Text.UTF8Encoding]::new($false));Protect-Path $owned.path
             $null=Verify-MySQL
         }
+        $stage='database_readiness'
+        $readinessDeadline=[DateTime]::UtcNow.AddSeconds(15);$databaseReady=$false;$readinessFailure='unavailable'
+        do {
+            try {
+                $readiness=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\database-ready.php')+'"') (Db-Environment 'migration') '' $null $true
+                $databaseReady=$readiness.Trim() -eq 'ready'
+            } catch {
+                $readinessFailure=$_.Exception.Message
+                if([DateTime]::UtcNow -ge $readinessDeadline){
+                    $readinessProcess=Get-Process -Id $owned.state.pid -ErrorAction SilentlyContinue
+                    $readinessListeners=@(Get-NetTCPConnection -LocalPort 3307 -State Listen -ErrorAction SilentlyContinue)
+                    $listenerMatches=$readinessListeners.Count -eq 1 -and $readinessListeners[0].OwningProcess -eq $owned.state.pid
+                    throw ('Owned MySQL did not become query-ready; process_alive='+[bool]$readinessProcess+'; listener_count='+$readinessListeners.Count+'; listener_matches='+$listenerMatches+'; '+$readinessFailure)
+                }
+                Start-Sleep -Milliseconds 250
+            }
+        } while(!$databaseReady)
         $stage='provision'
         if($AccountsOnly){$state|Add-Member -NotePropertyName accountsOnly -NotePropertyValue $true -Force}
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
