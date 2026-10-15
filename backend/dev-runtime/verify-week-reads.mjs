@@ -3,11 +3,11 @@ import {chromium} from '../../frontend/node_modules/playwright-core/index.mjs';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
-import {certificateOptions} from './browser-options.mjs';
+import {certificateOptions, resolveBrowserExecutable} from './browser-options.mjs';
 const root=process.env.EVAL_DEV_ROOT;if(!root)throw Error('Owned runtime required');
 const chunks=[];for await(const chunk of process.stdin)chunks.push(chunk);const passwords=JSON.parse(Buffer.concat(chunks).toString());
 const origin='https://127.0.0.1:8443';
-const browser=await chromium.launch({...certificateOptions(readFileSync(resolve(root,'cert.pem'))),headless:true,executablePath:chromium.executablePath()});
+const browser=await chromium.launch({...certificateOptions(readFileSync(resolve(root,'cert.pem'))),headless:true,executablePath:resolveBrowserExecutable()??chromium.executablePath()});
 async function login(name,password){const context=await browser.newContext();const page=await context.newPage();await page.goto(origin);await page.getByLabel('Usuario',{exact:true}).fill(name);await page.getByLabel('Contraseña',{exact:true}).fill(password);await page.getByRole('button',{name:'Ingresar',exact:true}).click();await page.getByRole('heading',{name:'Tu espacio académico',exact:true}).waitFor();return page;}
 async function read(page,path){return page.evaluate(async path=>{const started=performance.now();const response=await fetch(path,{cache:'no-store',credentials:'same-origin',redirect:'error',signal:AbortSignal.timeout(20000)});return {status:response.status,body:await response.json(),elapsedMs:Math.round(performance.now()-started)};},path);}
 try{

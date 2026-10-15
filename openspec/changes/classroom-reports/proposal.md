@@ -1,6 +1,6 @@
 # Proposal: Classroom Reports
 
-Date: 2026-10-08. Status: human-approved through Continue in response to the concrete director-only proposal, implemented and verified locally. Delivery assessment was verified before this unit. See docs/classroom-report-verification.md for results and remaining acceptance.
+Date: 2026-10-08. Status: human-approved through Continue in response to the concrete director-only proposal, implemented and verified locally. Delivery assessment was verified before this unit. See docs/pruebas/historico/classroom-report-verification.md for results and remaining acceptance.
 
 ## Accepted screen and proposed result
 

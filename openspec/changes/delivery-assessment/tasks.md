@@ -11,5 +11,5 @@
 - [x] Verify rollback and independent-connection update/assessment and correction serialization outcomes.
 - [x] Verify actual teacher/student browser flow, correction history and tablet layout; existing private-evidence download regression passes.
 - [x] Run supported frontend/backend regressions and record evidence honestly.
-- [x] Record final 104 frontend tests, 99 U11 tests, 56 assessment runtime checks, 11 assessment browser checks and 20 helper checks in docs/delivery-assessment-verification.md, superseding the initial review-limit block.
+- [x] Record final 104 frontend tests, 99 U11 tests, 56 assessment runtime checks, 11 assessment browser checks and 20 helper checks in docs/pruebas/historico/delivery-assessment-verification.md, superseding the initial review-limit block.
 - [ ] Prepare a verified local reconciliation handoff before any next contributor starts; no remote operation is authorized by this proposal.

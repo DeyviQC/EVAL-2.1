@@ -1,6 +1,6 @@
 # Approved Supervision Screen Review
 
-The existing institutional shell and Materials cards are the accepted visual baseline. The human approved these controls with the concrete requirements through Continue. The implemented flow is verified in docs/material-observations-verification.md.
+The existing institutional shell and Materials cards are the accepted visual baseline. The human approved these controls with the concrete requirements through Continue. The implemented flow is verified in docs/pruebas/historico/material-observations-verification.md.
 
 ## Vice principal
 

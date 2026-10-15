@@ -8,4 +8,4 @@
 - [x] Record DNI sign-in discussion separately without changing authentication.
 - [x] Open real student/teacher sample screens and document the local sequential handoff.
 
-Evidence: docs/school-sample-verification.md. Institutional roster/timetable, actual student import, PIN policy and deployment acceptance remain open.
+Evidence: docs/pruebas/historico/school-sample-verification.md. Institutional roster/timetable, actual student import, PIN policy and deployment acceptance remain open.

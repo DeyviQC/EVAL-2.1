@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAL · Pantalla de Aula — prototipo escénico</title>
+<style>
+  /* Institutional tokens (styles.css) drive the accents; the atmosphere is editorial-warm like ARKO */
+  :root {
+    --eval-primary:#142D56; --eval-accent:#28599B; --eval-paper:#F3F6FB;
+    --ink:#1b2433; --muted:#5b6878; --line:#e3e7ee;
+    --cream:#f6f1e7; --cream-2:#efe7d8; --walnut:#a4743f;
+    --serif:'Iowan Old Style','Palatino Linotype',Georgia,'Times New Roman',serif;
+    --sans:system-ui,-apple-system,'Segoe UI',sans-serif;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --fast:150ms; --base:240ms; --large:420ms;
+  }
+  * { box-sizing:border-box; margin:0; }
+  html { scroll-snap-type:y mandatory; }
+  body { font-family:var(--sans); color:var(--ink); background:#11161f; }
+
+  /* ===== Floating pill nav ===== */
+  .nav {
+    position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60;
+    display:flex; align-items:center; gap:6px; padding:8px;
+    background:#ffffffb8; backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border:1px solid #ffffff; border-radius:999px; box-shadow:0 12px 40px #14243d2b;
+    max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center;
+  }
+  .nav .logo { font-weight:800; letter-spacing:2.5px; font-size:14px; color:var(--eval-primary); padding:0 10px 0 14px; }
+  .crumb { font-size:12.5px; color:#5b6878; padding:0 6px; }
+  .crumb b { color:var(--ink); font-weight:600; }
+  .role { display:flex; gap:2px; padding:3px; background:#14243d0d; border-radius:999px; }
+  .role button { border:0; background:transparent; font-size:12.5px; padding:7px 13px; border-radius:999px; color:#5b6878; }
+  .role button[aria-pressed="true"] { background:#fff; color:var(--eval-primary); font-weight:700; box-shadow:0 1px 6px #14243d22; }
+  .nav .week { border:0; background:transparent; color:var(--ink); font-size:13.5px; padding:9px 14px; border-radius:999px; transition:background var(--fast) var(--ease), color var(--fast) var(--ease); }
+  .nav .week[aria-pressed="true"] { background:var(--eval-primary); color:#f6f1e7; font-weight:600; }
+  .nav .cta { background:var(--walnut); color:#fff; font-weight:600; padding:9px 22px; border:0; border-radius:999px; }
+  .nav .cta:hover { filter:brightness(1.08); }
+  .nav .week:hover { background:#14243d0d; }
+
+  /* ===== Scenes ===== */
+  .scene { position:relative; height:100dvh; scroll-snap-align:start; overflow:hidden;
+    display:flex; align-items:end; background:var(--cream); isolation:isolate; }
+  .scene .atmosphere { position:absolute; inset:0; z-index:-2; overflow:hidden; }
+  .scene .atmosphere::after { content:''; position:absolute; inset:0; background:
+    linear-gradient(90deg, #f6f1e7f2 0%, #f6f1e7cc 34%, #f6f1e700 62%),
+    linear-gradient(0deg, #14181f26 0%, #14181f00 26%),
+    linear-gradient(180deg, #14181f14 0%, #14181f00 20%); }
+  .scene .atmosphere .art {
+    position:absolute; inset:-6%; background-size:cover; background-position:center; }
+  @keyframes kenburns { from { transform:scale(1.02) translateY(-1.2%); } to { transform:scale(1.1) translateY(1.4%); } }
+  @supports (animation-timeline: view()) {
+    .scene .atmosphere .art { animation:kenburns linear both; animation-timeline:view(); animation-range:cover 0% cover 100%; }
+  }
+
+  .copy { position:relative; padding:0 clamp(20px,7vw,120px) clamp(56px,9vh,110px); max-width:640px; display:grid; gap:14px; }
+  .kicker { display:flex; align-items:center; gap:12px; font-size:11.5px; letter-spacing:3.2px; text-transform:uppercase; color:#7a6338; font-weight:600; }
+  .kicker .dot { width:5px; height:5px; border-radius:50%; background:var(--walnut); display:inline-block; }
+  .scene h1 { font-family:var(--serif); font-weight:500; font-size:clamp(42px,5.6vw,76px); line-height:1.06; letter-spacing:-1.2px; color:#20242c; text-wrap:balance; }
+  .scene .lead { font-size:clamp(14.5px,1.25vw,17px); color:var(--muted); max-width:46ch; }
+  .scene .lead b { color:var(--ink); font-weight:600; }
+  .scene .actions { margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .btn-primary { background:var(--eval-primary); color:#f6f1e7; border:0; font-weight:600; padding:13px 26px; border-radius:999px; font-size:14.5px; display:inline-flex; gap:10px; align-items:center; transition:transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease); box-shadow:0 10px 26px #14243d30; }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 16px 34px #14243d3d; }
+  .btn-ghost { background:transparent; border:1px solid #20242c26; color:var(--ink); padding:12px 24px; border-radius:999px; font-size:14px; }
+  .btn-ghost:hover { background:#20242c0a; }
+  .mini { font-size:11.5px; color:#7a6338; letter-spacing:1.6px; text-transform:uppercase; font-weight:600; }
+
+  /* Scene ambience: materials live inside white "paper" sheets (center-right, like ARKO's mirrors) */
+  .sheet-wrap { position:absolute; inset:0; display:grid; place-items:center; z-index:-1; }
+  .sheet { width:min(56vw,720px); aspect-ratio:3/3.2; background:#fff; border-radius:18px;
+    box-shadow:0 40px 90px #1b243340, 0 8px 26px #1b243322; padding:6%; position:relative; overflow:hidden;
+    transform:translateX(26%); }
+  .sheet::before { content:''; position:absolute; inset:0; background:
+    radial-gradient(140px 140px at 20% 24%, #dbeafe66, transparent 70%),
+    radial-gradient(160px 130px at 78% 70%, #fef3c75f, transparent 70%); }
+
+  /* ===== Dots + bottom progress ===== */
+  .dots { position:fixed; right:22px; top:50%; translate:0 -50%; z-index:60; display:grid; gap:9px; }
+  .dots button { width:9px; height:9px; padding:0; border-radius:50%; border:0; background:#20242c38; min-height:0; transition:all var(--base) var(--ease); }
+  .dots button[aria-current="true"] { background:var(--walnut); height:26px; border-radius:99px; }
+  .progress { position:fixed; inset:auto 0 0 0; height:3px; background:linear-gradient(90deg,var(--walnut),#d9a05f); transform-origin:0 50%; z-index:70; }
+  @supports (animation-timeline: scroll()) { .progress { animation:grow linear both; animation-timeline:scroll(root block); } @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } } }
+
+  /* ===== Reveal choreography ===== */
+  .copy > * { opacity:0; transform:translateY(22px); }
+  .scene.on .copy > * { animation:rise var(--large) var(--ease) both; }
+  .scene.on .copy > :nth-child(2) { animation-delay:90ms; } .scene.on .copy > :nth-child(3) { animation-delay:180ms; }
+  .scene.on .copy > :nth-child(4) { animation-delay:260ms; } .scene.on .copy > :nth-child(5) { animation-delay:330ms; }
+  @keyframes rise { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+  .scene .sheet-wrap { opacity:0; translate:0 26px; transition:opacity var(--large) var(--ease) 120ms, translate var(--large) var(--ease) 120ms; }
+  .scene.on .sheet-wrap { opacity:1; translate:0 0; }
+
+  ::view-transition-old(root) { animation:scene-out var(--base) var(--ease) both; }
+  ::view-transition-new(root) { animation:scene-in var(--base) var(--ease) both; }
+  @keyframes scene-out { to { opacity:.2; } }
+  @keyframes scene-in { from { opacity:.3; transform:translateY(10px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .copy > *, .scene .sheet-wrap, .scene .atmosphere .art { animation:none !important; opacity:1 !important; transform:none !important; translate:none !important; transition:none; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation:none; }
+    html { scroll-snap-type:none; }
+  }
+  @media (max-width:760px) { .sheet { transform:translateX(0); opacity:.4; width:min(88vw,540px); } .copy { padding-bottom:72px; } .hide-sm { display:none; } }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Aula">
+  <span class="logo">EVAL</span>
+  <span class="crumb hide-sm">Mis cursos / <b>Matemática 3°B</b> / Semana 11</span>
+  <div class="role" role="group" aria-label="Vista">
+    <button aria-pressed="true" data-role="teacher">Docente</button>
+    <button aria-pressed="false" data-role="student">Estudiante</button>
+  </div>
+  <button class="week" aria-pressed="true">Semana 11</button>
+  <button class="week hide-sm" aria-pressed="false">Semana 10</button>
+  <button class="week hide-sm" aria-pressed="false">Semana 9</button>
+  <button class="cta" id="start">Proyectar</button>
+</nav>
+
+<div class="dots" id="dots" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"></div>
+
+<!-- 01 · PORTADA -->
+<section class="scene" data-scene>
+  <div class="atmosphere" aria-hidden="true"><div class="art" style="background:radial-gradient(1100px 620px at 78% 18%, #d9ba8c55, transparent 60%), linear-gradient(160deg, #f6f1e7 0%, #efe7d8 58%, #e5d9c2 100%);"></div></div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span> Matemática 3°B · Semana 11 · Prof. Ríos</p>
+    <h1>Fracciones equivalentes, bien contadas</h1>
+    <p class="lead"><b>Un recorrido de 6 paradas.</b> Todo el material de la semana, ordenado para proyectar en el aula sin perder el hilo — con transiciones suaves y foco en el recurso.</p>
+    <div class="actions">
+      <button class="btn-primary" id="begin">Comenzar el recorrido <span aria-hidden="true">↓</span></button>
+      <button class="btn-ghost" onclick="alert('EVAL abriría el PDF en modo proyección.')">Ver guía completa</button>
+    </div>
+    <p class="mini">6 recursos · 2 actividades · 1 solucionario docente</p>
+  </div>
+</section>
+
+<!-- 02 · GUÍA PDF -->
+<section class="scene" data-scene>
+  <div class="atmosphere" aria-hidden="true"><div class="art" style="background:linear-gradient(150deg,#f8f4ea,#eadfc8);"></div></div>
+  <div class="sheet-wrap" aria-hidden="true">
+    <div class="sheet" style="display:grid;gap:16px;align-content:center;">
+      <div style="height:12px;border-radius:99px;background:#28599b26;width:36%;"></div>
+      <h2 style="font-family:var(--serif);font-weight:500;font-size:clamp(22px,2.4vw,32px);color:#20242c;">Fracciones equivalentes</h2>
+      <div style="display:flex;gap:14px;align-items:center;justify-content:center;padding:14px;background:#F3F6FB;border-radius:12px;">
+        <svg width="74" height="74" viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="38" fill="#dbeafe"/><path d="M44 6 A38 38 0 0 1 82 44 L44 44 Z" fill="#28599B"/><circle cx="44" cy="44" r="38" stroke="#28599B" stroke-width="2.4" fill="none"/></svg>
+        <svg width="74" height="74" viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="38" fill="#dbeafe"/><path d="M44 6 A38 38 0 0 1 82 44 L44 44 Z" fill="#28599B"/><path d="M44 44 A38 38 0 0 1 82 82 L44 82 Z" fill="#93c5fd"/><circle cx="44" cy="44" r="38" stroke="#28599B" stroke-width="2.4" fill="none"/></svg>
+      </div>
+      <div style="height:10px;border-radius:99px;background:#e2e8f0;width:88%;"></div>
+      <div style="height:10px;border-radius:99px;background:#e2e8f0;width:74%;"></div>
+      <div style="height:10px;border-radius:99px;background:#e2e8f0;width:62%;"></div>
+    </div>
+  </div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span><span class="klabel">02 / 06 · La guía</span></p>
+    <h1>La guía que abre la semana</h1>
+    <p class="lead">Teoría y práctica centrada. <b>PDF · 1.8 MiB · publicado por Prof. Ríos</b> — también disponible como archivo del curso para estudiantes ausentes.</p>
+    <div class="actions"><button class="btn-ghost" onclick="alert('EVAL abriría el PDF real en modo inline.')">Abrir documento</button></div>
+  </div>
+</section>
+
+<!-- 03 · DIAGRAMA -->
+<section class="scene" data-scene>
+  <div class="atmosphere" aria-hidden="true"><div class="art" style="background:linear-gradient(150deg,#eef3fb 0%,#dce7f5 60%,#cfdff2 100%);"></div></div>
+  <div class="sheet-wrap" aria-hidden="true">
+    <div class="sheet" style="display:grid;place-items:center;">
+      <svg viewBox="0 0 340 200" width="86%" aria-hidden="true">
+        <circle cx="95" cy="100" r="66" fill="#dbeafe" stroke="#28599B" stroke-width="4"/>
+        <path d="M95 34 A66 66 0 0 1 161 100 L95 100 Z" fill="#28599B"/>
+        <circle cx="245" cy="100" r="66" fill="#dbeafe" stroke="#28599B" stroke-width="4"/>
+        <path d="M245 34 A66 66 0 0 1 311 100 L245 100 Z" fill="#28599B"/>
+        <path d="M245 100 A66 66 0 0 1 311 166 L245 166 Z" fill="#93c5fd"/>
+      </svg>
+    </div>
+  </div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span><span class="klabel">03 / 06 · El apoyo visual</span></p>
+    <h1>Ver la fracción, no solo leerla</h1>
+    <p class="lead"><b>PNG · 420 KiB.</b> El diagrama de círculos para el pizarrón: ideal para abrir la conversación y queda guardado en la biblioteca del curso.</p>
+  </div>
+</section>
+
+<!-- 04 · ACTIVIDAD -->
+<section class="scene" data-scene>
+  <div class="atmosphere" aria-hidden="true"><div class="art" style="background:linear-gradient(150deg,#f6f1e7,#e9dcc4 62%,#e0cfad 100%);"></div></div>
+  <div class="sheet-wrap" aria-hidden="true">
+    <div class="sheet" style="display:grid;gap:14px;align-content:center;">
+      <p style="font-size:11px;letter-spacing:2.4px;color:#a4743f;font-weight:700;">PRÁCTICA · 10 EJERCICIOS</p>
+      <div style="height:12px;border-radius:99px;background:#28599b26;width:44%;"></div>
+      <div style="display:grid;gap:10px;margin-top:8px;">
+        <div style="height:44px;border-radius:10px;background:#eef3fb;border:1px solid #d7e3f4;"></div>
+        <div style="height:44px;border-radius:10px;background:#eef3fb;border:1px solid #d7e3f4;"></div>
+        <div style="height:44px;border-radius:10px;background:#eef3fb;border:1px solid #d7e3f4;"></div>
+      </div>
+      <div style="justify-self:start;background:#142D56;color:#f6f1e7;font-size:13px;font-weight:600;border-radius:999px;padding:10px 22px;">Entregar trabajo</div>
+    </div>
+  </div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span><span class="klabel">04 / 06 · La práctica</span></p>
+    <h1>Diez ejercicios, con corrección real</h1>
+    <p class="lead">La actividad <b>vence viernes 23:59</b>. Cada entrega mantiene versiones retenidas; el docente corrige con feedback y el estudiante consulta su historia siempre.</p>
+    <div class="actions"><span class="mini">Estado: publicada · 3 de 10 entregas recibidas</span></div>
+  </div>
+</section>
+
+<!-- 05 · SOLUCIONARIO (docente) -->
+<section class="scene" data-scene data-teacher-only>
+  <div class="atmosphere" aria-hidden="true"></div>
+  <div class="sheet-wrap" aria-hidden="true">
+    <div class="sheet" style="display:grid;gap:14px;align-content:center;background:#142D56;">
+      <p style="font-size:11px;letter-spacing:2.4px;color:#9dc1f0;font-weight:700;">VISIBLE SOLO PARA EL DOCENTE</p>
+      <div style="display:grid;gap:10px;"><div style="height:10px;border-radius:99px;background:#ffffff22;width:80%;"></div><div style="height:10px;border-radius:99px;background:#ffffff22;width:66%;"></div><div style="height:10px;border-radius:99px;background:#ffffff22;width:74%;"></div></div>
+      <p style="color:#c7d8f2;font-size:13px;">Respuestas orientativas con el desarrollo completo de cada ejercicio.</p>
+    </div>
+  </div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span><span class="klabel">05 / 06 · Interno docente</span></p>
+    <h1>La guía propia, nunca pública</h1>
+    <p class="lead"><b>PDF · 640 KiB.</b> Los roles definidos en el servidor protegen este recurso: si un estudiante adivinara el enlace, la autorización lo niega —la proyección nunca cambia permisos.</p>
+  </div>
+</section>
+
+<!-- 06 · CIERRE -->
+<section class="scene" data-scene>
+  <div class="atmosphere" aria-hidden="true"><div class="art" style="background:radial-gradient(900px 520px at 20% 30%, #efe7d8 0%, transparent 55%), linear-gradient(160deg,#f6f1e7,#e7dcc6 100%);"></div></div>
+  <div class="copy">
+    <p class="kicker"><span class="dot"></span><span class="klabel">06 / 06 · Cierre</span></p>
+    <h1>La semana 12 ya está encaminada</h1>
+    <p class="lead"><b>Semana 12: fracciones en la recta numérica.</b> Sin apuro: sube el material, ordena este recorrido y lo guardas tal cual para tu próxima clase.</p>
+    <div class="actions">
+      <button class="btn-primary" onclick="alert('EVAL regresaría al aula con el foco restaurado.')">Volver al aula</button>
+      <button class="btn-ghost" onclick="alert('EVAL abriría la Semana 12 en modo edición.')">Preparar semana 12</button>
+    </div>
+  </div>
+</section>
+
+<script>
+  const scenes = [...document.querySelectorAll('[data-scene]')];
+  const dots = document.getElementById('dots');
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  scenes.forEach((s, i) => {
+    const d = document.createElement('button');
+    d.addEventListener('click', () => {
+      if (document.startViewTransition && !reduced()) document.startViewTransition(() => s.scrollIntoView());
+      else s.scrollIntoView();
+    });
+    dots.append(d);
+  });
+  const dotEls = [...dots.children];
+
+  /* ===== Role gating: mirrors server-side roles (student never sees teacher-only material) ===== */
+  const roleBtns = [...document.querySelectorAll('.role button')];
+  let role = 'teacher';
+  function visibleScenes() { return scenes.filter(s => role === 'teacher' || !s.hasAttribute('data-teacher-only')); }
+  function renumber() {
+    const vis = visibleScenes();
+    vis.forEach((s, i) => {
+      const label = s.querySelector('.klabel');
+      if (label) label.textContent = label.textContent.replace(/^\d+ \/ \d+/, `${String(i + 1).padStart(2,'0')} / ${String(vis.length).padStart(2,'0')}`);
+    });
+  }
+  roleBtns.forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.role === role) return;
+    role = b.dataset.role;
+    roleBtns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    scenes.forEach(s => { if (s.hasAttribute('data-teacher-only')) s.style.display = role === 'teacher' ? '' : 'none'; });
+    renumber();
+    syncDots();
+    const crumb = document.querySelector('.crumb');
+    crumb.innerHTML = (role === 'teacher' ? 'Mis cursos / <b>Matemática 3°B</b> / Semana 11' : 'Mis cursos / <b>Matemática 3°B</b> / Semana 11') + (role === 'teacher' ? ' · vista docente' : ' · vista estudiante');
+  }));
+
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) {
+      scenes.forEach(s => s.classList.remove('on'));
+      e.target.classList.add('on');
+      syncDots();
+    }
+  }, { threshold: .55 });
+  function syncDots() {
+    const vis = visibleScenes().filter(s => s.classList.contains('on'));
+    const shownId = vis.length ? scenes.indexOf(vis[0]) : -1;
+    const visIdx = visibleScenes().indexOf(scenes[shownId]);
+    dotEls.forEach((d, j) => {
+      d.style.display = (role === 'student' && scenes[j].hasAttribute('data-teacher-only')) ? 'none' : '';
+      d.setAttribute('aria-current', String(j === visIdx));
+    });
+  }
+  scenes.forEach(s => io.observe(s));
+  function nearest() {
+    let best = 0, bd = Infinity;
+    visibleScenes().forEach(s => { const i = scenes.indexOf(s); const d = Math.abs(s.getBoundingClientRect().top); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown','PageDown'].includes(e.key)) { e.preventDefault(); const v = visibleScenes(); const n = v[Math.min(v.indexOf(scenes[nearest()]) + 1, v.length - 1)]; n && n.scrollIntoView({ behavior:'smooth' }); }
+    if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); const v = visibleScenes(); const n = v[Math.max(v.indexOf(scenes[nearest()]) - 1, 0)]; n && n.scrollIntoView({ behavior:'smooth' }); }
+    if (e.key === 'Escape') alert('EVAL saldría del modo proyección y volvería a Semana 11 de Matemática 3°B.');
+  });
+  document.getElementById('begin').addEventListener('click', () => visibleScenes()[1] && visibleScenes()[1].scrollIntoView({ behavior:'smooth' }));
+  scenes[0].classList.add('on');
+  syncDots();
+  renumber();
+</script>
+</body>
+</html>

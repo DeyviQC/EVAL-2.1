@@ -3,6 +3,7 @@ param(
     [switch]$Maintenance,
     [switch]$AccountsOnly,
     [switch]$BrowserOnly,
+    [switch]$ServerOnly,
     [switch]$Sample,
     [ValidateSet('director_admin','vice_principal','teacher','student')][string]$Role='director_admin'
 )
@@ -80,7 +81,8 @@ function Start-Child([string]$Exe,[string]$Arguments,$Environment,[string]$Log,$
     if($null -ne $InputText){$process.StandardInput.Write($InputText);$process.StandardInput.Close()}
     if($Wait){
         $output=$process.StandardOutput.ReadToEnd();$errors=$process.StandardError.ReadToEnd();$process.WaitForExit()
-        if($process.ExitCode -ne 0){throw ('Owned child failed at '+$stage+'; '+($errors -replace '[\r\n]+',' ').Substring(0,[Math]::Min(220,($errors -replace '[\r\n]+',' ').Length)))}
+        $diag=if($errors.Trim()){$errors}else{$output}
+        if($process.ExitCode -ne 0){throw ('Owned child failed at '+$stage+'; '+($diag -replace '[\r\n]+',' ').Substring(0,[Math]::Min(300,($diag -replace '[\r\n]+',' ').Length)))}
         return $output
     }
     return $process
@@ -215,7 +217,7 @@ try {
     } elseif($Command -in @('verify-calendar','verify-weeks','verify-week-reads','configure-calendar-demo')){
         $stage='calendar_runtime_check';$null=Verify-MySQL
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before calendar verification.'}
-        $passwords=@{};foreach($role in @('director_admin','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
+        $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
         $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}
         $stage='calendar_browser_verification'
         Write-Output (Start-Child $node ('"'+(Join-Path $repo $(if($Command -eq 'configure-calendar-demo'){'backend\dev-runtime\configure-calendar-demo.mjs'}elseif($Command -eq 'verify-week-reads'){'backend\dev-runtime\verify-week-reads.mjs'}elseif($Command -eq 'verify-weeks'){'backend\dev-runtime\verify-weeks.mjs'}else{'backend\dev-runtime\verify-calendar.mjs'}))+'"') $verifyEnvironment '' ($passwords|ConvertTo-Json -Compress) $true).Trim()
@@ -339,6 +341,7 @@ try {
         if($Command -eq 'verify-assignments'){
             $stage='assignment_fixture';$null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\assignment-fixture.php')+'"') (Db-Environment 'migration') '' $null $true
         }
+        if ($ServerOnly) { exit 0 }
         $stage='browser_verification';$helper=Join-Path $repo $(if($Command -eq 'verify-enrollments'){'backend\dev-runtime\verify-enrollments.mjs'}elseif($Command -eq 'verify-assignments'){'backend\dev-runtime\verify-assignments.mjs'}elseif($Command -eq 'verify-users'){'backend\dev-runtime\verify-users.mjs'}elseif($Command -eq 'verify-activities'){'backend\dev-runtime\verify-activities.mjs'}elseif($Command -eq 'verify-assessments'){'backend\dev-runtime\verify-assessments.mjs'}elseif($Command -eq 'verify-reports'){'backend\dev-runtime\verify-reports.mjs'}elseif($Command -eq 'verify-notifications'){'backend\dev-runtime\verify-notifications.mjs'}elseif($Command -eq 'verify-history'){'backend\dev-runtime\verify-history.mjs'}elseif($Command -eq 'verify-activity-recovery'){'backend\dev-runtime\verify-activity-recovery.mjs'}elseif($Command -eq 'verify-delivery-context'){'backend\dev-runtime\verify-delivery-context.mjs'}elseif($Command -eq 'verify-library'){'backend\dev-runtime\verify-library.mjs'}elseif($Command -eq 'verify-write-recovery'){'backend\dev-runtime\verify-write-recovery.mjs'}elseif($Command -eq 'verify-recorded-time'){'backend\dev-runtime\verify-recorded-time.mjs'}elseif($Command -eq 'verify-material-maintenance'){'backend\dev-runtime\verify-material-maintenance.mjs'}elseif($Command -eq 'verify-observations'){'backend\dev-runtime\verify-observations.mjs'}elseif($Command -eq 'verify-file-replacement'){'backend\dev-runtime\verify-file-replacement.mjs'}elseif($Command -eq 'verify-tablet-interface'){'backend\dev-runtime\verify-tablet-interface.mjs'}elseif($Command -eq 'verify-school-sample'){'backend\dev-runtime\verify-school-sample.mjs'}else{'backend\dev-runtime\verify-dev.mjs'})
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
         $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}

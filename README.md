@@ -15,12 +15,15 @@ The development checkout now contains PHP/Laravel, MySQL, React/TypeScript and T
 
 ## Repository layout
 
+Start with the [documentation index](docs/README.md): team setup, current plans, guides, requirements, and historical evidence.
+
 | Path | Purpose |
 | --- | --- |
 | `.github/workflows/` | Reserved for future automation after tooling is defined. |
 | `docs/requisitos/` | Requirements documentation. |
 | `docs/arquitectura/` | Architecture documentation and decisions. |
-| `docs/prototipos/` | Approved prototype artifacts. |
+| `docs/prototipos/` | Prototype artifacts; approval status is recorded per feature. |
+| `docs/guias/` | Feature walkthroughs and demonstration guides. |
 | `docs/pruebas/` | Test strategy and evidence. |
 | `frontend/` | React/TypeScript application, typed clients and UI tests. |
 | `backend/` | Laravel academic services, local HTTP runtime, migrations and tests. |
@@ -45,17 +48,17 @@ The repository has a real isolated development application with local authentica
 
 Double-click `Abrir EVAL.cmd` in the repository root. Teacher, student and Vice Principal launchers open separate role sessions. The app uses persistent `eval_dev` data at `https://127.0.0.1:8443`, not a prototype or a PHPUnit preview. See [local development](docs/local-development.md) for commands, credentials access, verified behavior and storage limitations.
 
-Original-teacher AD/A/B/C assessment, required feedback, retained corrections and locked assessed deliveries now work locally. Students consult their own results in My grades. See `docs/delivery-assessment-verification.md` for executed database/browser checks and remaining acceptance.
+Original-teacher AD/A/B/C assessment, required feedback, retained corrections and locked assessed deliveries now work locally. Students consult their own results in My grades. See `docs/pruebas/historico/delivery-assessment-verification.md` for executed database/browser checks and remaining acceptance.
 
-Director classroom reports now show complete delivery/grade totals and a bounded historical roster using real data. See docs/classroom-report-verification.md.
+Director classroom reports now show complete delivery/grade totals and a bounded historical roster using real data. See docs/pruebas/historico/classroom-report-verification.md.
 
-Academic notifications now persist activity publication, delivery/update and grading/correction events for their actual recipients. The own feed supports unread counts, explicit refresh, 50-row paging, section shortcuts and bounded read receipts. See docs/academic-notification-verification.md.
+Academic notifications now persist activity publication, delivery/update and grading/correction events for their actual recipients. The own feed supports unread counts, explicit refresh, 50-row paging, section shortcuts and bounded read receipts. See docs/pruebas/historico/academic-notification-verification.md.
 
-Pending work includes wider administrator/role management and institutional import, file replacement/purge and supervision, report export, library/search, synchronization, backup/restore and school-network/load acceptance. Current test evidence and remaining gates are recorded in OpenSpec tasks and `docs/local-development.md`; see `docs/activity-delivery-verification.md` for the activity/delivery journey.
+Pending work includes wider administrator/role management and institutional import, file replacement/purge and supervision, report export, library/search, synchronization, backup/restore and school-network/load acceptance. Current test evidence and remaining gates are recorded in OpenSpec tasks and `docs/local-development.md`; see `docs/pruebas/historico/activity-delivery-verification.md` for the activity/delivery journey.
 
 ## Scope boundaries
 
 - EVAL does not replace SIAGIE.
 - QR attendance is outside the initial MVP.
 
-Course-scoped Biblioteca now searches eligible real materials by title, description and filename. See docs/material-library-verification.md for executed MySQL/browser evidence.
+Course-scoped Biblioteca now searches eligible real materials by title, description and filename. See docs/pruebas/historico/material-library-verification.md for executed MySQL/browser evidence.

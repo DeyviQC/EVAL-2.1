@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAL · Pantalla de Aula — prototipo</title>
+<style>
+  /* ===== Tokens inherit EVAL institutional identity (styles.css) ===== */
+  :root {
+    --eval-primary:#142D56; --eval-accent:#28599B; --eval-paper:#F3F6FB;
+    --eval-ink:#0f172a; --eval-muted:#64748b; --eval-line:#e2e8f0;
+    --ease:cubic-bezier(.2,.7,.2,1);
+    --motion-fast:150ms; --motion-base:220ms; --motion-large:320ms;
+    color-scheme:dark;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body {
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55;
+    background:radial-gradient(1200px 700px at 75% -10%, #1c3f70 0%, #142D56 45%, #0c1930 100%);
+    color:#eef3fb; min-height:100dvh; padding:28px clamp(16px,4vw,56px) 96px;
+  }
+  button { font:inherit; cursor:pointer; min-height:44px; border-radius:12px; border:1px solid #ffffff26;
+    background:#ffffff12; color:#eef3fb; padding:10px 18px; transition:transform var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease); touch-action:manipulation; }
+  button:hover { background:#ffffff22; } button:active { transform:scale(.97); }
+  :focus-visible { outline:2px solid #9dc1f0; outline-offset:3px; }
+
+  /* ===== Top bar (aula chrome, deliberately minimal) ===== */
+  .aula-top { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  .aula-top .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.5px; font-size:19px; }
+  .aula-top .brand svg { width:26px; height:26px; }
+  .aula-course { color:#b9cbe8; font-size:14px; }
+  .aula-weeks { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+  .aula-weeks button[aria-pressed="true"] { background:#eef3fb; color:#142D56; font-weight:700; }
+  .exit-hint { font-size:12px; color:#8fa5c7; }
+
+  /* ===== Stage ===== */
+  .stage { position:relative; border-radius:24px; border:1px solid #ffffff1f; overflow:hidden;
+    background:linear-gradient(180deg,#12233f 0%, #0f1f39 100%); box-shadow:0 30px 80px #00000059; }
+  .stage-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 26px; border-bottom:1px solid #ffffff14; flex-wrap:wrap; }
+  .stage-head h1 { font-size:clamp(20px,3vw,30px); letter-spacing:-.6px; font-weight:800; }
+  .stage-head .meta { color:#a9bfe2; font-size:13.5px; }
+  .stage-body { min-height:clamp(380px,58vh,640px); padding:clamp(18px,4vw,52px); display:grid; place-items:center; }
+  iframe, img { max-width:100%; max-height:58vh; border-radius:16px; background:#fff; }
+
+  /* ===== Filmstrip ===== */
+  .filmstrip { display:flex; gap:12px; overflow-x:auto; padding:16px 26px; border-top:1px solid #ffffff14;
+    scroll-snap-type:x mandatory; scrollbar-width:none; }
+  .filmstrip::-webkit-scrollbar { display:none; }
+  .chip { scroll-snap-align:start; flex:0 0 auto; width:170px; text-align:left; padding:12px; border-radius:14px;
+    background:#ffffff0d; border:1px solid #ffffff1c; display:grid; gap:6px; }
+  .chip[aria-current="true"] { background:#eef3fb; color:#142D56; border-color:transparent; }
+  .chip .k { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--eval-accent); font-weight:700; }
+  .chip[aria-current="true"] .k { color:#28599B; }
+  .chip .t { font-size:13.5px; font-weight:650; line-height:1.3; }
+
+  /* ===== Progress (scroll-driven, root timeline) ===== */
+  .aurora { position:fixed; inset:0 0 auto 0; height:4px; z-index:50; background:linear-gradient(90deg,#5ea0ef,var(--eval-accent)); transform-origin:0 50%; }
+  @supports (animation-timeline: scroll()) {
+    .aurora { animation:grow-x linear both; animation-timeline:scroll(root block); }
+    @keyframes grow-x { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+  }
+
+  /* ===== Reveal on view (gallery) ===== */
+  @supports (animation-timeline: view()) {
+    .rise { animation:rise linear both; animation-timeline:view(); animation-range:entry 0% entry 60%; }
+    @keyframes rise { from { opacity:0; transform:translateY(26px) scale(.98); } }
+  }
+
+  /* ===== Resource change transition (View Transitions API) ===== */
+  ::view-transition-old(stage-content) { animation:fade-out var(--motion-base) var(--ease) both; }
+  ::view-transition-new(stage-content) { animation:fade-up var(--motion-base) var(--ease) both; }
+  @keyframes fade-out { to { opacity:0; } }
+  @keyframes fade-up { from { opacity:0; transform:translateY(14px); } }
+
+  /* ===== Gallery cards (extras) ===== */
+  .gallery { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); margin-top:26px; }
+  .card { border-radius:18px; padding:20px; background:#ffffff0d; border:1px solid #ffffff1c; display:grid; gap:8px; }
+  .card .k { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:#8fb6ee; font-weight:700; }
+  .card h3 { font-size:16.5px; font-weight:700; letter-spacing:-.3px; }
+  .card p { color:#b9cbe8; font-size:13.5px; }
+
+  /* ===== States ===== */
+  .skeleton { color:#7c93b8; font-size:14px; }
+  .skeleton .bar { height:14px; border-radius:99px; background:#ffffff14; animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora, .rise { animation:none !important; opacity:1; transform:none; }
+    ::view-transition-old(stage-content), ::view-transition-new(stage-content) { animation:none; }
+  }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="aula-top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2.5" stroke="#9dc1f0" stroke-width="1.8"/><path d="M12 4v13M8.5 21l3.5-4 3.5 4" stroke="#9dc1f0" stroke-width="1.8" stroke-linecap="round"/></svg>
+    EVAL · Pantalla de Aula
+  </div>
+  <span class="aula-course">Matemática 3°B — Prof. Ríos — Periodo 2026-I · <span id="pos">1/5</span></span>
+  <div class="aula-weeks" role="group" aria-label="Semana">
+    <button aria-pressed="true">Semana 11</button>
+    <button aria-pressed="false">Semana 10</button>
+    <button aria-pressed="false">Semana 9</button>
+  </div>
+  <span class="exit-hint">← → navega · Esc sale · f pantalla completa</span>
+</header>
+
+<main>
+  <section class="stage" aria-label="Recurso en proyección">
+    <div class="stage-head">
+      <h1 id="title">Guía de la semana 11: fracciones equivalentes</h1>
+      <span class="meta" id="meta">PDF · 1.8 MiB · publicado por Prof. Ríos</span>
+    </div>
+    <div class="stage-body" id="stage-content">
+      <!-- de apariencia simulada del material (pdf visualizado) -->
+      <div style="width:min(760px,100%);background:#fff;border-radius:14px;padding:44px clamp(20px,6vw,64px);color:#0f172a;">
+        <p style="font-size:12px;letter-spacing:2px;color:#28599B;font-weight:700;">MATEMÁTICA — 3°B — SEMANA 11</p>
+        <h2 style="font-size:clamp(24px,3.4vw,34px);letter-spacing:-.8px;margin-top:10px;">Fracciones equivalentes</h2>
+        <div style="margin-top:22px;display:grid;gap:12px;color:#334155;">
+          <div style="height:10px;border-radius:99px;background:#e2e8f0;width:92%"></div>
+          <div style="height:10px;border-radius:99px;background:#e2e8f0;width:78%"></div>
+          <div style="height:10px;border-radius:99px;background:#e2e8f0;width:85%"></div>
+          <div style="margin-top:18px;display:flex;gap:18px;align-items:center;justify-content:center;padding:18px;background:#F3F6FB;border-radius:14px;">
+            <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="#dbeafe"/><path d="M28 4 A24 24 0 0 1 52 28 L28 28 Z" fill="#28599B"/><circle cx="28" cy="28" r="24" stroke="#28599B" stroke-width="2" fill="none"/></svg>
+            <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="#dbeafe"/><path d="M28 4 A24 24 0 0 1 52 28 L28 28 Z" fill="#28599B"/><circle cx="28" cy="28" r="24" stroke="#28599B" stroke-width="2" fill="none"/><path d="M28 52 A24 24 0 0 1 52 76 L28 76 Z" fill="#93c5fd"/></svg>
+          </div>
+          <div style="height:10px;border-radius:99px;background:#e2e8f0;width:70%"></div>
+          <div style="height:10px;border-radius:99px;background:#e2e8f0;width:60%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="filmstrip" role="tablist" aria-label="Recursos de la semana" id="filmstrip"></div>
+  </section>
+
+  <h2 style="margin-top:34px;font-size:18px;letter-spacing:-.3px;">También disponible esta semana</h2>
+  <div class="gallery">
+    <article class="card rise"><span class="k">Actividad</span><h3>Práctica calificada: equivalentes</h3><p>10 ejercicios con corrección del docente. Estado: publicada.</p></article>
+    <article class="card rise"><span class="k">Imagen / PNG</span><h3>Diagrama: círculos de fracción</h3><p>Material de apoyo. 420 KiB.</p></article>
+    <article class="card rise"><span class="k">Estado cargado</span><h3>¿Viste skeleton?</h3><p>Este prototipo incluyó skeletons elegantes al cargar la semana 11 — nunca un salto de layout.</p></article>
+  </div>
+</main>
+
+<script>
+  const RESOURCES = [
+    { kind:'PDF', title:'Guía de la semana 11: fracciones equivalentes', meta:'PDF · 1.8 MiB · publicado por Prof. Ríos' },
+    { kind:'IMAGEN', title:'Diagrama: círculos de fracción', meta:'PNG · 420 KiB · publicado por Prof. Ríos', diagram:true },
+    { kind:'ACTIVIDAD', title:'Práctica calificada: equivalentes', meta:'Actividad · 10 ejercicios · vence viernes 23:59', card:true },
+    { kind:'PDF', title:'Solucionario (solo docente)', meta:'PDF · 640 KiB · publicado por Prof. Ríos' },
+    { kind:'ACTIVIDAD', title:'Reto bonus de clase', meta:'Actividad opcional · 8 ejercicios' }
+  ];
+  const titleEl = document.getElementById('title');
+  const metaEl = document.getElementById('meta');
+  const posEl = document.getElementById('pos');
+  const stage = document.getElementById('stage-content');
+  const strip = document.getElementById('filmstrip');
+  let idx = 0;
+  RESOURCES.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.setAttribute('role','tab');
+    b.innerHTML = `<span class="k">${r.kind}</span><span class="t">${r.title.split(' ').slice(0,4).join(' ')}…</span>`;
+    b.addEventListener('click', () => go(i));
+    strip.append(b);
+  });
+  function originalPdfHtml() { return stage.firstElementChild.outerHTML; }
+  function stagePdf() { return originalPdfHtml(); }
+  function stageDiagram() {
+    return `<img alt="Diagrama: círculos de fracción" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200'%3E%3Crect fill='%23fff' width='300' height='200' rx='14'/%3E%3Ccircle cx='80' cy='95' r='52' fill='%23dbeafe' stroke='%2328599B' stroke-width='3'/%3E%3Cpath d='M80 43 A52 52 0 0 1 132 95 L80 95 Z' fill='%2328599B'/%3E%3Ccircle cx='215' cy='95' r='52' fill='%23dbeafe' stroke='%2328599B' stroke-width='3'/%3E%3Cpath d='M215 43 A52 52 0 0 1 267 95 L215 95 Z' fill='%2328599B'/%3E%3Cpath d='M215 95 A52 52 0 0 1 267 147 L215 147 Z' fill='%2393c5fd'/%3E%3C/svg%3E">`;
+  }
+  function stageCard(r) {
+    return `<div style="width:min(620px,100%);background:#fff;border-radius:14px;padding:36px;color:#0f172a;">
+      <p style="font-size:12px;letter-spacing:2px;color:#28599B;font-weight:700;margin-bottom:12px;">ACTIVIDAD · MODO PROYECCIÓN</p>
+      <h2 style="font-size:24px;letter-spacing:-.6px;">${r.title}</h2>
+      <ul style="color:#334155;list-style:disc;margin-top:18px;padding-left:22px;display:grid;gap:10px;">
+        <li>10 ejercicios con corrección del docente y historial conservado</li>
+        <li>Estado: publicada · vence viernes 23:59</li>
+        <li>Los estudiantes ven el enunciado; el solucionario es solo docente</li>
+      </ul></div>`;
+  }
+  function paint(i) {
+    const r = RESOURCES[i];
+    for (const [j, c] of strip.querySelectorAll('.chip').entries()) c.setAttribute('aria-current', String(j === i));
+    titleEl.textContent = r.title;
+    metaEl.textContent = r.meta;
+    posEl.textContent = (i + 1) + '/' + RESOURCES.length;
+    strip.children[i].scrollIntoView({ block:'nearest', inline:'nearest', behavior:'smooth' });
+    stage.innerHTML = r.diagram ? stageDiagram() : (r.card ? stageCard(r) : stagePdf());
+    stage.classList.remove('rise');
+  }
+  function go(i) {
+    if (i < 0 || i >= RESOURCES.length) return;
+    idx = i;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (document.startViewTransition && !reduce) document.startViewTransition(() => paint(idx));
+    else paint(idx);
+  }
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(Math.min(idx + 1, RESOURCES.length - 1));
+    if (e.key === 'ArrowLeft') go(Math.max(idx - 1, 0));
+    if (e.key === 'Escape') alert('EVAL saldría del modo proyección y devolvería el foco al panel del curso.');
+  });
+  paint(0);
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Private Material Observations Proposal
 
-Date: 2026-10-08. Predecessor: ab2a020, completed material maintenance. Status: the human approved these concrete requirements and screen mapping through Continue; implemented and verified locally; see docs/material-observations-verification.md. Existing openspec/config.yaml assigns material review and private correction observations to the vice principal.
+Date: 2026-10-08. Predecessor: ab2a020, completed material maintenance. Status: the human approved these concrete requirements and screen mapping through Continue; implemented and verified locally; see docs/pruebas/historico/material-observations-verification.md. Existing openspec/config.yaml assigns material review and private correction observations to the vice principal.
 
 ## Observable next unit
 

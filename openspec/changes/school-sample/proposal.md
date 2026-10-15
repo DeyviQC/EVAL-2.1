@@ -6,4 +6,4 @@ Use the existing active local academic period, catalog, roles and original actor
 
 Curricular reference: MINEDU Programa Curricular de Educación Secundaria, https://www.minedu.gob.pe/curriculo/pdf/programa-curricular-educacion-secundaria.pdf . The national program also includes Castellano como Segunda Lengua; whether it belongs to this institution's plan is unverified, so it is not automatically assigned. Tutoría is not silently introduced as a graded subject. No verified school timetable, teacher list or enrollment was available; all generated distributions are illustrative.
 
-The teacher's suggested DNI entry is recorded separately in docs/student-dni-access-proposal.md. DNI-only sign-in, PIN rules and real student import remain unapproved/unimplemented. No passwords, real DNI, database or uploaded files enter Git.
+The teacher's suggested DNI entry is recorded separately in docs/requisitos/student-dni-access-proposal.md. DNI-only sign-in, PIN rules and real student import remain unapproved/unimplemented. No passwords, real DNI, database or uploaded files enter Git.

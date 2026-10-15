@@ -60,7 +60,7 @@ Material edit, attachment replacement and withdrawal/deletion remain required fu
 
 Real profile/My Courses bridge: 2.2/2.3 verified for own teacher contexts and student operative scope. Additive retained_identity_profiles migration ran only on isolated eval_u11_test; runtime is read-only on profiles, provisioning uses migration identity. Missing names fail closed. No student general-assignment permission is expanded. Publication-time historical material discovery and successor material consultation remain U2; 2.1 stays open for those cases. No global foundation gate closure.
 
-Verification: frontend 70 tests/typecheck/build pass; U11 80 tests / 1,556 assertions, zero failures/errors and one intentional optional-preview skip; embedded Chromium 9 passed including two independently authenticated teacher/student sessions opening the actual stored course. MySQL 8.4.9 / PHP 8.4.26. Run frontend npm test/build and the explicit browser U11 invocation recorded in docs/u12-browser-verification.md. Publication UI remains explicitly unavailable; milestone is not complete. U2 forecast remains 550-900 changed lines; size approval is required under the applicable 400-line review threshold before that coherent unit begins.
+Verification: frontend 70 tests/typecheck/build pass; U11 80 tests / 1,556 assertions, zero failures/errors and one intentional optional-preview skip; embedded Chromium 9 passed including two independently authenticated teacher/student sessions opening the actual stored course. MySQL 8.4.9 / PHP 8.4.26. Run frontend npm test/build and the explicit browser U11 invocation recorded in docs/pruebas/historico/u12-browser-verification.md. Publication UI remains explicitly unavailable; milestone is not complete. U2 forecast remains 550-900 changed lines; size approval is required under the applicable 400-line review threshold before that coherent unit begins.
 
 ## U2 backend/storage implementation receipt
 
@@ -84,4 +84,4 @@ To reproduce: frontend npm test/build, then the existing explicit browser U11 in
 
 - [x] Connect the human-accepted standalone Materials menu to the already approved server-owned courses and Materials panel, preserving My Courses.
 - [x] Verify actual teacher/student standalone navigation and protected byte-identical downloads, with director/vice-principal menu boundaries: 14 browser checks.
-- [x] Verify frontend contracts (115), TypeScript and build; record evidence in docs/materials-navigation-verification.md. No new capability or institutional acceptance is claimed.
+- [x] Verify frontend contracts (115), TypeScript and build; record evidence in docs/pruebas/historico/materials-navigation-verification.md. No new capability or institutional acceptance is claimed.

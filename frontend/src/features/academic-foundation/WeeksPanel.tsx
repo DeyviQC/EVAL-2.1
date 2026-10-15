@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicWeekNavigation} from './AcademicWeekNavigation.js';
 import {AcademicDialog} from './AcademicDialog.js';
+import {ClassroomPresentation} from './ClassroomPresentation.js';
 import {progressLabels} from './learning-progress.js';
 import {AcademicApiError} from './api.js';
 import {materialFileUrl,type Material} from './materials.js';
@@ -17,6 +18,7 @@ export function WeeksPanel({course,client,activities,onExpired,teacherMode=false
  const [editing,setEditing]=useState<WeekAssociation|null>(null),[chosen,setChosen]=useState(''),[opened,setOpened]=useState<Activity|null>(null),[reviewed,setReviewed]=useState<WeekAssociation|null>(null);
  const [contentView,setContentView]=useState<'all'|'material'|'activity'>('all'),[creating,setCreating]=useState(false);
  const activityTrigger=useRef<HTMLElement|null>(null);
+ const projectionTrigger=useRef<HTMLElement|null>(null),[projecting,setProjecting]=useState(false);
  const generation=useRef(0),alive=useRef(true),writing=useRef(false),summary=useRef<HTMLHeadingElement>(null);
  function fail(error:unknown){setMessage(error instanceof AcademicApiError&&error.outcomeUnknown?'El recurso sigue publicado; no se pudo confirmar su semana. Consulta el resultado antes de continuar.':'No se pudo consultar o guardar la organización. Consulta nuevamente.');
   if(error instanceof AcademicApiError&&[401,419].includes(error.status??0)){onExpired();return;}if(error instanceof AcademicApiError&&[403,404].includes(error.status??0)){setCalendar(null);setMaterials(null);setTasks(null);setEditing(null);setOpened(null);setReviewed(null);}}
@@ -40,6 +42,8 @@ export function WeeksPanel({course,client,activities,onExpired,teacherMode=false
  const entries=[...(contentView==='activity'?[]:materials?.items??[]),...(contentView==='material'?[]:tasks?.items??[])];
  return <section aria-label="Semanas del curso" className="eval-weekly-content" aria-busy={busy}>
   {calendar?.current&&<AcademicWeekNavigation calendar={calendar} selection={selection} busy={busy} onSelect={next=>{setTerm('');setCreating(false);void load(next,'',true);}}/>}
+  {selection.bucket==='week'&&calendar&&<button className="eval-primary-action" disabled={busy} onClick={event=>{projectionTrigger.current=event.currentTarget;setProjecting(true);}}>Proyectar semana</button>}
+  {projecting&&<ClassroomPresentation course={course} selection={selection} weekTitle={heading} client={client} onClose={()=>setProjecting(false)} onExpired={onExpired} returnFocus={projectionTrigger.current}/>}
   {calendar&&!calendar.current&&<div className="eval-empty-state"><strong>El calendario está por configurar</strong><p>Subdirección debe publicar los bimestres y semanas. Los recursos existentes siguen disponibles.</p></div>}
   <div className="eval-content-toolbar"><div><h4 ref={summary} tabIndex={-1}>{title}</h4>{selection.bucket==='week'&&<p>{currentWeek?.start_on} a {currentWeek?.end_on}</p>}</div><div><button disabled={busy} aria-pressed={selection.bucket==='pending'} onClick={()=>void load({bucket:'pending'},'',true)}>{teacherMode?'Por revisar':'Ver pendientes'}</button><button aria-label="Actualizar contenido semanal" disabled={busy} onClick={()=>void load(selection,filter,true)}>↻ Actualizar</button>{teacherMode&&course.can_publish&&selection.bucket==='week'&&<button className="eval-primary-action" disabled={busy||activities.isUncertain()||client.isUncertain()} aria-expanded={creating} onClick={()=>setCreating(!creating)}>{creating?'Cancelar':'＋ Crear actividad'}</button>}</div></div>
   <nav className="eval-content-types" aria-label="Tipo de contenido semanal">{(['all','material','activity'] as const).map(type=><button key={type} aria-pressed={contentView===type} onClick={()=>setContentView(type)}>{type==='all'?'Todo':type==='material'?'Materiales':'Actividades'}{type==='material'&&materials?' ('+materials.total+')':type==='activity'&&tasks?' ('+tasks.total+')':''}</button>)}</nav>

@@ -25,14 +25,14 @@ Closing a browser keeps the app running. Opening the same role again gracefully 
 
 ## What is available
 
-- Director/Admin: real period/catalog management and enrollment listing/creation, immediate transfers and explicit closure with retained history. See `docs/enrollment-ui-contract.md` for the bounded transport and evidence.
+- Director/Admin: real period/catalog management and enrollment listing/creation, immediate transfers and explicit closure with retained history. See `docs/requisitos/enrollment-ui-contract.md` for the bounded transport and evidence.
 - Teacher/student: real Mathematics / 2.º B course, protected materials, teacher publication and student consultation/download.
-- Director/Admin and Vice Principal: assignment planning, activation, dated closure and immediate teacher replacement, with retained original contexts and replacement lineage. The Vice Principal uses purpose-bound options and cannot access general period/catalog/enrollment administration. See `docs/assignment-ui-contract.md`.
-- Director/Admin: Users creates actual teacher/student accounts, shows their generated initial passwords once, and supports reset, deactivation and reactivation with retained records. Mi cuenta lets each authenticated user change their own password. Creation does not implicitly enroll or assign. See `docs/local-user-administration-verification.md`.
-- Teacher/student: Activities and Deliveries use actual course selection, publication, text/file delivery, retained updates, private version downloads and explicit activity closure. Evidence limit is 10 MiB; dates are informational. See `docs/activity-delivery-verification.md`.
+- Director/Admin and Vice Principal: assignment planning, activation, dated closure and immediate teacher replacement, with retained original contexts and replacement lineage. The Vice Principal uses purpose-bound options and cannot access general period/catalog/enrollment administration. See `docs/requisitos/assignment-ui-contract.md`.
+- Director/Admin: Users creates actual teacher/student accounts, shows their generated initial passwords once, and supports reset, deactivation and reactivation with retained records. Mi cuenta lets each authenticated user change their own password. Creation does not implicitly enroll or assign. See `docs/pruebas/historico/local-user-administration-verification.md`.
+- Teacher/student: Activities and Deliveries use actual course selection, publication, text/file delivery, retained updates, private version downloads and explicit activity closure. Evidence limit is 10 MiB; dates are informational. See `docs/pruebas/historico/activity-delivery-verification.md`.
 - Report export, administrator-account maintenance, file replacement/purge, supervision, institutional library/content search and synchronization remain pending.
 
-Academic notifications now persist activity publication, delivery/update and grading/correction events for their actual recipients. The own feed supports unread counts, explicit refresh, 50-row paging, section shortcuts and bounded read receipts. See docs/academic-notification-verification.md.
+Academic notifications now persist activity publication, delivery/update and grading/correction events for their actual recipients. The own feed supports unread counts, explicit refresh, 50-row paging, section shortcuts and bounded read receipts. See docs/pruebas/historico/academic-notification-verification.md.
 
 The initial course and accounts are provisioned once through existing academic commands. Starts never migrate, reseed, reset periods or delete data. Development verification has retained two small welcome PDF publications; these are test-owned persistent content, not institutional resources. Upload your own allowed PDF/image/Office file through the teacher UI to exercise the real journey.
 
@@ -70,20 +70,20 @@ Supported commands from the repository root:
 
 Screenshots and the latest non-secret browser verification receipt are in the private ignored directory. Neither loopback browser evidence nor this working development app establishes school LAN/WLAN, external-Internet-loss, physical tablet, load, accessibility or institutional acceptance. OpenSpec acceptance gates remain open.
 
-Assessment delivery: AD/A/B/C, required feedback, retained corrections and locked assessed evidence are verified locally. See docs/delivery-assessment-verification.md for 56 runtime checks, 11 browser checks and remaining institutional acceptance.
+Assessment delivery: AD/A/B/C, required feedback, retained corrections and locked assessed evidence are verified locally. See docs/pruebas/historico/delivery-assessment-verification.md for 56 runtime checks, 11 browser checks and remaining institutional acceptance.
 
-Director classroom Reports: real scope selectors, logical-delivery totals, current AD/A/B/C distribution and 50-row roster pagination are verified. See docs/classroom-report-verification.md. Use manage-dev.ps1 -Command verify-reports; -BrowserOnly reuses the existing synthetic report fixtures.
+Director classroom Reports: real scope selectors, logical-delivery totals, current AD/A/B/C distribution and 50-row roster pagination are verified. See docs/pruebas/historico/classroom-report-verification.md. Use manage-dev.ps1 -Command verify-reports; -BrowserOnly reuses the existing synthetic report fixtures.
 
-Academic notifications: publication, delivery/update and assessment/correction events, own read receipts and retained read state are verified in MySQL and Chromium. See docs/academic-notification-verification.md. Use manage-dev.ps1 -Command verify-notifications; -BrowserOnly reuses server fixtures.
+Academic notifications: publication, delivery/update and assessment/correction events, own read receipts and retained read state are verified in MySQL and Chromium. See docs/pruebas/historico/academic-notification-verification.md. Use manage-dev.ps1 -Command verify-notifications; -BrowserOnly reuses server fixtures.
 
-Materials now has its own teacher/student menu. Select a course there to consult/publish through the existing protected service; My Courses remains available. The standalone navigation passed 14 real browser checks. See docs/materials-navigation-verification.md.
+Materials now has its own teacher/student menu. Select a course there to consult/publish through the existing protected service; My Courses remains available. The standalone navigation passed 14 real browser checks. See docs/pruebas/historico/materials-navigation-verification.md.
 
-Historial / Mi historial: director enrollment/assignment reads, vice-principal assignment reads, teacher own assignments and student own enrollments, with retained dates/scope and bounded paging. See docs/academic-history-verification.md; verify with manage-dev.ps1 -Command verify-history.
+Historial / Mi historial: director enrollment/assignment reads, vice-principal assignment reads, teacher own assignments and student own enrollments, with retained dates/scope and bounded paging. See docs/pruebas/historico/academic-history-verification.md; verify with manage-dev.ps1 -Command verify-history.
 
-Teacher/student delivery cards now offer Ver contexto original through the existing protected historical endpoint. See docs/delivery-context-verification.md; verify with manage-dev.ps1 -Command verify-delivery-context.
+Teacher/student delivery cards now offer Ver contexto original through the existing protected historical endpoint. See docs/pruebas/historico/delivery-context-verification.md; verify with manage-dev.ps1 -Command verify-delivery-context.
 
-Biblioteca: choose an authorized course and search its eligible materials by title, description or filename. Search covers server-side records with protected downloads and 50-row pages. See docs/material-library-verification.md; verify with manage-dev.ps1 -Command verify-library, or -BrowserOnly to reuse fixtures.
+Biblioteca: choose an authorized course and search its eligible materials by title, description or filename. Search covers server-side records with protected downloads and 50-row pages. See docs/pruebas/historico/material-library-verification.md; verify with manage-dev.ps1 -Command verify-library, or -BrowserOnly to reuse fixtures.
 
-Academic write recovery now requires a matching successful consultation before He revisado el resultado becomes available. It never repeats an uncertain write automatically. See docs/academic-write-recovery-verification.md; verify with manage-dev.ps1 -Command verify-write-recovery.
+Academic write recovery now requires a matching successful consultation before He revisado el resultado becomes available. It never repeats an uncertain write automatically. See docs/pruebas/historico/academic-write-recovery-verification.md; verify with manage-dev.ps1 -Command verify-write-recovery.
 
-Event timestamps in Materials, Biblioteca, deliveries, grades, notifications and original acceptance context now display Spanish dates/times in America/Lima, labeled hora de Per?. Declared academic calendar dates remain unchanged. See docs/recorded-time-verification.md; verify with manage-dev.ps1 -Command verify-recorded-time.
+Event timestamps in Materials, Biblioteca, deliveries, grades, notifications and original acceptance context now display Spanish dates/times in America/Lima, labeled hora de Per?. Declared academic calendar dates remain unchanged. See docs/pruebas/historico/recorded-time-verification.md; verify with manage-dev.ps1 -Command verify-recorded-time.

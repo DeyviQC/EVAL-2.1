@@ -8,4 +8,4 @@
 - [x] Complete existing workflow regressions and record bundle/evidence limits.
 - [x] Open the real updated application and commit the verified sequential local handoff.
 
-Evidence: docs/tablet-interface-verification.md. The local commit is the sequential handoff; actual tablet and institutional gates remain open.
+Evidence: docs/pruebas/historico/tablet-interface-verification.md. The local commit is the sequential handoff; actual tablet and institutional gates remain open.

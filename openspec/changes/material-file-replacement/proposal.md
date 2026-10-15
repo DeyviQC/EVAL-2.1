@@ -1,6 +1,6 @@
 # Retained Material File Replacement
 
-Date: 2026-10-08. Predecessor: fd8e595, verified private material observations. Status: the human approved these concrete rules, design and screen mapping through Continue before implementation. Implemented and verified locally; see docs/material-file-replacement-verification.md.
+Date: 2026-10-08. Predecessor: fd8e595, verified private material observations. Status: the human approved these concrete rules, design and screen mapping through Continue before implementation. Implemented and verified locally; see docs/pruebas/historico/material-file-replacement-verification.md.
 
 ## Proposed bounded behavior
 
