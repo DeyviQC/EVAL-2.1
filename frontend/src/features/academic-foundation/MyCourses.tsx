@@ -9,13 +9,23 @@ import type { WeeksClient } from './weeks.js';
 import type { ActivityClient } from './activities.js';
 import {CourseClassroomButtons} from './CourseClassroomButtons.js';
 import {courseClassrooms,emptyClassroom,selectedClassroom,type CourseClassroom as AuthorizedClassroom,type CourseClassroomSelection} from './course-classrooms.js';
+function getSubjectAccent(subject: string) {
+  const s = subject.toLowerCase();
+  if (s.includes('matemática') || s.includes('matematica')) return { bar: 'bg-blue-500', chip: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800' };
+  if (s.includes('comunicación') || s.includes('comunicacion')) return { bar: 'bg-purple-500', chip: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800' };
+  if (s.includes('ciencia') || s.includes('tecnología') || s.includes('tecnologia')) return { bar: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' };
+  if (s.includes('sociales') || s.includes('historia')) return { bar: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' };
+  if (s.includes('personal') || s.includes('cívica') || s.includes('civica')) return { bar: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800' };
+  if (s.includes('arte') || s.includes('cultura')) return { bar: 'bg-teal-500', chip: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800' };
+  return { bar: 'bg-primary', chip: 'bg-primary-soft text-primary border-primary/20' };
+}
+
 export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void}){
   const [localClassroom,setLocalClassroom]=useState(emptyClassroom);
   const scope=classroom??localClassroom;
   const changeClassroom=onClassroomChange??setLocalClassroom;
   const [classrooms,setClassrooms]=useState<AuthorizedClassroom[]>([]);
   const activeClassroom=selectedClassroom(classrooms,scope);
-
 
   const [rows,setRows]=useState<Course[]>([]),[selected,setSelected]=useState<Course|null>(null),[cursor,setCursor]=useState<string|null>(null);
   const [phase,setPhase]=useState<'loading'|'ready'|'error'>('loading');const [message,setMessage]=useState('');const generation=useRef(0);
@@ -40,16 +50,146 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
     }catch(error){if(current===generation.current)fail(error);}})();
     return ()=>{generation.current++;};
   },[client,teacherMode,scope.gradeId,scope.sectionId]);
-  return <section aria-label={libraryOnly?'Biblioteca':materialsOnly?'Materiales':'Mis cursos'} aria-busy={phase==='loading'}><h3 hidden={!!selected} className="text-2xl font-semibold">{selected?selected.subject:libraryOnly?'Biblioteca':materialsOnly?'Materiales':'Mis cursos'}</h3>
-    {teacherMode&&!selected&&<CourseClassroomButtons rows={classrooms} value={scope} onChange={value=>{generation.current++;setRows([]);setSelected(null);setCursor(null);changeClassroom(value);}} disabled={phase==='loading'}/>}
-    {(materialsOnly||libraryOnly)&&!selected&&(!teacherMode||activeClassroom)&&<p className="my-4">Selecciona un curso para consultar sus materiales.</p>}
-    {teacherMode&&!selected&&activeClassroom&&<p className="eval-scope-hint">Aula seleccionada: {activeClassroom.grade} · {activeClassroom.section}</p>}
-    {phase==='loading'&&<p role="status">Consultando tus cursos…</p>}{phase==='error'&&<p role="alert">{message}</p>}
-    <button hidden={!!selected} className="my-4 rounded-lg border px-4 py-2" disabled={phase==='loading'} onClick={()=>void load()}>{selected?'Volver a mis cursos':'Consultar cursos'}</button>
-    {phase==='ready'&&selected?<CourseClassroom key={selected.id} course={selected} materials={materials} {...weeks?{weeks}:{}} {...activities?{activities}:{}} teacherMode={teacherMode} onExpired={onExpired} onBack={()=>void load()} initial={libraryOnly?'library':materialsOnly?'materials':'weeks'}/>:
-      phase==='ready'&&<><div className="grid gap-4 md:grid-cols-2">{rows.map(row=><article key={row.id} className="eval-course-card rounded-xl border bg-white p-5" aria-label={row.subject+' · '+row.grade+' '+row.section}>
-        <h4 className="text-lg font-semibold whitespace-pre-wrap">{row.subject}</h4><p>Aula {row.grade} · {row.section}</p><p className="whitespace-pre-wrap">{row.teacher}</p><p>{row.period} · {row.state==='planned'?'Planificado':row.state==='closed'||row.period_state==='closed'?'Contexto histórico':'Activo'}</p>
-        <button className="mt-3 rounded-lg border px-4 py-2" onClick={()=>void open(row.id)}>{libraryOnly?'Consultar biblioteca del curso':materialsOnly?'Consultar materiales del curso':'Entrar al curso'}</button></article>)}</div>
-        {rows.length===0&&(!teacherMode||activeClassroom)&&<p>No tienes cursos disponibles para esta consulta.</p>}{teacherMode&&classrooms.length===0&&<p>No tienes aulas asignadas para esta consulta.</p>}{cursor&&<button onClick={()=>void load(cursor)}>Cargar más cursos</button>}</>}
-  </section>;
+
+  const sectionTitle = selected ? selected.subject : libraryOnly ? 'Biblioteca' : materialsOnly ? 'Materiales' : 'Mis cursos';
+
+  return (
+    <section aria-label={libraryOnly?'Biblioteca':materialsOnly?'Materiales':'Mis cursos'} aria-busy={phase==='loading'} className="space-y-6">
+      {!selected && (
+        <header className="border-b border-border/80 pb-5">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-accent bg-accent-soft/60 px-2.5 py-0.5 rounded-full">
+              {libraryOnly ? 'RECURSOS Y BIBLIOTECA' : materialsOnly ? 'MATERIALES DE APRENDIZAJE' : 'AULAS VIRTUALES'}
+            </span>
+          </div>
+          <h3 className="font-serif text-2xl sm:text-3xl font-normal text-text tracking-tight">
+            {sectionTitle}
+          </h3>
+          <p className="text-xs sm:text-sm text-text-muted mt-1">
+            {libraryOnly ? 'Consulta y descarga libros, guías y recursos de consulta para tus áreas.' : materialsOnly ? 'Revisa los materiales y documentos de clase compartidos por tus docentes.' : 'Espacio de aprendizaje de tus áreas curriculares, tareas y seguimiento.'}
+          </p>
+        </header>
+      )}
+
+      {selected && (
+        <h3 hidden className="text-2xl font-semibold">{sectionTitle}</h3>
+      )}
+
+      {teacherMode && !selected && (
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-xs">
+          <CourseClassroomButtons rows={classrooms} value={scope} onChange={value=>{generation.current++;setRows([]);setSelected(null);setCursor(null);changeClassroom(value);}} disabled={phase==='loading'}/>
+        </div>
+      )}
+
+      {(materialsOnly||libraryOnly)&&!selected&&(!teacherMode||activeClassroom)&&(
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-soft/50 border border-primary/20 text-xs text-primary">
+          <span>💡</span>
+          <p>Selecciona un curso para consultar sus materiales.</p>
+        </div>
+      )}
+
+      {teacherMode&&!selected&&activeClassroom&&(
+        <p className="eval-scope-hint text-xs font-medium text-text-muted bg-surface-2 border border-border px-3 py-1.5 rounded-lg inline-block">
+          Aula seleccionada: <strong>{activeClassroom.grade} · {activeClassroom.section}</strong>
+        </p>
+      )}
+
+      {phase==='loading'&& (
+        <div className="flex items-center gap-2.5 p-4 rounded-xl bg-surface border border-border text-sm text-text-muted">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p role="status">Consultando tus cursos…</p>
+        </div>
+      )}
+
+      {phase==='error'&& (
+        <div className="p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm">
+          <p role="alert">{message}</p>
+        </div>
+      )}
+
+      <button
+        hidden={!!selected}
+        className="inline-flex items-center gap-2 rounded-full border border-border bg-surface hover:bg-surface-2 px-4 py-2 text-xs font-medium text-text transition-colors cursor-pointer"
+        disabled={phase==='loading'}
+        onClick={()=>void load()}
+      >
+        <span>{selected?'Volver a mis cursos':'Consultar cursos'}</span>
+      </button>
+
+      {phase==='ready'&&selected?(
+        <CourseClassroom
+          key={selected.id}
+          course={selected}
+          materials={materials}
+          {...weeks?{weeks}:{}}
+          {...activities?{activities}:{}}
+          teacherMode={teacherMode}
+          onExpired={onExpired}
+          onBack={()=>void load()}
+          initial={libraryOnly?'library':materialsOnly?'materials':'weeks'}
+        />
+      ):(
+        phase==='ready'&&(
+          <>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {rows.map(row=>{
+                const accent = getSubjectAccent(row.subject);
+                return (
+                  <article
+                    key={row.id}
+                    className="eval-course-card relative group bg-surface border border-border hover:border-primary/50 rounded-xl p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                    aria-label={row.subject+' · '+row.grade+' '+row.section}
+                  >
+                    <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${accent.bar}`} aria-hidden="true" />
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2 pt-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${accent.chip}`}>
+                          {row.grade} · {row.section}
+                        </span>
+                        <span className="text-[10px] font-medium text-text-muted px-2 py-0.5 rounded-md bg-surface-2 border border-border">
+                          {row.state==='planned'?'Planificado':row.state==='closed'||row.period_state==='closed'?'Contexto histórico':'Activo'}
+                        </span>
+                      </div>
+                      <h4 className="text-base font-bold text-text group-hover:text-primary transition-colors whitespace-pre-wrap leading-snug">
+                        {row.subject}
+                      </h4>
+                      <p className="text-xs text-text-muted mt-1">Aula {row.grade} · {row.section}</p>
+                      <div className="mt-4 pt-3 border-t border-border/60">
+                        <p className="text-xs font-medium text-text truncate whitespace-pre-wrap">👤 {row.teacher}</p>
+                        <p className="text-[11px] text-text-muted truncate mt-0.5">📅 {row.period} · {row.state==='planned'?'Planificado':row.state==='closed'||row.period_state==='closed'?'Contexto histórico':'Activo'}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="mt-4 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-2 hover:bg-primary hover:text-white hover:border-primary px-3 py-2 text-xs font-semibold text-text transition-all cursor-pointer"
+                      onClick={()=>void open(row.id)}
+                    >
+                      {libraryOnly?'Consultar biblioteca del curso':materialsOnly?'Consultar materiales del curso':'Entrar al curso'}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+            {rows.length===0&&(!teacherMode||activeClassroom)&&(
+              <div className="p-8 text-center bg-surface border border-border rounded-xl">
+                <p className="text-sm text-text-muted">No tienes cursos disponibles para esta consulta.</p>
+              </div>
+            )}
+            {teacherMode&&classrooms.length===0&&(
+              <div className="p-8 text-center bg-surface border border-border rounded-xl">
+                <p className="text-sm text-text-muted">No tienes aulas asignadas para esta consulta.</p>
+              </div>
+            )}
+            {cursor&&(
+              <button
+                className="mt-4 px-5 py-2.5 rounded-full border border-border bg-surface hover:bg-surface-2 text-xs font-semibold text-text transition-colors cursor-pointer"
+                onClick={()=>void load(cursor)}
+              >
+                Cargar más cursos
+              </button>
+            )}
+          </>
+        )
+      )}
+    </section>
+  );
 }
