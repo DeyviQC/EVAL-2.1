@@ -32,12 +32,12 @@ export function AppHeader({
     <header className="sticky top-4 z-20 mx-auto w-full max-w-6xl px-4 md:px-6 mb-6">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-full bg-surface/85 backdrop-blur-xl border border-border/80 shadow-sm transition-all">
         {/* Left: Section indicator & Semantic heading */}
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary-soft text-primary">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary-soft text-primary shrink-0">
             {activeLabel}
           </span>
-          {/* Accessible heading for test compatibility */}
-          <h2 className="sr-only">Tu espacio académico</h2>
+          <span className="text-border text-xs hidden sm:inline" aria-hidden="true">/</span>
+          <h2 className="text-xs font-medium text-text-muted truncate">Tu espacio académico</h2>
         </div>
 
         {/* Center: Global Search trigger with Ctrl+K */}
