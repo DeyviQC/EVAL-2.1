@@ -25,7 +25,7 @@ const server=https.createServer({cert:readFileSync(certPath),key:readFileSync(ke
       }
       const mime=filename.endsWith('.png')?'image/png':filename.endsWith('.js')?'text/javascript':filename.endsWith('.css')?'text/css':'text/html';
       response.writeHead(200,{'Content-Type':`${mime}; charset=utf-8`,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',
-        'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});
+        'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});
       response.end(readFileSync(target));return;
     }
   }

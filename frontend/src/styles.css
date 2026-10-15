@@ -1,4 +1,36 @@
 @import "tailwindcss";
+/* Classroom presentation: editorial canvas over the existing institutional tokens. */
+.eval-projection { --projection-paper:color-mix(in srgb,var(--eval-paper) 86%,#d3ba8b);position:fixed;inset:0;margin:0;border:0;padding:24px clamp(16px,4vw,64px);width:100%;max-width:none;height:100dvh;max-height:none;overflow:auto;background:var(--projection-paper);color:var(--color-eval-ink); }
+.eval-projection::backdrop { background:#142D56; }
+.eval-projection button { min-height:44px;padding:10px 18px;border:1px solid #142D5633;background:#fffaf1;color:#142D56;border-radius:999px; }
+.eval-projection button:disabled { opacity:.45; }
+.eval-projection-nav { position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;width:fit-content;margin:auto;padding:10px 18px;border-radius:28px;background:#fffdf7;border:1px solid #e3dccd;box-shadow:0 12px 38px #142D5614; }
+.eval-projection-nav strong { color:var(--eval-primary);letter-spacing:.18em; }
+.eval-projection-nav span { font-size:.85rem; }
+.eval-projection-stage { min-height:calc(100dvh - 200px);display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.3fr);gap:clamp(24px,5vw,80px);align-items:center;padding-block:40px; }
+.eval-projection-copy h1,.eval-projection-state h1 { font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;font-size:clamp(2.5rem,4.5vw,5.2rem);font-weight:400;line-height:1.07;letter-spacing:-.035em;overflow-wrap:anywhere;margin:20px 0; }
+.eval-projection-copy p { color:#4e5968;max-width:42ch;white-space:pre-wrap;overflow-wrap:anywhere; }
+.eval-projection-copy .eval-projection-kicker { color:var(--eval-accent);font-size:.8rem;letter-spacing:.13em;text-transform:uppercase; }
+.eval-projection-copy small { display:block;margin-top:26px;color:#4e5968; }
+.eval-projection-resource { min-width:0;view-transition-name:eval-projection-resource;animation:eval-projection-enter 220ms ease-out; }
+.eval-projection-sheet { position:relative;background:#fff;border-radius:18px;padding:clamp(24px,4vw,54px);box-shadow:0 28px 65px #142D5624;max-height:65dvh;overflow:auto; }
+.eval-projection-sheet h2 { font-family:Georgia,serif;font-weight:400;font-size:2rem;overflow-wrap:anywhere; }
+.eval-projection-instructions { white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.25rem; }
+.eval-projection-media iframe { display:block;width:100%;height:65dvh;border:1px solid #e3dccd;border-radius:16px;background:white; }
+.eval-projection-media img { display:block;max-width:100%;max-height:65dvh;object-fit:contain;margin:auto;border-radius:16px; }
+.eval-projection-media a { display:inline-block;margin-top:14px;color:#142D56;text-decoration:underline;min-height:44px;padding:10px; }
+.eval-projection-controls { display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:12px 0; }
+.eval-projection-controls small { color:#4e5968; }
+.eval-projection-state,.eval-projection-loading { grid-column:1/-1;max-width:720px;justify-self:center; }
+.eval-projection-skeleton { display:block;width:min(70vw,600px);height:200px;margin:20px 0;border-radius:18px;background:#e3dccd; }
+@keyframes eval-projection-enter { from { opacity:0;transform:translateY(12px); } to { opacity:1;transform:none; } }
+@supports (animation-timeline:view()) { .eval-projection-instructions { animation:eval-projection-read linear both;animation-timeline:view();animation-range:entry 0% entry 100%; } }
+@keyframes eval-projection-read { from { opacity:.8;transform:translateY(6px); } to { opacity:1;transform:none; } }
+::view-transition-old(eval-projection-resource) { animation:eval-projection-exit 150ms ease-out both; }
+::view-transition-new(eval-projection-resource) { animation:eval-projection-enter 220ms ease-out both; }
+@keyframes eval-projection-exit { to { opacity:0; } }
+@media (max-width:800px) { .eval-projection-stage { grid-template-columns:1fr;gap:24px; }.eval-projection-copy h1 { font-size:2.6rem; }.eval-projection-media iframe { height:55dvh; } }
+@media (prefers-reduced-motion:reduce) { .eval-projection-resource,.eval-projection-instructions { animation:none; }.eval-projection button { transition:none; }::view-transition-old(eval-projection-resource),::view-transition-new(eval-projection-resource) { animation:none; } }
 @theme { --color-eval-ink:#0f172a; --color-eval-teal:#28599B; --color-eval-paper:#F3F6FB; }
 :root { color-scheme:light; --eval-primary:#142D56; --eval-accent:#28599B; --eval-line:#e2e8f0; --eval-muted:#64748b; }
 .eval-classroom-filters { padding:20px; margin-block:20px; background:white; border:1px solid #e2e8f0; border-radius:14px; }
