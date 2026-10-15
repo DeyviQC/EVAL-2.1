@@ -41,7 +41,7 @@ if ($evalProcess) {
 if (Get-NetTCPConnection -LocalPort 3307 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Port 3307 occupied; never use another server.'
 }
-$evalArgs = @('--no-defaults', ('--datadir="'+$evalData+'"'), '--bind-address=127.0.0.1', '--port=3307',
+$evalArgs = @('--no-defaults', ('--basedir="'+(Join-Path $evalRoot 'mysql')+'"'), ('--datadir="'+$evalData+'"'), '--bind-address=127.0.0.1', '--port=3307',
     '--mysqlx=OFF', '--skip-log-bin', '--require-secure-transport=ON',
     ('--ssl-ca="'+(Join-Path $evalRoot 'tls\ca.pem')+'"'),
     ('--ssl-cert="'+(Join-Path $evalRoot 'tls\server-cert.pem')+'"'),

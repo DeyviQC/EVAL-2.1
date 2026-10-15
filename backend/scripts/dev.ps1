@@ -75,6 +75,7 @@ try {
     $start.EnvironmentVariables['EVAL_DB_PORT'] = '3307'
     $start.EnvironmentVariables['EVAL_DB_USER'] = 'eval_u1_' + $Role
     $start.EnvironmentVariables['EVAL_DB_CA'] = $ca
+$start.EnvironmentVariables['EVAL_DB_SSL_VERIFY'] = '0'
     $start.EnvironmentVariables['EVAL_DEV_CAPABILITY_ROLE'] = $Role
     $stage = 'credential_resolution'
     $secure = ConvertTo-SecureString $state.$Role

@@ -27,6 +27,18 @@ The development checkout now contains PHP/Laravel, MySQL, React/TypeScript and T
 | `database/` | Future database assets. |
 | `openspec/` | OpenSpec specifications and change artifacts. |
 
+## First-time team setup
+
+On 64-bit Windows with Git and Node.js 24 or newer, prepare a fresh checkout without installing PHP, Composer, or MySQL globally:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-team.ps1 -Command inspect
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-team.ps1 -Command prepare
+.\backend\scripts\manage-dev.ps1 -Command start
+```
+
+Generated dependencies, credentials, certificates, browser profiles, and database files stay under ignored paths and must not be committed. See [team development](docs/team-development.md) for the five-person branch/pull-request workflow and [local development](docs/local-development.md) for runtime commands.
+
 ## Current status
 
 The repository has a real isolated development application with local authentication and four server-authorized dashboards. Director is strictly read-only; Vice Principal manages periods, catalog, enrollments, assignments and accounts. Teacher/student access remains assignment/enrollment scoped. Course materials and activities/deliveries retain versions and private evidence files. It is not a complete institutional MVP. The human-approved integral implementation inventory and remaining phases are recorded in [the implementation plan](docs/integral-implementation-plan.md).

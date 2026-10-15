@@ -1,5 +1,7 @@
 # EVAL real local development application
 
+For a fresh team checkout, start with [`team-development.md`](team-development.md) and run `backend/scripts/setup-team.ps1 -Command prepare`. The setup contract pins the current team versions and creates an ignored, user-scoped runtime. Version numbers and restoration notes later in this document describe the original development machine and are historical evidence, not prerequisites for a new checkout.
+
 Date: 2026-10-08 (America/Lima). This runs the actual React application, Laravel HTTP adapter, academic services and MySQL persistence. It does not serve the synthetic prototype or launch PHPUnit previews.
 
 ## Opening and stopping

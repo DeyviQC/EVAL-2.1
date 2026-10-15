@@ -5,8 +5,11 @@ param(
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
 )
 $ErrorActionPreference = 'Stop'
-$root = Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u1'
-if (!(Test-Path -LiteralPath $root)) { throw 'Isolated runtime missing' }
+$repo = [IO.Path]::GetFullPath((Split-Path (Split-Path $PSScriptRoot)))
+$workspaceRoot = Join-Path $repo '.local\runtime'
+$legacyRoot = Join-Path $env:LOCALAPPDATA 'Temp\opencode\eval-u1'
+$root = if (Test-Path -LiteralPath $workspaceRoot) { $workspaceRoot } else { $legacyRoot }
+if (!(Test-Path -LiteralPath $root)) { throw 'Isolated runtime missing. Run .\backend\scripts\setup-team.ps1 -Command prepare.' }
 $php = Join-Path $root 'php\php.exe'
 $names = @('COMPOSER_HOME','COMPOSER_CACHE_DIR','COMPOSER_VENDOR_DIR','COMPOSER_AUTH','COMPOSER','GIT_CONFIG_GLOBAL','GIT_CONFIG_NOSYSTEM','GIT_TERMINAL_PROMPT','EVAL_VENDOR_DIR','EVAL_DB_HOST','EVAL_DB_PORT','EVAL_DB_NAME','EVAL_DB_USER','EVAL_DB_PASSWORD','EVAL_DB_CA','EVAL_DB_ROLE','EVAL_U1_MIGRATION_PASSWORD','EVAL_UNIT')
 $saved = @{}
@@ -43,6 +46,7 @@ try {
         $env:EVAL_UNIT = $Unit
         $env:EVAL_DB_USER = "eval_u1_$Role"
         $env:EVAL_DB_CA = Join-Path $root 'tls\ca.pem'
+        $env:EVAL_DB_SSL_VERIFY = '0'
         $env:EVAL_DB_ROLE = $Role
     }
     $target = switch ($Command) {
