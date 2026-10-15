@@ -12,6 +12,19 @@ import { weekCases } from '../.test-build/features/academic-foundation/weeks.tes
 import {calendarCases} from '../.test-build/features/academic-foundation/calendars.test.js';
 import {materialFileCases} from '../.test-build/features/academic-foundation/material-files.test.js';
 import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+test('classroom CSP permits same-origin frames without relaxing scripts or defaults',()=>{
+ const proxy=readFileSync('../backend/dev-runtime/https-proxy.mjs','utf8');
+ for(const directive of ["frame-src 'self'","default-src 'none'","script-src 'self'","frame-ancestors 'none'"])assert.ok(proxy.includes(directive));
+ assert.doesNotMatch(proxy,/frame-src[^;"\n]*(?:https?:|\*|blob:|data:)/);
+});
+test('classroom inherits institutional tokens and keeps both motion paths progressive',()=>{
+ const css=readFileSync('src/styles.css','utf8');
+ for(const value of ['var(--eval-paper)','var(--primary)','var(--eval-accent)','var(--text)','var(--surface)','var(--border)','@supports (animation-timeline:view())','::view-transition-old(eval-projection-resource)','prefers-reduced-motion:reduce'])assert.ok(css.includes(value),value);
+});
+import {classroomPresentationCases} from '../.test-build/features/academic-foundation/classroom-presentation.test.js';
+for(const [name,run] of classroomPresentationCases)test(name,run);
 import {courseClassroomCases} from '../.test-build/features/academic-foundation/course-classrooms.test.js';
 for(const [name,run] of courseClassroomCases)test(name,run);
 import {directoryFilterCases} from '../.test-build/features/academic-foundation/directory-filters.test.js';

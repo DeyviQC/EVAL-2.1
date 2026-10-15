@@ -1,6 +1,6 @@
 # Classroom presentation (Pantalla de Aula)
 Objective: implement the pending "classroom screen/board presentation" module — a modern, motion-forward full-screen projector view of course materials.
-Branch: `feat/classroom-presentation` (created after PR #1 merge; prototyping on the current working base meanwhile) | Delivery: `ask-on-risk` | Checks: typecheck + existing suite (151-test floor) + new component isolated tests.
+Branch: `chore/documentation-navigation` (integrated from `feat/classroom-presentation`) | Delivery: `exception-ok` (one local feature commit explicitly chosen) | Checks: typecheck, contracts, build, targeted Chrome scenarios.
 Driver: `ui-aula-design` skill + `landing-page-design`/`scroll-warp` motion layer; CSS-only motion (no animation library dependency).
 
 ## Specs
@@ -13,13 +13,20 @@ Driver: `ui-aula-design` skill + `landing-page-design`/`scroll-warp` motion laye
 
 ## Tasks
 
-- **T1** — S1-S4 — `inline` — **prototype complete (pending user visual approval)** — self-contained navigable mockup at `docs/prototipos/aula-presentation/prototype.html`; verified with repo Playwright (Chrome channel): init renders course 3B week 11 (5 resources), ArrowRight/Left cycles resources with View Transitions, filmstrip chip click navigates, position indicator updates, 0 page errors. Institutional tokens inherited; motion guarded by @supports + prefers-reduced-motion.
-- **T2** — S5 — user prototype approval cycle.
-- **T3** — S1-S4 — implementation pending prototype approval + PR #1 merge.
-- **T4** — S5 — verification (typecheck/suite/manual projection walkthrough).
+- **T3 implementation route** — `inline` — authorized by "sigamos con lo que toca que es seguir desarrollando la aplicacion"; risk item 2 (same-origin frame CSP) and item 3 (weekly shared screen). Independent verification is required after self-checks. Baseline `63e7137`; frontend suite: 202 pass, 0 fail, 0 skipped. Worktree: `mercedeseval-worktrees/classroom-presentation`; documentation cleanup stays in its original checkout. Forecast: approximately 380 implementation/test/documentation lines, excluding the already-authored prototype.
+
+- **T1** — S1-S4 — `inline` — prototype complete; retained at `docs/prototipos/aula-presentation/prototype.html` as visual reference, not as evidence of server permissions.
+- **T2** — S5 — direction accepted in "me gusta pero adaptalo a nuestro sistema"; implementation authorized in L5, including integrated PDFs.
+- **T3** — S1-S4 — `inline` — implemented and self-checked; commit pending verification closure and delivery-size decision if applicable.
+- **T4** — S5 — `independent verification` — first review identified token/motion/proof/documentation gaps. One correction batch applied; targeted independent recheck resolved all four reported blockers. Receipt: `docs/classroom-presentation-verification.md`. Native review globally off (unchanged); assessment unassessable for undeclared untracked files. Delivery/commit boundary pending.
 
 ## Log
 
+- **L5 — Implementation authorization:** "sigamos con lo que toca que es seguir desarrollando la aplicacion". User selected "Integrados (recomendado)" when asked how to display PDFs; permit frames only from the application's own origin. Implement the approved editorial direction using real weekly GET responses; the role toggle and teacher-only solution fixture are prototype simulations, not authorization requirements. Do not expose grades, student submissions, or private feedback in the presentation. Projection displays public course resource content only; existing server authorization remains authoritative.
+- **L6 — Checks:** `npm ci --ignore-scripts --no-audit --no-fund` exit 0; baseline `npm test`: 202 pass, 0 fail, 0 skipped. Applicable behavior work follows observed RED, GREEN, then browser verification. No application schema or persisted data changes. Feature mirror pending until memory synchronization is available.
+- **L7 — Observed implementation proof:** new component tests first failed with TS2307 for the absent `ClassroomPresentation.js` module; after implementation 206 tests passed. The independent verifier did not witness that pre-implementation run, so its baseline comparison is not RED evidence. Final correction adds a token/motion regression case: 207 tests pass, 0 failed, 0 skipped. Build/typecheck pass. Targeted built-app Chrome scenarios pass, including integrated same-origin file, activity instructions, keyboard, focus restoration, empty/403, reduced motion, responsive layouts, pagination, blocked external frame, and expired session closing the projection. No mutation or external requests observed. This is synthetic-browser evidence, not acceptance on school tablets or live institutional data.
+- **L8 — Delivery choice (verbatim):** "Un solo commit". The user explicitly accepted the approximately 670-line unit including the 309-line existing prototype. Prepare one local Conventional Commit with source, tests, prototype, specifications, and verification together. No push or PR is authorized by this choice.
+- **L9 — Integration authorization:** "puedes incluir tambien ese cambio para que esten todos". Integrate the verified classroom feature commit into `chore/documentation-navigation`; remote publication remains a separate authorization.
 - **L1 — User request (verbatim):** "pantalla de aula + motion , pero que se vea como un iu actual no uno de 10 años" (in answer to the UI sprint question; context: "quiero mejorar mi iu frontend", Video reference: Midudev rich-frontend techniques adapted without paid services).
 - **L2 — Method:** prototype-first per OpenSpec; single self-contained HTML in docs/prototipos using real course-week data shapes (materials + activities per week); motion per scroll-warp/landing-page-design hard rules; institutional tokens event.
 - **L3 — Art direction correction (user, verbatim intent):** user saw v1 dark-cinema and answered "se ve feo quisiera que se vea mas como esto [ARKO reference]" then "me gusta pero adaptalo a nuestro sistema". v2 (prototype.html) keeps the ARKO editorial direction: cream atmosphere, serif display headlines, floating glass pill nav, material as full-bleed paper scene, scroll-snap scenes, View Transitions and staggered reveals with the standard guards. v1 kept as prototype-nocturno-v1.html.
