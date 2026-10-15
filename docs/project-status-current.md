@@ -1,6 +1,6 @@
 # EVAL Current Project Status
 
-Date: 2026-10-08. Reviewed predecessor: fd8e595; subsequent retained material file replacement is recorded in docs/material-file-replacement-verification.md. This assessment compares openspec/config.yaml, current approved change specifications, the functional-completion roadmap and recent verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
+Date: 2026-10-08. Reviewed predecessor: fd8e595; subsequent retained material file replacement is recorded in docs/pruebas/historico/material-file-replacement-verification.md. This assessment compares openspec/config.yaml, current approved change specifications, the functional-completion roadmap and recent verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
 
 ## Two different scopes
 
@@ -25,9 +25,9 @@ The complete institutional product described in openspec/config.yaml is broader.
 
 ## Verified engineering evidence
 
-Latest frontend verification: 151 tests passed; TypeScript/tooling and Vite build passed. Latest full U11 backend regression: 99 tests / 2397 assertions, two optional skips. That suite was run during material-file-replacement integration. The responsive interface refinement is verified in docs/tablet-interface-verification.md, including deferred teacher maintenance requests, motion reduction and emulated tablet/mobile layouts. Physical school tablet acceptance remains open. Separate real runtime/browser receipts cover materials, enrollment, assignments, accounts, activities, grading, reports, notifications, history, original contexts, Library, lost-response recovery and Peru time display. These tests demonstrate selected scenarios, not exhaustive institutional acceptance or a percentage of requirements.
+Latest frontend verification: 151 tests passed; TypeScript/tooling and Vite build passed. Latest full U11 backend regression: 99 tests / 2397 assertions, two optional skips. That suite was run during material-file-replacement integration. The responsive interface refinement is verified in docs/pruebas/historico/tablet-interface-verification.md, including deferred teacher maintenance requests, motion reduction and emulated tablet/mobile layouts. Physical school tablet acceptance remains open. Separate real runtime/browser receipts cover materials, enrollment, assignments, accounts, activities, grading, reports, notifications, history, original contexts, Library, lost-response recovery and Peru time display. These tests demonstrate selected scenarios, not exhaustive institutional acceptance or a percentage of requirements.
 
-The latest runtime snapshot contains 31 tables / 17 migrations, 314 accounts, 16 periods, 483 assignments, 297 enrollments, 332 materials and ordinal 2942. Many records are synthetic verification fixtures. The human-authorized school sample adds fictional 1?5/A?H contexts, ten curricular areas and illustrative learning data; see docs/school-sample-verification.md. Data volume does not increase software-completion percentages. Actual locally running application and MySQL persistence are established; school deployment readiness is not accepted.
+The latest runtime snapshot contains 31 tables / 17 migrations, 314 accounts, 16 periods, 483 assignments, 297 enrollments, 332 materials and ordinal 2942. Many records are synthetic verification fixtures. The human-authorized school sample adds fictional 1?5/A?H contexts, ten curricular areas and illustrative learning data; see docs/pruebas/historico/school-sample-verification.md. Data volume does not increase software-completion percentages. Actual locally running application and MySQL persistence are established; school deployment readiness is not accepted.
 
 ## Main risks and delivery gaps
 

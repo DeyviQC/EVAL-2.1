@@ -1,6 +1,6 @@
 # Proposal: Delivery Assessment
 
-Date: 2026-10-08. Status: approved by the human's Continue response to the concrete proposal. This approval covers the bounded rules, additive architecture and accepted screen mapping below. The local workflow is implemented and verified; see docs/delivery-assessment-verification.md for evidence and remaining acceptance.
+Date: 2026-10-08. Status: approved by the human's Continue response to the concrete proposal. This approval covers the bounded rules, additive architecture and accepted screen mapping below. The local workflow is implemented and verified; see docs/pruebas/historico/delivery-assessment-verification.md for evidence and remaining acceptance.
 
 ## Intended result
 

@@ -96,10 +96,10 @@ export function StudentHome({ name, onSelect, client }: Props) {
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent/20 text-accent border border-accent/30">
                 Continúa donde lo dejaste
               </span>
-              <span className="text-xs text-slate-300">· Matemática 2.º B</span>
+              <span className="text-xs text-slate-300">· Ciencia y Tecnología 2.º B</span>
             </div>
             <h3 className="text-lg sm:text-xl font-semibold !text-white tracking-tight leading-snug">
-              Actividad: Fracciones y operaciones en la vida cotidiana
+              Actividad: Métodos de filtración y purificación de agua
             </h3>
             <div className="pt-1 w-full max-w-md">
               <ProgressBar progress={65} color="bg-accent" />
@@ -183,15 +183,15 @@ export function StudentHome({ name, onSelect, client }: Props) {
             <div className="space-y-2.5">
               <TaskItem
                 id="task-1"
-                title="Resolución de problemas con fracciones"
-                courseTitle="Matemática · 2.º B"
-                dueDate="Hoy a las 6:00 pm"
+                title="Informe de indagación: Métodos de filtración y purificación de agua"
+                courseTitle="Ciencia y Tecnología · 2.º B"
+                dueDate="Hoy · Laboratorio"
                 dueCategory="today"
                 onClick={() => onSelect('activities')}
               />
               <TaskItem
                 id="task-2"
-                title="Redacción de texto argumentativo sobre identidad"
+                title="Texto argumentativo: Tradiciones orales en Ayacucho"
                 courseTitle="Comunicación · 2.º B"
                 dueDate="Mañana a las 11:59 pm"
                 dueCategory="tomorrow"
@@ -199,9 +199,9 @@ export function StudentHome({ name, onSelect, client }: Props) {
               />
               <TaskItem
                 id="task-3"
-                title="Informe de indagación científica sobre el agua"
-                courseTitle="Ciencia y Tecnología · 2.º B"
-                dueDate="Viernes 24 de octubre"
+                title="Taller práctico: Ecuaciones lineales aplicadas a presupuestos"
+                courseTitle="Matemática · 2.º B"
+                dueDate="En 4 días (19 de octubre)"
                 dueCategory="later"
                 onClick={() => onSelect('activities')}
               />
@@ -220,7 +220,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
                 onClick={() => onSelect('my_enrollments')}
                 className="text-xs font-semibold text-primary hover:text-primary-hover transition-colors"
               >
-                Ver catálogo →
+                Ver todos (10) →
               </button>
             </div>
 
@@ -228,15 +228,15 @@ export function StudentHome({ name, onSelect, client }: Props) {
               <CourseCard
                 title="Matemática"
                 gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Lucía Torres"
+                teacherName="Prof. Docente de desarrollo"
                 subjectColor="#3B82F6"
-                progress={65}
+                progress={75}
                 onOpen={() => onSelect('my_enrollments')}
               />
               <CourseCard
                 title="Comunicación"
                 gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Carlos Mendoza"
+                teacherName="Prof. Docente de desarrollo"
                 subjectColor="#8B5CF6"
                 progress={80}
                 onOpen={() => onSelect('my_enrollments')}
@@ -244,17 +244,17 @@ export function StudentHome({ name, onSelect, client }: Props) {
               <CourseCard
                 title="Ciencia y Tecnología"
                 gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Elena Quispe"
+                teacherName="Prof. Docente de desarrollo"
                 subjectColor="#10B981"
-                progress={50}
+                progress={60}
                 onOpen={() => onSelect('my_enrollments')}
               />
               <CourseCard
                 title="Ciencias Sociales"
                 gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Miguel Huamán"
+                teacherName="Prof. Jorge Salazar"
                 subjectColor="#F59E0B"
-                progress={70}
+                progress={85}
                 onOpen={() => onSelect('my_enrollments')}
               />
             </div>
@@ -275,27 +275,27 @@ export function StudentHome({ name, onSelect, client }: Props) {
             <div className="space-y-3 text-xs">
               <div className="p-3 rounded-xl bg-surface-2/60 border border-border/60 space-y-1">
                 <div className="flex justify-between items-center text-text-muted text-[11px]">
-                  <strong className="text-text font-semibold">Prof. Lucía Torres</strong>
-                  <span>Hace 2 h</span>
+                  <strong className="text-text font-semibold">Prof. Docente de desarrollo</strong>
+                  <span>Hace 1 h</span>
                 </div>
                 <p className="text-text leading-relaxed">
-                  Recuerden repasar la ficha 3 de fracciones antes de la entrega de hoy.
+                  Recuerden registrar sus observaciones para el informe de purificación de agua que vence hoy.
                 </p>
                 <span className="inline-block text-[10px] text-primary font-medium">
-                  Matemática · 2.º B
+                  Ciencia y Tecnología · 2.º B
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-surface-2/60 border border-border/60 space-y-1">
                 <div className="flex justify-between items-center text-text-muted text-[11px]">
-                  <strong className="text-text font-semibold">Prof. Carlos Mendoza</strong>
+                  <strong className="text-text font-semibold">Prof. Jorge Salazar</strong>
                   <span>Ayer</span>
                 </div>
                 <p className="text-text leading-relaxed">
-                  Ya están publicadas las retroalimentaciones del borrador de ensayo.
+                  Ya están disponibles las calificaciones y retroalimentaciones de la línea de tiempo de Huamanga.
                 </p>
                 <span className="inline-block text-[10px] text-primary font-medium">
-                  Comunicación · 2.º B
+                  Ciencias Sociales · 2.º B
                 </span>
               </div>
             </div>

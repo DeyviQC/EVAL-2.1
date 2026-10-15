@@ -52,6 +52,7 @@ export function CourseClassroom({course,materials,weeks,activities,teacherMode,o
       {weeks&&activities&&(
         <button
           aria-pressed={view==='weeks'}
+          aria-label="Semanas"
           className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${view==='weeks' ? 'bg-primary text-white shadow-xs' : 'text-text-muted hover:text-text hover:bg-surface'}`}
           onClick={()=>setView('weeks')}
         >

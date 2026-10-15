@@ -78,12 +78,13 @@ export function AppSidebar({
   ] : role === 'director_admin' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
-    { id: 'institution', label: 'Institución', icon: BookOpen },
+    { id: 'institution', label: 'Información institucional', icon: BookOpen },
     { id: 'history', label: 'Historial', icon: Library },
     { id: 'account', label: 'Mi perfil', icon: User },
   ] : [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'periods', label: 'Períodos', icon: Calendar },
+    { id: 'calendar', label: 'Calendario institucional', icon: Calendar },
     { id: 'catalog', label: 'Catálogo', icon: Layers },
     { id: 'enrollments', label: 'Matrículas', icon: Users },
     { id: 'assignments', label: 'Docentes', icon: BookOpen },
@@ -95,6 +96,8 @@ export function AppSidebar({
   const initials = account?.name
     ? account.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : 'E';
+
+  const roleNavLabel = role === 'director_admin' ? 'Menú de Director' : role === 'vice_principal' ? 'Menú de Subdirector' : role === 'teacher' ? 'Menú de Docente' : 'Menú de Estudiante';
 
   return (
     <aside
@@ -124,7 +127,7 @@ export function AppSidebar({
       {/* Main Navigation with 6 items */}
       <nav
         className="eval-navigation flex-1 space-y-1.5 overflow-y-auto pr-1"
-        aria-label="Secciones académicas"
+        aria-label={role ? roleNavLabel : 'Secciones académicas'}
       >
         {navItems.map((item) => {
           const IconComponent = item.icon;
@@ -243,13 +246,14 @@ export function AppSidebar({
           )}
         </button>
 
-        {/* Hidden accessible button for Playwright E2E logout compatibility */}
+        {/* Quick logout button */}
         <button
           type="button"
           onClick={() => void onLogout()}
-          className="sr-only"
+          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors border border-transparent hover:border-danger/20 cursor-pointer"
         >
-          Cerrar sesión
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>

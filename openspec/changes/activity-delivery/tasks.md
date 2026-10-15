@@ -15,7 +15,7 @@
 - [x] Verify role/scope/transfer/replacement/closed-parent publication denials and retained version files.
 - [x] Verify file validation, failure rollback, two-connection serialization and client uncertain-response handling.
 - [x] Verify the live teacher/student browser journey and tablet layout.
-- [x] Record supported check results and remaining gates in docs/activity-delivery-verification.md.
+- [x] Record supported check results and remaining gates in docs/pruebas/historico/activity-delivery-verification.md.
 - [ ] Prepare a committed reconciliation handoff before another contributor starts; no new contributor or remote operation was started.
 
 ## Consultation reliability refinement
@@ -27,4 +27,4 @@
 
 - [x] Require a decoded matching consultation begun after uncertainty before explicit review; coordinate pending writes within the shared client.
 - [x] Verify unrelated/failed/malformed/earlier reads and actual lost publication/submission/grading/closure responses without replay.
-- [x] Record 127 frontend tests and 11 browser checks with limits in docs/academic-write-recovery-verification.md.
+- [x] Record 127 frontend tests and 11 browser checks with limits in docs/pruebas/historico/academic-write-recovery-verification.md.

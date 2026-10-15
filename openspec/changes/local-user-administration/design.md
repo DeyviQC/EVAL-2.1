@@ -2,7 +2,7 @@
 
 Status: proposed; approve together with proposal, specification and UI review before application code.
 
-Superseding status: bounded approval recorded in proposal.md; implementation and verification recorded in docs/local-user-administration-verification.md. The earlier proposed status is preserved as history.
+Superseding status: bounded approval recorded in proposal.md; implementation and verification recorded in docs/pruebas/historico/local-user-administration-verification.md. The earlier proposed status is preserved as history.
 
 ## Existing foundation
 

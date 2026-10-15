@@ -1,6 +1,6 @@
 # Design: Delivery Assessment
 
-Status: human-approved and implemented locally. Migration 000013 and the real teacher/student workflow are verified in docs/delivery-assessment-verification.md; remaining acceptance is stated explicitly there.
+Status: human-approved and implemented locally. Migration 000013 and the real teacher/student workflow are verified in docs/pruebas/historico/delivery-assessment-verification.md; remaining acceptance is stated explicitly there.
 
 ## Persistence and concurrency
 

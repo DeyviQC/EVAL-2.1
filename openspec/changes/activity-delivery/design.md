@@ -2,7 +2,7 @@
 
 Status: pending bounded behavioral approval. Existing professor-approved screens are the UI reference; no substitute preview application is required.
 
-Superseding status: approval recorded in proposal.md. The implemented mapping and evidence are below and in docs/activity-delivery-verification.md. Global planning/deployment gates remain unchanged.
+Superseding status: approval recorded in proposal.md. The implemented mapping and evidence are below and in docs/pruebas/historico/activity-delivery-verification.md. Global planning/deployment gates remain unchanged.
 
 ## Storage and identity
 

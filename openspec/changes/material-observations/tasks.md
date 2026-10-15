@@ -9,4 +9,4 @@
 - [x] Verify real DB/browser role/privacy/rollback/concurrency/pagination and existing regressions.
 - [x] Record evidence and commit the finished local handoff.
 
-Verification: docs/material-observations-verification.md. The local handoff commit contains this completed bounded unit; institutional gates remain open.
+Verification: docs/pruebas/historico/material-observations-verification.md. The local handoff commit contains this completed bounded unit; institutional gates remain open.

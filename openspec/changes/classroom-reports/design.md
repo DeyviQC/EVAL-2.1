@@ -1,6 +1,6 @@
 # Design: Classroom Reports
 
-Status: human-approved, implemented and verified locally; see docs/classroom-report-verification.md. The report menu uses the existing server-confirmed director can_manage flag; its endpoint independently enforces the dedicated report permission.
+Status: human-approved, implemented and verified locally; see docs/pruebas/historico/classroom-report-verification.md. The report menu uses the existing server-confirmed director can_manage flag; its endpoint independently enforces the dedicated report permission.
 
 Use a dedicated read service and controller under the existing authenticated session, with live retained identity/credential checks and stored director_admin role. Keep the reporting permission separate from ActivityDelivery and DeliveryAssessment authorization; management continues to be denied individual work and file reads.
 

@@ -16,7 +16,7 @@ The human accepted the blue/mint visual direction and subsequently accepted the 
 
 The human approved the integration-review rules as the basis for architecture on 2026-10-08 ("si cintinua"). See architecture.md for the subsequent concrete proposal: retained calendar revisions, dedicated optional association commands and authorized paginated course discovery. Architecture-specific policies remain pending approval.
 
-National-calendar research is recorded in docs/school-calendar-research-2026.md. MINEDU defines the annual framework, while the institution's approved calendar and applicable DRE/UGEL adjustments determine actual dates and bimester/trimester organization. Recommended direction: institution-wide teaching weeks selected by teachers for content grouping; this is not yet an approved implementation decision.
+National-calendar research is recorded in docs/requisitos/school-calendar-research-2026.md. MINEDU defines the annual framework, while the institution's approved calendar and applicable DRE/UGEL adjustments determine actual dates and bimester/trimester organization. Recommended direction: institution-wide teaching weeks selected by teachers for content grouping; this is not yet an approved implementation decision.
 
 - Teacher-defined teaching weeks or calendar weeks; numbering origin and date ranges.
 - Whether existing materials/activities can be assigned or reassigned, by whom, and under which current maintenance authority.

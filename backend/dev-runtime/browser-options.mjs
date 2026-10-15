@@ -9,9 +9,24 @@ export async function loopbackCertificate(pem){
  if(peer.fingerprint256!==original.fingerprint256&&(peer.subject!==original.subject||!peer.issuer.includes('CN=Avast Web/Mail Shield Self-signed Root')))throw Error('Unexpected local TLS certificate');
  return peer.toString();
 }
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 export function certificateOptions(pem, now=Date.now()) {
   const cert=new X509Certificate(pem);
   if(cert.checkIP('127.0.0.1')!=='127.0.0.1'||Date.parse(cert.validFrom)>now||Date.parse(cert.validTo)<=now)throw new Error('Owned loopback certificate is invalid or expired.');
   const pin=createHash('sha256').update(cert.publicKey.export({format:'der',type:'spki'})).digest('base64');
   return {ignoreHTTPSErrors:false,args:[`--ignore-certificate-errors-spki-list=${pin}`]};
 }
+
+export function resolveBrowserExecutable() {
+  const candidates = [
+    process.env.ProgramFiles && resolve(process.env.ProgramFiles, 'Google/Chrome/Application/chrome.exe'),
+    'C:/Program Files/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe',
+    process.env.LOCALAPPDATA && resolve(process.env.LOCALAPPDATA, 'BraveSoftware/Brave-Browser/Application/brave.exe')
+  ];
+  return candidates.find(path => path && existsSync(path));
+}
+

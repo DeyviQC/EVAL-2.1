@@ -41,4 +41,4 @@ These are pending physical checks, not results claimed by local browser simulati
 
 Do not use the workstation's loopback address from another device. The institutional server address, certificate setup, IIS/Apache choice and deployment configuration require their own approved environment. No firewall, certificate-trust or production change is authorized by this guide.
 
-Local verification evidence: [weekly-course-discovery-verification.md](weekly-course-discovery-verification.md). The synthetic period/calendar/activity fixtures recorded there are verification data, not approved school records.
+Local verification evidence: [weekly-course-discovery-verification.md](pruebas/historico/weekly-course-discovery-verification.md). The synthetic period/calendar/activity fixtures recorded there are verification data, not approved school records.
