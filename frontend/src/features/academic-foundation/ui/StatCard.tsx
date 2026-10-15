@@ -39,22 +39,18 @@ export function StatCard({
         </span>
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        {isZero ? (
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-text">0</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+      <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-2xl font-bold text-text">{isZero ? '0' : value}</span>
+          {isZero && emptyMessage && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 whitespace-nowrap shrink-0">
               {emptyMessage}
             </span>
-          </div>
-        ) : (
-          <span className="text-3xl font-bold tracking-tight text-text">
-            {value}
-          </span>
-        )}
+          )}
+        </div>
 
         {trend && (
-          <span className="text-xs font-medium text-text-muted shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-medium text-text-muted shrink-0 whitespace-nowrap">
             {trend}
           </span>
         )}

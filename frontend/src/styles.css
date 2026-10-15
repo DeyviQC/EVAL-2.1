@@ -164,8 +164,8 @@ button:active:not(:disabled) { transform:scale(.98); }
 .eval-connection-dot { width:6px; height:6px; border-radius:50%; background:#059669; }
 .eval-notification-button { display:flex; align-items:center; gap:8px; background:white; border:1px solid var(--eval-line); padding:8px 12px; color:#475569; font-size:12px; }
 .eval-workspace-content { overflow-wrap:anywhere; }
-.eval-workspace-content h2,.eval-workspace-content h3 { letter-spacing:-.025em; line-height:1.3; color:#0f172a; }
-.eval-workspace-content h4,.eval-workspace-content h5 { color:#1e293b; line-height:1.4; }
+.eval-workspace-content h2,.eval-workspace-content h3 { letter-spacing:-.025em; line-height:1.3; color:var(--text); }
+.eval-workspace-content h4,.eval-workspace-content h5 { color:var(--text); line-height:1.4; }
 .eval-workspace-content article { min-width:0; border-color:var(--eval-line); border-radius:14px; background:white; box-shadow:0 1px 3px #0f172a08; }
 .eval-workspace-content article article { background:#F3F6FB; }
 .eval-workspace-content button,.eval-workspace-content a[href] { min-height:44px; padding:10px 14px; line-height:1.4; border-radius:10px; max-width:100%; white-space:normal; }
