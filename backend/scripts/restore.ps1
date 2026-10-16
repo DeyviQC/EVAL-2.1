@@ -147,7 +147,7 @@ try {
 
     # Ensure database exists and recreate cleanly if needed
     $initSql = "CREATE DATABASE IF NOT EXISTS $TargetDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_cs;"
-    $initArgs = @("--host=127.0.0.1", "--port=3307", "--user=eval_dev_migration", "-p$migrationPass", "-e", $initSql)
+    $initArgs = @("--host=127.0.0.1", "--port=3307", "--user=eval_dev_migration", "-p$migrationPass", "-e", "`"$initSql`"")
     $proc = Start-Process -FilePath $mysql -ArgumentList $initArgs -Wait -PassThru -NoNewWindow
     if ($proc.ExitCode -ne 0) { throw "Failed to initialize database $TargetDatabase" }
 
@@ -177,12 +177,7 @@ try {
     Write-Host "  [OK] Physical attachments restored to $devRoot." -ForegroundColor Green
 
     # 6. Post-Restoration Database Integrity Verification
-    $verifyScript = @"
-SELECT 
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$TargetDatabase') AS table_count,
-    (SELECT COUNT(*) FROM \`$TargetDatabase\`.migrations) AS migration_count,
-    (SELECT last_ordinal FROM \`$TargetDatabase\`.academic_write_guard LIMIT 1) AS last_ordinal;
-"@
+    $verifyScript = "SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$TargetDatabase') AS table_count, (SELECT COUNT(*) FROM $TargetDatabase.migrations) AS migration_count, (SELECT last_ordinal FROM $TargetDatabase.academic_write_guard LIMIT 1) AS last_ordinal;"
     $verifyArgs = @("--host=127.0.0.1", "--port=3307", "--user=eval_dev_migration", "-p$migrationPass", "-s", "-N", "-e", $verifyScript)
     $verifyOutput = & $mysql @verifyArgs
     $parts = ($verifyOutput -split '\s+') | Where-Object { $_ -ne "" }
