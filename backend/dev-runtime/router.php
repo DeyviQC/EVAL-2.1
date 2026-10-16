@@ -8,9 +8,13 @@ if(!in_array(getenv('EVAL_UNIT'),['U11','Dev'],true) || getenv('EVAL_DB_ROLE')!=
 }
 try{
     require dirname(__DIR__).'/bootstrap.php';
-    $origin=getenv('EVAL_RUNTIME_ORIGIN');$parts=parse_url($origin?:'');
-    if(($parts['scheme']??null)!=='https'||($parts['host']??null)!=='127.0.0.1'||empty($parts['port'])||count($parts)!==3)throw new RuntimeException('Invalid isolated origin');
-    $_SERVER['HTTPS']='on';$_SERVER['HTTP_HOST']='127.0.0.1:'.$parts['port'];$_SERVER['SERVER_PORT']=(string)$parts['port'];
+    $origin=getenv('EVAL_RUNTIME_ORIGIN')?:'';
+    $origins=array_values(array_filter(array_map('trim',explode(',',$origin))));
+    if(empty($origins))throw new RuntimeException('Invalid isolated origin');
+    $parts=parse_url($origins[0]);
+    if(($parts['scheme']??null)!=='https'||empty($parts['host'])||empty($parts['port']))throw new RuntimeException('Invalid isolated origin');
+    $reqHost=$_SERVER['HTTP_X_FORWARDED_HOST']??($_SERVER['HTTP_HOST']??($parts['host'].':'.$parts['port']));
+    $_SERVER['HTTPS']='on';$_SERVER['HTTP_HOST']=$reqHost;$_SERVER['SERVER_PORT']=(string)$parts['port'];
     \Illuminate\Http\Request::setTrustedProxies([],0);
     $request=\Illuminate\Http\Request::capture();
     $db=\Illuminate\Database\Capsule\Manager::connection();
