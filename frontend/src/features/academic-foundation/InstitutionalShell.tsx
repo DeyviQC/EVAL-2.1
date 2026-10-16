@@ -381,15 +381,7 @@ export function SessionPanel({
             </button>
           </form>
 
-          <button
-            type="button"
-            className="eval-session-refresh mt-3 w-full text-xs text-slate-300 hover:text-white bg-transparent hover:bg-white/5 border border-white/15 py-2.5 rounded-full transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-            disabled={pending}
-            onClick={() => void onRefresh()}
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Verificar sesión</span>
-          </button>
+          {/* Botón secundario retirado: el acceso se realiza directamente con 'Ingresar' y la verificación ocurre en segundo plano */}
 
           <p className="eval-login-help text-[11px] text-center text-slate-400 mt-4 leading-relaxed">
             Utiliza la red del colegio y las credenciales asignadas a tu cuenta.

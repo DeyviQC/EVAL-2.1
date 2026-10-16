@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$vendor = getenv('EVAL_VENDOR_DIR');
+$vendor = getenv('EVAL_VENDOR_DIR') ?: (__DIR__.'/vendor');
 if (!$vendor || !is_file($vendor.'/autoload.php')) {
     throw new RuntimeException('Invoke the isolated local wrapper; external dependencies are missing.');
 }

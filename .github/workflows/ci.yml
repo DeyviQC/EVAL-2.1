@@ -1,0 +1,75 @@
+name: EVAL CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'chore/**'
+      - 'feat/**'
+      - 'test/**'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend Quality & Contract Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit
+
+      - name: Verify TypeScript & Tooling (Typecheck)
+        run: npm run typecheck
+
+      - name: Run 217 Automated Contract Tests
+        run: npm test
+
+      - name: Build Production Bundle (Vite)
+        run: npm run build
+
+  backend:
+    name: Backend Quality & Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo, pdo_mysql
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --no-check-all
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --ignore-platform-reqs
+
+      - name: Lint PHP Syntax
+        run: find app tests dev-runtime -name "*.php" -exec php -l {} \; > /dev/null
+
+      - name: Run Core Domain Unit Tests (PHPUnit)
+        env:
+          EVAL_VENDOR_DIR: ${{ github.workspace }}/backend/vendor
+        run: ./vendor/bin/phpunit -c phpunit.xml --filter "TemporalBoundaryTest|WriteGuardPreconditionTest"

@@ -14,6 +14,7 @@ $suites = [
     'file_replacement'     => ['script' => 'verify-file-replacement-server.php', 'role' => 'runtime', 'fixture' => 'file-rollback-fixture.php'],
     'notifications'        => ['script' => 'verify-notifications-server.php', 'role' => 'runtime', 'fixture' => 'notification-rollback-fixture.php'],
     'library'              => ['script' => 'verify-library-server.php', 'role' => 'runtime'],
+    'audit'                => ['script' => 'verify-audit-server.php', 'role' => 'runtime'],
     'role_policy'          => ['script' => 'verify-role-policy-server.php', 'role' => 'migration'],
 ];
 

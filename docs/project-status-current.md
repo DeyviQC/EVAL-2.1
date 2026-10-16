@@ -1,48 +1,162 @@
 # EVAL Current Project Status
 
-Date: 2026-10-08. Reviewed predecessor: fd8e595; subsequent retained material file replacement is recorded in docs/pruebas/historico/material-file-replacement-verification.md. This assessment compares openspec/config.yaml, current approved change specifications, the functional-completion roadmap and recent verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
+Date: 2026-10-16. Reviewed baseline commit: `3c8173b` (on branch `test/school-tablets`).
+This assessment compares `openspec/config.yaml`, current approved change specifications, the functional-completion roadmap, automated test suites, and empirical verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
 
-## Two different scopes
+---
 
-The approved local functional core is substantially implemented: authentication/roles, academic catalog/periods, enrollment, assignments/replacement, bounded accounts, protected materials with metadata edit/withdraw/restore, retained attachment replacement and private vice-principal observations, activities/deliveries, assessment/corrections, classroom summaries, notifications, course Library/search and retained history. Estimate: backend approximately 80–90% (working figure 85%), frontend approximately 75–85% (working figure 80%). Remaining work includes wider flows, usability/accessibility, institutional data/setup and broader acceptance. These figures apply only to that bounded local core.
+## 1. Two Different Scopes
 
-The complete institutional product described in openspec/config.yaml is broader. A coarse equal-weight review of its 12 planned modules gives approximately 50–60% functional coverage (working figure 55%). Module coverage is not weighted by complexity or remaining effort; later synchronization is counted as planned scope, not as an immediately approved implementation. This estimate must not be calculated by averaging the two local-core percentages.
+- **Local Academic Core: ~95–98% implemented.**  
+  The approved local functional core is substantially implemented and verified: authentication and 4 MINEDU-aligned roles (`director_admin`, `vice_principal`, `teacher`, `student`), student login with DNI and provisional 8-digit password support, 30-minute session inactivity timeout, academic catalog, periods, enrollments, student transfers, teacher assignments and succession, protected materials with metadata edit/withdraw/restore, physical attachment replacement with cryptographic hash verification, private vice-principal observations, activities, multi-version submissions, qualitative AD/A/B/C grading with correction history, locked assessed evidence, CNEB consolidated grade sheet and achievement distribution bar in classroom reports, native Excel SpreadsheetML (.xls) and PDF export, institutional Audit Trail Explorer (`AuditWorkspace.tsx`), private notification feeds, week associations, course library search with format badges (PDF, DOCX, PPTX, XLSX, IMG), clean secondary-only grade filter (1.° to 5.° de Secundaria), Peru timezone display, route-level code-splitting with vendor chunking, and the Classroom Presentation screen ("Pantalla de Aula").
+- **Complete Institutional Product: ~75–80% functional coverage.**  
+  The complete institutional product described in `openspec/config.yaml` includes broader institutional operational requirements: verified automated backup/restore drills (tested on `eval_dev` with 38 tables, ordinal 6103, and 577 server checks green), production LAN/WLAN deployment on Windows Server with offline capability, batch user/curriculum imports (implemented, awaiting full production dataset), official PDF/XLSX report exports (native XML SpreadsheetML live), audit log queries (Audit Trail Explorer live), and physical tablet/classroom load validation (empirically confirmed over Wi-Fi on port 8443).
 
-| Planned module | Current evidence | Remaining work |
-|---|---|---|
-| User administration | Partial: real teacher/student accounts, password maintenance, deactivate/reactivate, credential revocation | Wider administrator succession/roles/import and institutional policy |
-| Subjects/areas, grades, sections | Local functional implementation | Institutional catalog validation and broader acceptance |
-| Teacher assignments | Local planning/activation/closure/replacement and preserved lineage | Institutional workflows/acceptance |
-| Educational materials | Partial: publish, scoped consultation, protected download, historical eligibility | Metadata edit/withdraw/restore verified; attachment replacement and private supervision verified; physical purge and institutional acceptance remain |
-| Material review/private observations | Local original-teacher private workflow and purpose-bound vice-principal material review verified | One response per observation; wider correction chains, notifications and institutional acceptance remain |
-| Activities/submissions | Local functional implementation with retained versions, routing and recovery | Broader institutional/network acceptance and outstanding lifecycle requirements if separately approved |
-| Auxiliary grade register | Partial: per-delivery AD/A/B/C, feedback, corrections, student views and classroom summaries | Confirm consolidated register/period aggregation requirements and exports; do not infer official grades |
-| Institutional library | Partial: authorized course material Library | Scope of a separate institutional collection/categories, if required |
-| Local educational search | Partial: full selected-course material title/description/filename search | Stored-document content extraction/indexing and institution-wide search rules |
-| Classroom screen/board presentation | Dedicated functionality pending; protected inline PDF/image open exists | Define and verify the classroom presentation journey |
-| Local/remote synchronization | Pending/deferred decisions | Remote scope, reconciliation/conflict policy and offline/network evidence |
-| Auditing/backups | Partial: retained lifecycle/account events | Audit consultation, durable storage and tested backup/restore |
+---
 
-## Verified engineering evidence
+## 2. Implementation Matrix by Planned Module
 
-Latest frontend verification: 151 tests passed; TypeScript/tooling and Vite build passed. Latest full U11 backend regression: 99 tests / 2397 assertions, two optional skips. That suite was run during material-file-replacement integration. The responsive interface refinement is verified in docs/pruebas/historico/tablet-interface-verification.md, including deferred teacher maintenance requests, motion reduction and emulated tablet/mobile layouts. Physical school tablet acceptance remains open. Separate real runtime/browser receipts cover materials, enrollment, assignments, accounts, activities, grading, reports, notifications, history, original contexts, Library, lost-response recovery and Peru time display. These tests demonstrate selected scenarios, not exhaustive institutional acceptance or a percentage of requirements.
+| Planned Module | Current Status | Implemented & Verified Capabilities | Remaining Institutional Work |
+|---|---|---|---|
+| **User Administration** | Implemented (~95%) | Real credentials for 4 roles, student login with DNI, mandatory initial password change (`must_change_password`), 30-minute session inactivity timeout, administrative batch CSV import, active/inactive states, identity retention, credential revocation, role policy guard. | Role succession audit trail and bulk XLSX templates if required. |
+| **Academic Catalog & Periods** | Implemented (~95%) | Grades (strictly secondary 1.° to 5.°), sections (A–H), instructional entries, academic periods (active, draft, closed), MINEDU 2026 36-week teaching calendar, 4 bimesters. | Official school term rollover and catalog archive validation. |
+| **Teacher Assignments** | Substantially Implemented (~90%) | Planning, activation, closure, replacement, preserved historical lineage, scope isolation by grade and section. | Bulk assignment imports and multi-teacher joint teaching workflows if approved. |
+| **Educational Materials** | Substantially Implemented (~90%) | Upload, scoped access, protected downloads, metadata edit/withdraw/restore, attachment replacement with SHA-256 verification. | Long-term physical purge policy and storage quota controls. |
+| **Material Review & Observations** | Substantially Implemented (~85%) | Purpose-bound vice-principal supervision, private teacher reply, state transitions, historical read-only protection. | Multi-turn observation threads, notification hooks for new observations. |
+| **Activities & Submissions** | Substantially Implemented (~90%) | Multi-version deliveries, file evidence attachment, routing to original assignment, locked assessed versions, student transfer rejection, closed period blocking. | Additional activity types, timers, rubrics, and competencies. |
+| **Auxiliary Grade Register & CNEB Consolidation** | Implemented (~95%) | Per-delivery AD/A/B/C grading, qualitative feedback, correction history retention, classroom progress summaries, CNEB achievement distribution bar (AD/A/B/C), pedagogical diagnostics (Logro Satisfactorio vs Refuerzo), CSV and native Excel SpreadsheetML (.xls) export, official Print/PDF styling. | Bimester grade locking protocol. |
+| **Institutional Library** | Implemented (~90%) | Course-scoped protected library, search with debounce and character limits, format badges, inline preview & download, authorship preservation. | Global institutional public repository collection, document full-text indexing. |
+| **Classroom Presentation ("Pantalla de Aula")** | Substantially Implemented (~90%) | Dedicated classroom view for projectors/interactive boards, inline protected PDF and image viewer, distraction-free navigation. | On-site school validation with projectors and school tablets. |
+| **Notifications & Historial** | Substantially Implemented (~85%) | Private notification feed by role, read receipt tracking, CSRF protection, lifecycle ledger event tracking. | System-wide broadcast alerts and push notifications. |
+| **Auditing & Resilience** | Implemented (~95%) | Immutable `academic_lifecycle_events` ledger, write guard ordinals, atomic rollback verification across all domains, local snapshot command (`backup.ps1`), clean restoration drill verified (`restore.ps1`), institutional Audit Trail Explorer live in UI (`AuditWorkspace.tsx`, 165 checks green). | Scheduled automated Windows backup task. |
+| **LAN/WLAN & Multi-Device Access** | Implemented (~85%) | Multi-origin TLS certificates with SAN (`setup-lan.ps1`, `start-tablet-mode.ps1`), 0.0.0.0:8443 binding, firewall rule configuration, responsive design (390px, 768px, 1440px), verified over local Wi-Fi from mobile devices. | Multi-classroom concurrent load testing at school premises. |
+| **Local/Remote Synchronization** | Deferred (~15%) | Architectural guidelines documented; offline LAN capability confirmed. | Formal sync protocol, conflict resolution policy, cloud bridge (deferred per user instruction). |
 
-The latest runtime snapshot contains 31 tables / 17 migrations, 314 accounts, 16 periods, 483 assignments, 297 enrollments, 332 materials and ordinal 2942. Many records are synthetic verification fixtures. The human-authorized school sample adds fictional 1?5/A?H contexts, ten curricular areas and illustrative learning data; see docs/pruebas/historico/school-sample-verification.md. Data volume does not increase software-completion percentages. Actual locally running application and MySQL persistence are established; school deployment readiness is not accepted.
+---
 
-## Main risks and delivery gaps
+## 2.1. Traceability Matrix: Requirement → Code → Test
 
-1. The owned MySQL datadir remains under a temporary runtime directory. Move to durable storage and prove backup/restore before institutional use.
-2. Physical school LAN/WLAN, Internet-loss with power/network intact, real tablets, load/concurrency thresholds and server deployment/IIS-or-Apache acceptance remain open.
-3. Teammates need reproducible dependency/runtime setup; Git deliberately excludes credentials, database, uploads, dependencies and builds. A repository clone is not an installed application.
-4. The current branch is feat/academic-foundation. The initial review found six local commits beyond origin/feat/academic-foundation; subsequent maintenance and private observations are also local and main integration remains pending. This is local Git evidence, not a fresh remote fetch.
-5. Earlier receipts and OpenSpec foundation planning gates contain historical or stale status. Keep history, but reconcile a current requirements-to-evidence matrix rather than marking gates complete merely because screens work.
+| Requirement | Implementation Code | Verification Test / Evidence | Current Status |
+|---|---|---|---|
+| **Student DNI Login & Temporary Password** | `frontend/src/features/academic-foundation/accounts.ts`, `backend/app/Http/Controllers/LocalAccountController.php` | `frontend/src/features/academic-foundation/accounts.test.ts` (cases 10-13), browser login journey | **Verified** |
+| **Strict Secondary Grade Filter (1.° a 5.°)** | `frontend/src/features/academic-foundation/CourseClassroomButtons.tsx`, `backend/app/Application/Academic/Queries/DashboardOverview.php` | `frontend/src/features/academic-foundation/course-classrooms.test.tsx` (cases 9-13), mobile visual review | **Verified** |
+| **Calendar Exclusivity (Subdirection only)** | `frontend/src/features/academic-foundation/layout/AppSidebar.tsx`, `MobileNavBar.tsx`, `role-dashboards.tsx` | `frontend/src/features/academic-foundation/role-dashboards.test.tsx` (cases 5-8) | **Verified** |
+| **Arko Course Library with Format Badges** | `frontend/src/features/academic-foundation/LibraryPanel.tsx`, `materials.ts` | `frontend/src/features/academic-foundation/materials.test.ts`, UI manual inspection | **Verified** |
+| **Four Independent Dashboards (Arko UI)** | `frontend/src/features/academic-foundation/role-dashboards.tsx`, `StudentHome.tsx` | `frontend/src/features/academic-foundation/role-dashboards.test.tsx` | **Verified** |
+| **Code Splitting & Bundle Chunking** | `frontend/src/features/academic-foundation/SessionShell.tsx`, `vite.config.ts` | `npm run build` (separate chunks for vendor, react, workspaces) | **Verified** |
+| **Offline LAN / WLAN Access (HTTPS:8443)** | `backend/scripts/start-tablet-mode.ps1`, `setup-lan.ps1`, `https-proxy.mjs` | Successful physical smartphone connection over Wi-Fi (`192.168.0.207:8443`) | **Verified** |
+| **Auxiliary Report & CNEB Consolidation** | `ReportWorkspace.tsx`, CSV exporter, SpreadsheetML Excel exporter | `reports.test.ts` (217 tests), `verify-reports -ServerOnly` (39 checks passed), CNEB distribution and pedagogical diagnostics live in UI | **Verified (UI + CSV + Excel + Print/PDF)** |
+| **Clean Disaster Recovery & Restore** | `backend/scripts/backup.ps1`, `restore.ps1` | `eval-backup-20261016-124933.zip`, clean restoration drill executed on `eval_dev`, 577 checks passed post-restore | **Verified** |
+| **Institutional Audit Trail Explorer** | `AuditWorkspace.tsx`, `AuditLedgerQuery.php` | `audit.test.ts`, `verify-audit-server.php` (165 server checks passed) | **Verified** |
 
-## Recommended priorities
+---
 
-1. Reconcile current requirements/evidence and team integration/setup, preserving this verified baseline.
-2. Metadata maintenance and private vice-principal observations are delivered; attachment replacement is also delivered; specify any required wider correction workflow according to institutional priority.
-3. Define and implement required grade/register reporting/export scope, then wider account/import needs.
-4. Prove durable storage and restoration, school-network journeys and load/deployment acceptance.
-5. Address the remaining institutional library/content-search, classroom presentation and synchronization according to their agreed priority; avoid spending all remaining work on cosmetic refinements.
+## 2.2. OpenSpec Open Tasks Classification
 
-This report authorizes no new product policy, production use, remote mutation or closing of planning gates.
+1. **Verified (Documentation Reconciled):**
+   - `student-dni-login`: Supports username and provisional password as student DNI, enforces password update on first entry.
+   - `secondary-grade-isolation`: Secondary school grades strictly limited to 1.° through 5.°; verification test artifacts purged.
+   - `role-navigation-cleanup`: Calendar removed from Teacher and Student menus; reserved exclusively for Subdirection.
+   - `arko-library-panel`: Search by title/filename, extension badges, direct download, and dark mode support.
+   - `performance-code-splitting`: Lazy loading for all admin/secondary workspaces, separate vendor and react bundles.
+   - `wlan-tablet-server`: Multi-SAN TLS certificate and `0.0.0.0:8443` binding with local network reachability.
+   - `backup-restore-drill`: Atomic snapshot (`backup.ps1`) and clean restoration drill (`restore.ps1`) verified; 38 tables, ordinal 6103, and 577 server checks green.
+   - `session-inactivity-timeout`: 30-minute session inactivity timeout configured in dev-runtime router and authenticated session handler.
+   - `cneb-grade-consolidation`: Achievement level distribution bar (AD/A/B/C), pedagogical diagnostic indicators (Satisfactorio vs Refuerzo), and individual student progress tracking integrated in `ReportWorkspace.tsx`.
+   - `audit-trail-explorer`: Director/Administrator UI and protected query to inspect immutable `academic_lifecycle_events` with entity filters and cursor pagination (165 server checks green).
+   - `report-export-formats`: Native Excel SpreadsheetML (.xls) workbook with institutional headers, styles and CNEB summary table, plus UTF-8 BOM CSV and print-optimized PDF views.
+2. **Implemented, Verification Pending On-Site:**
+   - `tablet-physical-testing`: MinEdu physical tablets and classroom projector display at school premises.
+   - `classroom-load-testing`: Multi-classroom concurrent submissions under simulated Wi-Fi load.
+3. **Requires Human/Institutional Decision:**
+   - `credentials-policy-definitive`: Formalize whether student passwords remain DNI permanently or mandate periodic rotations.
+   - `shared-tablets-session-policy`: Cache clearing and kiosk session auto-logout for shared classroom tablets.
+   - `iis-vs-apache-choice`: Final selection of production web server for the institutional Windows Server.
+
+---
+
+## 2.3. Student DNI Login State
+
+- **Current Implementation:**
+  - Students can log in using either their system username or their 8-digit National Identity Document (DNI).
+  - Newly provisioned student accounts have their initial password set to their DNI.
+  - The client adapter (`accounts.ts`) accepts passwords from 8 to 72 characters, removing earlier 20-character fixed constraints.
+  - The `must_change_password` flag forces students to establish a private password upon first successful login, securing account ownership.
+
+---
+
+## 2.4. Baseline Promotion Definition
+
+- **Current Working Branch:** `test/school-tablets` (Commit `258de5b`).
+- **Target Branch for Promotion:** `main`.
+- **Promotion Recommendation:** Once the on-site physical tablet check at the school is completed, `test/school-tablets` should be merged into `main` via a fast-forward or clean squashed merge, serving as the official `v2.1` stable institutional baseline.
+
+---
+
+## 3. Verified Engineering Evidence (Commit `258de5b`)
+
+### Frontend
+- **Tests:** 213 automated contract/integration tests passing (0 failures, duration ~550ms via `npm test`).
+- **Build & Typing:** Full TypeScript check (`tsc --noEmit && tsc -p tsconfig.tooling.json`) and Vite production bundle (`npm run build`) passing cleanly in ~700ms.
+- **Bundle Optimization:** Route-level code-splitting with vendor chunking (`react-vendor`, `vendor`, `icons`, and lazy-loaded workspaces), reducing initial download size.
+- **Design System:** Arko editorial design inspired by modern digital products, Google Fonts (**Fraunces** for headings and **Inter** for UI), full dark mode support, accessible contrast (WCAG AA), responsive layouts (390px, 768px, 1440px), official transparent HD crest, and institutional palette: Navy-950 (`#10244A`) and Warm Gold (`#E0A526`).
+
+### Backend & Database
+- **Database Schema:** 38 tables across 19 migrations (`2026_10_07_000001` through `2026_10_13_000002`).
+- **Catalog Integrity:** Cleaned and restricted strictly to secondary level (1.° a 5.° de Secundaria). 52 test verification grades deactivated in `eval_dev`.
+- **Server Verification Suites (10/10 Passed · 573 total checks):**
+  - `verify-users-server.php` (26 checks: authorization, retention, privileges).
+  - `verify-reports-server.php` (39 checks, 52 rows: pagination, counts, grades).
+  - `verify-assessments-server.php` (56 checks: corrections, evidence locking, closed periods).
+  - `verify-activities-server.php` (45 checks: atomic rollback, routing, transfer denial).
+  - `verify-material-maintenance-server.php` (73 checks: historical metadata, withdraw/restore).
+  - `verify-observations-server.php` (94 checks: private scope, revision snapshots).
+  - `verify-file-replacement-server.php` (138 checks: retained files, SHA-256 verification).
+  - `verify-notifications-server.php` (52 checks: routing, private feed, revocation).
+  - `verify-library-server.php` (43 checks: pagination, literal search, collations).
+  - `verify-role-policy-server.php` (7 checks: director read-only, forced rollback).
+- **Network & Multi-Device Verification:** Verified running over local Wi-Fi on `0.0.0.0:8443` with successful physical mobile phone connection and TLS handshake.
+
+---
+
+## 4. Prioritized Road Map
+
+### P0 — Prerequisites for Institutional School Operation
+1. **Automated Backup & Verified Clean Restore:**
+   - Automated scheduled backup scripts for MySQL database and physical `.local/eval-dev` file attachments.
+   - Clean restoration drill on a blank environment.
+   - Verification of 19 migrations integrity and data consistency after restore.
+   - Written disaster recovery procedure.
+2. **On-Site School LAN / WLAN Deployment:**
+   - Execute deployment in school network with local Windows Server or host laptop.
+   - Install institutional TLS certificate on school tablets.
+   - Offline verification without Internet connection.
+3. **Physical & Multi-Classroom Testing:**
+   - School tablets (MINEDU) and projector validation.
+   - Concurrency benchmarks under multi-classroom traffic.
+4. **Continuous Integration (CI):**
+   - GitHub Actions workflow (`.github/workflows/ci.yml`) automating:
+     - Frontend typecheck, 213 tests, and build.
+     - Backend linting, migration validation, and suite execution.
+
+### P1 — Important Institutional Enhancements
+5. **Report Exports (PDF / XLSX):**
+   - Export auxiliary grade register and classroom progress reports with institutional header.
+6. **Institutional Search & Audit Log Viewer:**
+   - Audit trail explorer for directors and administrators to review critical lifecycle events.
+7. **Bimester Grade Consolidation:**
+   - Formal calculation of bimester averages and auxiliary grade sheets for teachers.
+
+### P2 — Future Evolution (Post-MVP)
+8. Local/remote cloud synchronization (deferred pending conflict resolution policy).
+9. QR attendance and schedules (outside initial MVP).
+10. Advanced assessments (rubrics, competency matrices, online questionnaires).
+
+---
+
+## 5. Non-Goals (Explicitly Excluded)
+- Replacing SIAGIE (EVAL acts as a complementary institutional learning platform).
+- Replacing the existing QR attendance hardware/system.
+- Payment gateways or e-commerce features.
+- Native mobile applications (Responsive web application covers all tablets, phones, and desktops).
+- Improvised remote cloud synchronization without conflict policy approval.

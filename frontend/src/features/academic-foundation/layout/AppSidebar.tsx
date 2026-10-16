@@ -60,26 +60,25 @@ export function AppSidebar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 6 standard items for Student; customized clean list for other roles
+  // Elementos limpios y enfocados por rol (sin calendario para estudiante ni docente)
   const navItems = role === 'student' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'my_enrollments', label: 'Cursos', icon: BookOpen },
     { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: unread },
-    { id: 'weeks', label: 'Calendario', icon: Calendar },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'history', label: 'Progreso', icon: TrendingUp },
   ] : role === 'teacher' ? [
     { id: null, label: 'Inicio', icon: Home },
-    { id: 'my_assignments', label: 'Cursos', icon: BookOpen },
-    { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: unread },
-    { id: 'weeks', label: 'Calendario', icon: Calendar },
-    { id: 'materials', label: 'Biblioteca', icon: Library },
-    { id: 'history', label: 'Progreso', icon: TrendingUp },
+    { id: 'my_assignments', label: 'Cursos y aulas', icon: BookOpen },
+    { id: 'activities', label: 'Tareas y entregas', icon: ClipboardList, badge: unread },
+    { id: 'library', label: 'Biblioteca', icon: Library },
+    { id: 'history', label: 'Historial docente', icon: TrendingUp },
   ] : role === 'director_admin' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
     { id: 'institution', label: 'Información institucional', icon: BookOpen },
     { id: 'history', label: 'Historial', icon: Library },
+    { id: 'audit', label: 'Auditoría', icon: ShieldAlert },
     { id: 'account', label: 'Mi perfil', icon: User },
   ] : [
     { id: null, label: 'Inicio', icon: Home },
@@ -91,6 +90,7 @@ export function AppSidebar({
     { id: 'users', label: 'Usuarios', icon: Settings },
     { id: 'supervision', label: 'Supervisión', icon: ShieldAlert },
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
+    { id: 'audit', label: 'Auditoría', icon: ShieldAlert },
   ];
 
   const initials = account?.name

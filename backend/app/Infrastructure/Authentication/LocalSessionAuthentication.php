@@ -19,23 +19,32 @@ use Symfony\Component\HttpFoundation\Response;
 final class LocalSessionAuthentication
 {
     public const COOKIE='__Host-eval_session';
+    /** @var list<string> */
+    private array $allowedOrigins;
 
     public function __construct(private Connection $db,private Encrypter $encrypter,private string $origin,
         private int $minutes,private int $loginAttempts,private int $loginWindow,private BcryptHasher $hasher)
     {
-        $parts=parse_url($origin);
-        if(($parts['scheme']??null)!=='https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
-            || isset($parts['path']) || isset($parts['query']) || isset($parts['fragment'])
-            || $minutes<1 || $loginAttempts<1 || $loginWindow<1){
+        $origins=array_values(array_filter(array_map('trim',explode(',',$origin))));
+        if(empty($origins)){
             throw new \InvalidArgumentException('Explicit HTTPS origin and positive session/throttle settings required.');
         }
+        foreach($origins as $orig){
+            $parts=parse_url($orig);
+            if(($parts['scheme']??null)!=='https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
+                || isset($parts['path']) || isset($parts['query']) || isset($parts['fragment'])
+                || $minutes<1 || $loginAttempts<1 || $loginWindow<1){
+                throw new \InvalidArgumentException('Explicit HTTPS origin and positive session/throttle settings required.');
+            }
+        }
+        $this->allowedOrigins=$origins;
     }
 
     public function handle(Request $request,Closure $next):Response
     {
-        if($request->getSchemeAndHttpHost()!==$this->origin){return $this->error('invalid_origin',403);}
+        if(!in_array($request->getSchemeAndHttpHost(),$this->allowedOrigins,true)){return $this->error('invalid_origin',403);}
         $unsafe=!in_array($request->getMethod(),['GET','HEAD','OPTIONS'],true);
-        if($unsafe && $request->headers->get('Origin')!==$this->origin){return $this->error('invalid_origin',403);}
+        if($unsafe && !in_array($request->headers->get('Origin'),$this->allowedOrigins,true)){return $this->error('invalid_origin',403);}
         $handler=new LocalSessionHandler($this->db,'local_sessions',$this->minutes);
         $id=null;
         try {
@@ -77,7 +86,7 @@ final class LocalSessionAuthentication
     private function login(Request $request,SessionGuard $guard,EncryptedStore $session):Response
     {
         // No forwarded IP header is trusted by this adapter.
-        $limit=hash('sha256',$this->origin.'|'.($request->getClientIp()??'unknown'));
+        $limit=hash('sha256',$this->allowedOrigins[0].'|'.($request->getClientIp()??'unknown'));
         $allowed=$this->db->transaction(function()use($limit){
             $table=$this->db->table('local_login_limits');
             $table->insertOrIgnore(['id'=>$limit,'attempts'=>0,'window_started'=>time()]);

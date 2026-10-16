@@ -16,9 +16,13 @@ $result=$service->execute($manager,'created',null,['name'=>'Docente de verificac
 $assert(strlen($result['password'])===20);$assert(password_verify($result['password'],$db->table('local_credentials')->where('id',$result['id'])->value('password')));
 $assert(!$db->table('teaching_assignments')->where('teacher_id',$result['id'])->exists());
 $deny('username_unavailable',fn()=>$service->execute($manager,'created',null,['name'=>'Duplicate','username'=>$username,'role'=>'student']));
-$teacher=$actor($username);$deny('invalid_current_password',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>'wrong','password'=>'New-valid-password-2026']));
+$teacher=$actor($username);$assert($service->own($teacher)['must_change_password']===true);
+$deny('password_unchanged',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>$result['password'],'password'=>$result['password']]));
+$deny('invalid_current_password',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>'wrong','password'=>'New-valid-password-2026']));
 $service->execute($manager,'deactivated',$teacher->identityId,[]);$service->execute($manager,'reactivated',$teacher->identityId,[]);
 $deny('forbidden',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>$result['password'],'password'=>'New-valid-password-2026']));
+$teacherFresh=$actor($username);$service->execute($teacherFresh,'password_changed',null,['current_password'=>$result['password'],'password'=>'New-valid-password-2026']);
+$assert($service->own($actor($username))['must_change_password']===false);
 $assert($db->table('local_credentials')->where('id',$result['id'])->value('login')===$username);
 foreach([fn()=>$db->table('local_account_events')->where('target_id',$result['id'])->delete(),fn()=>$db->table('local_credentials')->where('id',$result['id'])->update(['login'=>'forged']),fn()=>$db->table('local_role_grants')->where('identity_id',$result['id'])->update(['role'=>'director_admin'])] as $operation){try{$operation();throw new RuntimeException('Forbidden runtime privilege');}catch(Illuminate\Database\QueryException){$assert(true);}}
 $assert($db->getSchemaBuilder()->getColumnListing('local_account_events')===['id','actor_id','target_id','operation','operation_key','recorded_at']);
