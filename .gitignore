@@ -4,3 +4,4 @@
 /backend/.env*
 /backend/.phpunit.cache/
 /backend/.phpunit.result.cache
+/backups/
