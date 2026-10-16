@@ -9,19 +9,19 @@ type Props = {
 };
 
 export function MobileNavBar({ role = 'student', selected, onSelect, pendingCount }: Props) {
-  // 5 primary items per role
+  // 4–5 elementos principales por rol (sin calendario para estudiante ni docente)
   const items = role === 'student' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'my_enrollments', label: 'Cursos', icon: BookOpen },
     { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: pendingCount },
-    { id: 'weeks', label: 'Calendario', icon: Calendar },
     { id: 'library', label: 'Biblioteca', icon: Library },
+    { id: 'history', label: 'Progreso', icon: TrendingUp },
   ] : role === 'teacher' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'my_assignments', label: 'Cursos', icon: BookOpen },
     { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: pendingCount },
-    { id: 'weeks', label: 'Semanas', icon: Calendar },
     { id: 'library', label: 'Biblioteca', icon: Library },
+    { id: 'history', label: 'Historial', icon: TrendingUp },
   ] : role === 'director_admin' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
