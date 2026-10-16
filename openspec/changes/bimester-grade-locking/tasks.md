@@ -16,3 +16,5 @@
 - [x] 11. Add contract tests in `frontend/src/features/academic-foundation/reports.test.ts` for bimester closing and reopening actions.
 - [x] 12. Update `ReportWorkspace.tsx` to render bimester status badges, closure controls, and definitive vs provisional print views.
 - [x] 13. Run full verification suite (server verification, Vitest tests, TypeScript, build) and prepare commit handoff.
+- [x] 14. Harden bimester lock policy in `DeliveryAssessment.php`: resolve bimester via week or teaching block dates; fail unmapped activities with explicit `unmapped_bimester` error when any bimesters are locked; allow assessment when all bimesters are open.
+- [x] 15. Add concurrency tests and multi-cycle lifecycle verification (close -> reopen -> reclose) in `verify-bimesters-server.php` (40 checks passed).

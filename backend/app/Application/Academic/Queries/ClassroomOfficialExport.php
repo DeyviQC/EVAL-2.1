@@ -7,16 +7,171 @@ use App\Infrastructure\Authentication\AuthenticatedActor;
 
 final class ClassroomOfficialExport
 {
+    public const FORMAT_VERSION = '2.1';
+    public const INSTITUTION = 'I.E. NUESTRA SEÑORA DE LAS MERCEDES';
+    public const DEFAULT_SECRET = 'EVAL_INSTITUTIONAL_DOCUMENT_SECRET_KEY_2026';
+
+    /**
+     * Resolves the server key for document signing.
+     */
+    public static function resolveSigningKey(?string $explicitKey = null): string
+    {
+        if ($explicitKey !== null && $explicitKey !== '') {
+            return $explicitKey;
+        }
+        $runtimeKey = getenv('EVAL_RUNTIME_KEY');
+        if ($runtimeKey) {
+            return $runtimeKey;
+        }
+        return self::DEFAULT_SECRET;
+    }
+
+    /**
+     * Builds canonical payload containing full academic evidence and student roster.
+     */
+    public static function buildCanonicalPayload(
+        array $report,
+        array $bimesters,
+        AuthenticatedActor $actor,
+        string $emissionId,
+        int $ledgerOrdinal = 0,
+        ?string $nowUtc = null
+    ): array {
+        $scope = $report['scope'];
+        $totals = $report['totals'];
+        $items = $report['items'];
+        $bimesterList = $bimesters['bimesters'] ?? [];
+
+        $allLocked = count($bimesterList) > 0 && array_reduce($bimesterList, fn($carry, $b) => $carry && ($b['state'] === 'locked'), true);
+        $anyLocked = count($bimesterList) > 0 && array_reduce($bimesterList, fn($carry, $b) => $carry || ($b['state'] === 'locked'), false);
+
+        $conditionLabel = $allLocked
+            ? 'CONSOLIDADO DEFINITIVO'
+            : ($anyLocked
+                ? 'CONSOLIDADO PARCIAL'
+                : 'VISTA PROVISIONAL');
+
+        // Canonical student roster (sorted deterministically by ID)
+        $students = [];
+        $sortedItems = $items;
+        usort($sortedItems, fn($a, $b) => strcmp((string)$a['id'], (string)$b['id']));
+
+        foreach ($sortedItems as $st) {
+            $students[] = [
+                'id' => (string)$st['id'],
+                'name' => (string)$st['name'],
+                'historical' => (bool)$st['historical'],
+                'received' => (int)$st['received'],
+                'graded' => (int)$st['graded'],
+                'pending' => (int)$st['pending'],
+            ];
+        }
+
+        // Canonical bimesters state
+        $bimestersData = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $found = null;
+            foreach ($bimesterList as $bim) {
+                if ((int)$bim['bimester_number'] === $i) {
+                    $found = $bim;
+                    break;
+                }
+            }
+            $bimestersData[] = [
+                'bimester' => $i,
+                'state' => $found['state'] ?? 'open',
+                'closed_by' => $found['closed_by_name'] ?? null,
+                'reopened_by' => $found['reopened_by_name'] ?? null,
+            ];
+        }
+
+        return [
+            'institution' => self::INSTITUTION,
+            'version' => self::FORMAT_VERSION,
+            'emission_id' => $emissionId,
+            'scope' => [
+                'period_id' => (string)$scope['period_id'],
+                'period_name' => (string)$scope['period_name'],
+                'period_state' => (string)$scope['period_state'],
+                'grade_id' => (string)$scope['grade_id'],
+                'grade_name' => (string)$scope['grade_name'],
+                'section_id' => (string)$scope['section_id'],
+                'section_name' => (string)$scope['section_name'],
+            ],
+            'totals' => [
+                'received' => (int)$totals['received'],
+                'pending' => (int)$totals['pending'],
+                'graded' => (int)$totals['graded'],
+                'AD' => (int)$totals['AD'],
+                'A' => (int)$totals['A'],
+                'B' => (int)$totals['B'],
+                'C' => (int)$totals['C'],
+            ],
+            'condition' => $conditionLabel,
+            'bimesters' => $bimestersData,
+            'students' => $students,
+            'emitted_by' => [
+                'identity_id' => (string)$actor->identityId,
+                'roles' => $actor->roles,
+            ],
+            'emitted_at_utc' => $nowUtc ?: (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z'),
+            'ledger_ordinal' => $ledgerOrdinal,
+        ];
+    }
+
+    /**
+     * Hashes canonical payload into SHA-256.
+     */
+    public static function hashPayload(array $payload): string
+    {
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return hash('sha256', (string)$json);
+    }
+
+    /**
+     * Signs hash with server HMAC-SHA-256.
+     */
+    public static function sign(string $hash, ?string $secretKey = null): string
+    {
+        $key = self::resolveSigningKey($secretKey);
+        return hash_hmac('sha256', $hash, $key);
+    }
+
+    /**
+     * Verifies HMAC signature.
+     */
+    public static function verify(string $hash, string $signature, ?string $secretKey = null): bool
+    {
+        $expected = self::sign($hash, $secretKey);
+        return hash_equals($expected, $signature);
+    }
+
+    /**
+     * Formats human-readable verification code from content hash.
+     */
+    public static function verificationCode(string $hash): string
+    {
+        $clean = strtoupper(substr($hash, 0, 12));
+        return 'EVAL-2026-' . substr($clean, 0, 4) . '-' . substr($clean, 4, 4) . '-' . substr($clean, 8, 4);
+    }
+
     /**
      * Generates a tamper-evident, standalone official institutional grade sheet document.
      *
      * @param array $report Output from ClassroomReport::read
      * @param array $bimesters Output from BimesterClosuresQuery::getForPeriod
      * @param AuthenticatedActor $actor Generating actor
-     * @return array{html: string, sha256: string, filename: string}
+     * @param int $ledgerOrdinal Ordinal recorded from academic_write_guard
+     * @param string|null $secretKey Explicit signing key or null for environment
+     * @return array{html: string, sha256: string, signature: string, verification_code: string, emission_id: string, filename: string}
      */
-    public static function generate(array $report, array $bimesters, AuthenticatedActor $actor): array
-    {
+    public static function generate(
+        array $report,
+        array $bimesters,
+        AuthenticatedActor $actor,
+        int $ledgerOrdinal = 0,
+        ?string $secretKey = null
+    ): array {
         $scope = $report['scope'];
         $totals = $report['totals'];
         $items = $report['items'];
@@ -24,29 +179,19 @@ final class ClassroomOfficialExport
 
         $nowLima = (new \DateTimeImmutable('now', new \DateTimeZone('America/Lima')))->format('d/m/Y H:i:s');
         $nowUtc = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
+        $emissionId = bin2hex(random_bytes(16));
 
-        // Check if all bimesters are locked
-        $allLocked = count($bimesterList) > 0 && array_reduce($bimesterList, fn($carry, $b) => $carry && ($b['state'] === 'locked'), true);
-        $anyLocked = count($bimesterList) > 0 && array_reduce($bimesterList, fn($carry, $b) => $carry || ($b['state'] === 'locked'), false);
+        $canonical = self::buildCanonicalPayload($report, $bimesters, $actor, $emissionId, $ledgerOrdinal, $nowUtc);
+        $contentHash = self::hashPayload($canonical);
+        $signature = self::sign($contentHash, $secretKey);
+        $verificationCode = self::verificationCode($contentHash);
 
-        $conditionLabel = $allLocked
-            ? 'CONSOLIDADO DEFINITIVO (TODOS LOS BIMESTRES CERRADOS)'
-            : ($anyLocked
-                ? 'CONSOLIDADO PARCIAL (BIMESTRES CON BLOQUEO ACTIVO)'
-                : 'VISTA PROVISIONAL EN PROCESO');
-
-        // Cryptographic integrity seal calculated over core data
-        $payloadToSign = json_encode([
-            'institution' => 'I.E. NUESTRA SEÑORA DE LAS MERCEDES',
-            'scope' => $scope,
-            'totals' => $totals,
-            'students_count' => count($items),
-            'condition' => $conditionLabel,
-            'generated_by_id' => $actor->identityId,
-            'generated_at_utc' => $nowUtc,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        $integrityHash = hash('sha256', (string)$payloadToSign);
+        $conditionLabel = $canonical['condition'];
+        $conditionFull = match($conditionLabel) {
+            'CONSOLIDADO DEFINITIVO' => 'CONSOLIDADO DEFINITIVO (TODOS LOS BIMESTRES CERRADOS)',
+            'CONSOLIDADO PARCIAL' => 'CONSOLIDADO PARCIAL (BIMESTRES CON BLOQUEO ACTIVO)',
+            default => 'VISTA PROVISIONAL EN PROCESO'
+        };
 
         $actorRoles = implode(', ', $actor->roles);
         $esc = fn(?string $v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -87,6 +232,8 @@ final class ClassroomOfficialExport
             $bimestersHtml .= '</div>';
         }
 
+        $verifyUrl = "/reports/verify?code=" . urlencode($verificationCode);
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="es">
@@ -102,8 +249,9 @@ final class ClassroomOfficialExport
   .header p { font-size: 8pt; color: #64748b; margin: 2px 0 0 0; }
   .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; font-size: 8.5pt; background: #f1f5f9; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; }
   .meta-grid strong { color: #0f172a; }
-  .seal-box { background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 8pt; color: #1e40af; }
-  .seal-box code { font-family: Consolas, monospace; font-size: 7.5pt; word-break: break-all; }
+  .seal-box { background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 8pt; color: #14532d; }
+  .seal-box code { font-family: Consolas, monospace; font-size: 7.5pt; word-break: break-all; color: #0f172a; }
+  .code-highlight { font-size: 11pt; font-weight: bold; color: #15803d; letter-spacing: 1px; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 8.5pt; }
   th { background: #0f172a; color: #ffffff; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.3px; border: 1px solid #0f172a; }
   td { padding: 5px 8px; border: 1px solid #cbd5e1; }
@@ -120,9 +268,12 @@ final class ClassroomOfficialExport
 </head>
 <body>
 
-<div class="no-print" style="margin-bottom:15px;padding:10px;background:#e0f2fe;border:1px solid #7dd3fc;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
-  <span><strong>Documento Oficial Generado por el Servidor EVAL</strong> · Sello Criptográfico Válido</span>
-  <button onclick="window.print()" style="background:#0f172a;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;">Imprimir / Guardar en PDF</button>
+<div class="no-print" style="margin-bottom:15px;padding:10px 15px;background:#e0f2fe;border:1px solid #7dd3fc;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+  <span><strong>Documento Institucional Oficial EVAL</strong> · Firma Criptográfica Verificable por Servidor</span>
+  <div>
+    <a href="{$verifyUrl}" target="_blank" style="margin-right:10px;color:#0369a1;font-weight:bold;text-decoration:underline;">Verificar Autenticidad</a>
+    <button onclick="window.print()" style="background:#0f172a;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;">Imprimir / Guardar en PDF</button>
+  </div>
 </div>
 
 <div class="header">
@@ -134,7 +285,7 @@ final class ClassroomOfficialExport
 <div class="meta-grid">
   <div><strong>Período Lectivo:</strong> {$esc($scope['period_name'])}</div>
   <div><strong>Grado y Sección:</strong> {$esc($scope['grade_name'])} {$esc($scope['section_name'])}</div>
-  <div><strong>Condición de Calificaciones:</strong> <strong>{$esc($conditionLabel)}</strong></div>
+  <div><strong>Condición de Calificaciones:</strong> <strong>{$esc($conditionFull)}</strong></div>
   <div><strong>Total Estudiantes Evaluados:</strong> {$esc((string)count($items))}</div>
   <div><strong>Fecha de Emisión Oficial:</strong> {$esc($nowLima)} (Hora de Perú)</div>
   <div><strong>Generado por Actor ID:</strong> {$esc($actor->identityId)} ({$esc($actorRoles)})</div>
@@ -143,9 +294,16 @@ final class ClassroomOfficialExport
 {$bimestersHtml}
 
 <div class="seal-box">
-  <strong>🔒 SELLO DE INTEGRIDAD CRIPTOGRÁFICA DEL SERVIDOR:</strong><br>
-  <code>SHA-256: {$integrityHash}</code><br>
-  <span style="font-size:7pt;color:#475569;">Este sello certifica que la información del aula coincide exactamente con la bitácora inmutable (audit ledger) del servidor EVAL en la fecha y hora indicada.</span>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <strong>🛡️ SELLO DE INTEGRIDAD CRIPTOGRÁFICA Y FIRMA INSTITUCIONAL:</strong>
+    <span class="code-highlight">{$esc($verificationCode)}</span>
+  </div>
+  <div><strong>ID de Emisión Única:</strong> <code>{$esc($emissionId)}</code> &middot; <strong>Ordinal Ledger:</strong> {$ledgerOrdinal} &middot; <strong>Algoritmo:</strong> HMAC-SHA-256 (EVAL Core v2.1)</div>
+  <div><strong>Hash SHA-256 (Nómina Completa y Calificaciones):</strong> <code>{$esc($contentHash)}</code></div>
+  <div><strong>Firma Digital del Servidor:</strong> <code>{$esc($signature)}</code></div>
+  <div style="font-size:7pt;color:#166534;margin-top:4px;">
+    Certificado inmutable: Esta acta ampara la integridad de las calificaciones y la nómina completa registrada en la bitácora del servidor EVAL. Verifique en <a href="{$verifyUrl}" style="color:#166534;font-weight:bold;">{$verifyUrl}</a>.
+  </div>
 </div>
 
 <h3 style="font-size:9.5pt;font-weight:bold;margin:12px 0 4px 0;text-transform:uppercase;color:#0f172a;">
@@ -215,11 +373,14 @@ HTML;
         $cleanGrade = preg_replace('/[^a-zA-Z0-9]/', '', (string)$scope['grade_name']);
         $cleanSec = preg_replace('/[^a-zA-Z0-9]/', '', (string)$scope['section_name']);
         $cleanPeriod = preg_replace('/[^a-zA-Z0-9]/', '', (string)$scope['period_name']);
-        $filename = "acta-eval-{$cleanPeriod}-{$cleanGrade}{$cleanSec}-oficial.html";
+        $filename = "acta-eval-{$cleanPeriod}-{$cleanGrade}{$cleanSec}-{$verificationCode}.html";
 
         return [
             'html' => $html,
-            'sha256' => $integrityHash,
+            'sha256' => $contentHash,
+            'signature' => $signature,
+            'verification_code' => $verificationCode,
+            'emission_id' => $emissionId,
             'filename' => $filename,
         ];
     }

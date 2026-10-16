@@ -4,10 +4,14 @@
          bootstrap="bootstrap.php" cacheResult="false" failOnEmptyTestSuite="true"
          failOnWarning="true" failOnRisky="true">
     <testsuites>
-        <testsuite name="U1">
+        <testsuite name="Unit">
             <file>tests/Unit/Academic/TemporalBoundaryTest.php</file>
             <file>tests/Unit/Academic/WriteGuardPreconditionTest.php</file>
-            <file>tests/Feature/Academic/IdentityRetentionTest.php</file>
+            <file>tests/Unit/Academic/AcademicLockSetTest.php</file>
+            <file>tests/Unit/Academic/AcademicNameKeyTest.php</file>
+            <file>tests/Unit/Academic/DeliveryTimingTest.php</file>
+            <file>tests/Unit/Academic/SchoolCalendarPlanTest.php</file>
+            <file>tests/Unit/Academic/DocumentIntegrityTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

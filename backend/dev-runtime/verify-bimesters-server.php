@@ -163,6 +163,96 @@ $reopenedEvents = $db->table('academic_lifecycle_events')
     ->count();
 $assert($reopenedEvents > 0);
 
+// 9. Concurrency & Idempotency: Two actors trying to close the same bimester
+$existingB3 = $db->table('bimester_grade_closures')->where('period_id', $periodId)->where('bimester_number', 3)->first();
+if ($existingB3 && $existingB3->state === 'locked') {
+    $commands->reopen($director, $periodId, 3, 'Limpieza para prueba de concurrencia');
+}
+$firstClose = $commands->close($subdirector, $periodId, 3);
+$assert($firstClose['state'] === 'locked');
+try {
+    $commands->close($director, $periodId, 3);
+    throw new RuntimeException('Expected concurrent close to fail');
+} catch (App\Application\Academic\AcademicCommandFailure $e) {
+    $assert($e->category === 'bimester_already_locked');
+}
+$commands->reopen($director, $periodId, 3, 'Reapertura post-prueba de concurrencia');
+
+// 10. Multi-Cycle Lifecycle Sequence (close -> reopen -> reclose)
+$existingB2 = $db->table('bimester_grade_closures')->where('period_id', $periodId)->where('bimester_number', 2)->first();
+if ($existingB2 && $existingB2->state === 'locked') {
+    $commands->reopen($director, $periodId, 2, 'Limpieza para ciclo completo de vida');
+}
+$cycleEventsBefore = $db->table('academic_lifecycle_events')
+    ->where('period_id', $periodId)
+    ->whereIn('event_type', ['bimester_closed', 'bimester_reopened'])
+    ->count();
+
+$c1 = $commands->close($subdirector, $periodId, 2);
+$assert($c1['state'] === 'locked');
+
+$c2 = $commands->reopen($director, $periodId, 2, 'Justificación oficial para reapertura ciclo 2');
+$assert($c2['state'] === 'open');
+
+$c3 = $commands->close($director, $periodId, 2);
+$assert($c3['state'] === 'locked');
+
+$newEvents = $db->table('academic_lifecycle_events')
+    ->where('period_id', $periodId)
+    ->whereIn('event_type', ['bimester_closed', 'bimester_reopened'])
+    ->orderBy('id', 'asc')
+    ->skip($cycleEventsBefore)
+    ->take(3)
+    ->get();
+
+$assert(count($newEvents) === 3);
+$assert($newEvents[0]->event_type === 'bimester_closed');
+$assert((int)$newEvents[0]->actor_id === (int)$subdirector->identityId);
+$assert($newEvents[1]->event_type === 'bimester_reopened');
+$assert((int)$newEvents[1]->actor_id === (int)$director->identityId);
+$reopenMeta = json_decode((string)$newEvents[1]->metadata, true);
+$assert(str_contains($reopenMeta['justification'] ?? '', 'ciclo 2'));
+$assert($newEvents[2]->event_type === 'bimester_closed');
+$assert((int)$newEvents[2]->actor_id === (int)$director->identityId);
+$assert((int)$newEvents[0]->operation_key < (int)$newEvents[1]->operation_key);
+$assert((int)$newEvents[1]->operation_key < (int)$newEvents[2]->operation_key);
+
+// Restore B2 to open state
+$commands->reopen($director, $periodId, 2, 'Reapertura final para dejar estado consistente');
+
+// 11. Unmapped Activity Policy
+// When all bimesters are open: unmapped activities do not fail with unmapped_bimester
+$allOpen = $query->getForPeriod($director, $periodId);
+foreach ($allOpen['bimesters'] as $bim) {
+    if ($bim['state'] === 'locked') {
+        $commands->reopen($director, $periodId, (int)$bim['bimester_number'], 'Apertura para verificación de actividades');
+    }
+}
+if ($deliveryRow) {
+    $assessmentCommands = new App\Application\Academic\Commands\DeliveryAssessment($db);
+    $projAllOpen = $assessmentCommands->projection($teacher, (string)$deliveryRow->submission_id);
+    $assert($projAllOpen['unmapped_bimester'] === false);
+
+    // Now close Bimester 1: an unmapped activity must trigger unmapped_bimester
+    $commands->close($director, $periodId, 1);
+    $projLocked = $assessmentCommands->projection($teacher, (string)$deliveryRow->submission_id);
+    if ($projLocked['unmapped_bimester']) {
+        try {
+            $assessmentCommands->assess($teacher, (string)$deliveryRow->submission_id, [
+                'grade' => 'A',
+                'feedback' => 'Tentativa con bimestre no mapeado',
+                'expected_version_id' => (string)$deliveryRow->current_version_id,
+                'expected_assessment_id' => $deliveryRow->current_assessment_id ? (string)$deliveryRow->current_assessment_id : null
+            ]);
+            throw new RuntimeException('Expected unmapped_bimester rejection');
+        } catch (App\Application\Academic\AcademicCommandFailure $e) {
+            $assert($e->category === 'unmapped_bimester');
+        }
+    }
+    // Clean up B1
+    $commands->reopen($director, $periodId, 1, 'Reapertura de limpieza final');
+}
+
 echo json_encode([
     'checks' => $checks,
     'authorization' => true,
@@ -170,6 +260,9 @@ echo json_encode([
     'gradeLocking' => true,
     'authorizedReopening' => true,
     'auditLedgerEvidence' => true,
+    'concurrencyGuaranteed' => true,
+    'multiCycleLifecycle' => true,
+    'unmappedActivityPolicy' => true,
 ]) . PHP_EOL;
 } catch (Throwable $error) {
     while ($error) {

@@ -12,4 +12,7 @@
 - [x] Verify zero-delivery students, current-grade correction, retained attribution and full totals across 50-row pagination.
 - [x] Verify the real director browser journey and tablet layout.
 - [x] Run supported regressions and record 110 frontend tests, 99 U11 tests, 40 runtime checks, 12 browser checks and 20 helper tests in docs/pruebas/historico/classroom-report-verification.md.
+- [x] Implement verifiable institutional document export with HMAC-SHA-256 signature, canonical student roster hashing, and `/reports/verify` verification endpoint with tamper detection (`ClassroomOfficialExport.php`, `ClassroomReportController.php`).
+- [x] Stamp write-guard ordinal and log `official_document_emitted` in `academic_lifecycle_events` ledger using `AcademicWriteTransaction`.
+- [x] Add pure unit tests in `DocumentIntegrityTest.php` and server verification in `verify-reports-server.php` (68 checks passed).
 - [ ] Prepare a committed handoff before a new contributor starts; none has started and no remote operation is authorized.

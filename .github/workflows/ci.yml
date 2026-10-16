@@ -78,18 +78,17 @@ jobs:
       - name: Lint PHP Syntax
         run: find app tests dev-runtime -name "*.php" -exec php -l {} \; > /dev/null
 
-      - name: Run 62 Domain Unit Tests (PHPUnit)
+      - name: Run 67 Domain & Integrity Unit Tests (PHPUnit)
         env:
           EVAL_VENDOR_DIR: ${{ github.workspace }}/backend/vendor
-        run: ./vendor/bin/phpunit -c phpunit.xml --filter "TemporalBoundaryTest|WriteGuardPreconditionTest|AcademicLockSetTest|AcademicNameKeyTest|DeliveryTimingTest|SchoolCalendarPlanTest"
+        run: ./vendor/bin/phpunit -c phpunit.xml --testsuite Unit
 
-      - name: Provision MySQL Migration & Runtime Users
+      - name: Provision MySQL Migration & Runtime Users (Least Privilege)
         run: |
           mysql -h 127.0.0.1 -P 3307 -u root -proot_ci_password -e "
             CREATE USER IF NOT EXISTS 'eval_dev_migration'@'%' IDENTIFIED BY 'ci_mig_password';
             CREATE USER IF NOT EXISTS 'eval_dev_runtime'@'%' IDENTIFIED BY 'ci_run_password';
-            GRANT ALL PRIVILEGES ON eval_dev.* TO 'eval_dev_migration'@'%' WITH GRANT OPTION;
-            GRANT ALL PRIVILEGES ON *.* TO 'eval_dev_migration'@'%' WITH GRANT OPTION;
+            GRANT ALL PRIVILEGES ON eval_dev.* TO 'eval_dev_migration'@'%';
             GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE, TRIGGER, CREATE TEMPORARY TABLES, LOCK TABLES ON eval_dev.* TO 'eval_dev_runtime'@'%';
             FLUSH PRIVILEGES;
           "

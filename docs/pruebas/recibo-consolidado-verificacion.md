@@ -21,11 +21,11 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
   1. Frontend Contract Suite      Node test / TypeScript     223 tests    PASSED
   2. Frontend Typecheck           tsc (src + tooling)          0 errors   PASSED
   3. Frontend Production Build    Vite v8.3.3 client           0 errors   PASSED
-  4. Core Domain Unit Tests       PHPUnit 12.5 (en memoria)   62 tests    PASSED
-                                                              (112 assertions)
-  5. Master Backend Runner        PHP 8.4 isolated runner    780 checks   PASSED
+  4. Core Domain Unit Tests       PHPUnit 12.5 (en memoria)   67 tests    PASSED
+                                                               (130 assertions)
+  5. Master Backend Runner        PHP 8.4 isolated runner    818 checks   PASSED
      - Users & Credentials        verify-users-server.php     30 checks   PASSED
-     - Institutional Reports      verify-reports-server.php   46 checks   PASSED
+     - Institutional Reports      verify-reports-server.php   68 checks   PASSED
      - Qualitative Assessments    verify-assessments-server   56 checks   PASSED
      - Activities & Deliveries    verify-activities-server    45 checks   PASSED
      - Material Maintenance       verify-material-maint.php   73 checks   PASSED
@@ -35,11 +35,11 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
      - Institutional Library      verify-library-server.php   43 checks   PASSED
      - Role Policies & Guards     verify-role-policy-server    7 checks   PASSED
      - Institutional Audit Trail  verify-audit-server.php    172 checks   PASSED
-     - Bimester Grade Closures    verify-bimesters-server     24 checks   PASSED
+     - Bimester Grade Closures    verify-bimesters-server     40 checks   PASSED
   6. Dispositivo Físico LAN Wi-Fi Smartphone / Tablet        HTTPS:8443   VERIFICADO
   7. CI GitHub Actions c/ MySQL   ubuntu + mysql:8.4          20 migr.    PASSED
 --------------------------------------------------------------------------------
-  TOTAL COMPROBACIONES PASADAS:                            1,065 checks   100% OK
+  TOTAL COMPROBACIONES PASADAS:                            1,108 checks   100% OK
 ================================================================================
 ```
 
