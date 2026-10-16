@@ -6,6 +6,7 @@ on:
       - main
       - 'chore/**'
       - 'feat/**'
+      - 'test/**'
   pull_request:
     branches:
       - main
@@ -38,7 +39,7 @@ jobs:
       - name: Verify TypeScript & Tooling (Typecheck)
         run: npm run typecheck
 
-      - name: Run 207 Automated Contract Tests
+      - name: Run 213 Automated Contract Tests
         run: npm test
 
       - name: Build Production Bundle (Vite)

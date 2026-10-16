@@ -65,10 +65,10 @@ function Owned-Process($Record){
         if($Record.marker -notin $nodeMarkers -or $process.Path -ne (Get-Command node.exe).Source){throw 'Incomplete process record cannot be recovered.'}
         $Record.executable=$process.Path
     }
-    if($process.Path -ne $Record.executable -or $process.StartTime.ToUniversalTime().Ticks.ToString() -ne [string]$Record.started){throw ('Recorded process identity changed: actual='+[IO.Path]::GetFileName($process.Path)+'; recorded='+[IO.Path]::GetFileName($Record.executable)+'; start_match='+($process.StartTime.ToUniversalTime().Ticks.ToString() -eq [string]$Record.started)+'.')}
+    if($process.Path -ne $Record.executable -or $process.StartTime.ToUniversalTime().Ticks.ToString() -ne [string]$Record.started){return $null}
     $info=Get-CimInstance Win32_Process -Filter ('ProcessId='+$process.Id)
     $owner=Invoke-CimMethod -InputObject $info -MethodName GetOwnerSid
-    if($owner.ReturnValue -ne 0 -or $owner.Sid -ne $sid.Value -or !$info.CommandLine.Replace('"','').Contains($Record.marker)){throw 'Recorded process ownership changed.'}
+    if($owner.ReturnValue -ne 0 -or $owner.Sid -ne $sid.Value -or !$info.CommandLine.Replace('"','').Contains($Record.marker)){return $null}
     return $process
 }
 function Record-Process($Process,[string]$Marker){return @{pid=$Process.Id;started=$Process.StartTime.ToUniversalTime().Ticks.ToString();executable=[IO.Path]::GetFullPath($Process.StartInfo.FileName);marker=$Marker}}
