@@ -1,30 +1,33 @@
 import {roleMenus,roleLabels,allowedSection,StudentDashboard,TeacherDashboard,DirectorDashboard,VicePrincipalDashboard,type DashboardRole} from './role-dashboards.js';
 import {InstitutionReadView} from './InstitutionReadView.js';
-import { useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { createSessionClient, createSessionController, type SessionView } from './session.js';
 import { createNavigationController, sectionLabels } from './navigation.js';
 import { createAcademicClient } from './api.js';
-import { FoundationWorkspace } from './FoundationWorkspace.js';
 import { MyCourses } from './MyCourses.js';
-import { EnrollmentWorkspace } from './EnrollmentWorkspace.js';
-import { AssignmentWorkspace } from './AssignmentWorkspace.js';
 import { createMaterialClient } from './materials.js';
 import { createAccountClient,type OwnAccount } from './accounts.js';
-import { UsersWorkspace,OwnAccountWorkspace,MandatoryPasswordChangeWorkspace } from './AccountWorkspace.js';
 import { createActivityClient } from './activities.js';
 import { NotificationWorkspace } from './NotificationWorkspace.js';
 import { createNotificationClient } from './notifications.js';
-import { ReportWorkspace } from './ReportWorkspace.js';
 import { createReportClient } from './reports.js';
-import { SupervisionWorkspace } from './SupervisionWorkspace.js';
-import { HistoryWorkspace } from './HistoryWorkspace.js';
 import { ActivityWorkspace } from './ActivityWorkspace.js';
-import { CalendarWorkspace } from './CalendarWorkspace.js';
 import { createCalendarClient } from './calendars.js';
 import { createWeeksClient } from './weeks.js';
 import {SessionPanel} from './InstitutionalShell.js';
 import {NavButton} from './InstitutionalUI.js';
 import {emptyClassroom} from './course-classrooms.js';
+
+const FoundationWorkspace = lazy(() => import('./FoundationWorkspace.js').then(m => ({ default: m.FoundationWorkspace })));
+const EnrollmentWorkspace = lazy(() => import('./EnrollmentWorkspace.js').then(m => ({ default: m.EnrollmentWorkspace })));
+const AssignmentWorkspace = lazy(() => import('./AssignmentWorkspace.js').then(m => ({ default: m.AssignmentWorkspace })));
+const UsersWorkspace = lazy(() => import('./AccountWorkspace.js').then(m => ({ default: m.UsersWorkspace })));
+const OwnAccountWorkspace = lazy(() => import('./AccountWorkspace.js').then(m => ({ default: m.OwnAccountWorkspace })));
+const MandatoryPasswordChangeWorkspace = lazy(() => import('./AccountWorkspace.js').then(m => ({ default: m.MandatoryPasswordChangeWorkspace })));
+const ReportWorkspace = lazy(() => import('./ReportWorkspace.js').then(m => ({ default: m.ReportWorkspace })));
+const SupervisionWorkspace = lazy(() => import('./SupervisionWorkspace.js').then(m => ({ default: m.SupervisionWorkspace })));
+const HistoryWorkspace = lazy(() => import('./HistoryWorkspace.js').then(m => ({ default: m.HistoryWorkspace })));
+const CalendarWorkspace = lazy(() => import('./CalendarWorkspace.js').then(m => ({ default: m.CalendarWorkspace })));
 export {SessionPanel} from './InstitutionalShell.js';
 export function SessionShell() {
   const session=useMemo(()=>createSessionClient(),[]);
@@ -76,5 +79,5 @@ export function SessionShell() {
     }
     return <p>Esta sección no está disponible para tu perfil.</p>;
   }
-  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}>{content()}</SessionPanel>;
+  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}><Suspense fallback={<div className="p-8 text-center text-xs text-text-muted animate-pulse">Cargando sección institucional…</div>}>{content()}</Suspense></SessionPanel>;
 }
