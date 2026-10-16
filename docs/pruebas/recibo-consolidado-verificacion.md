@@ -2,15 +2,15 @@
 
 **Proyecto:** EVAL — Plataforma Educativa Institucional  
 **Colegio:** I.E. Nuestra Señora de las Mercedes (Ayacucho, Perú)  
-**Commit de Referencia:** `d32bc5a` (rama `test/school-tablets`)  
-**Fecha de Emisión:** 2026-10-16 12:50:00 -05:00  
-**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 22+, MySQL 8.4 (`eval_dev`, 38 tablas, 19 migraciones, ordinal 4828).
+**Commit de Referencia:** `fe36e7f` (rama `main`)  
+**Fecha de Emisión:** 2026-10-16 14:35:00 -05:00  
+**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 22+, MySQL 8.4 (`eval_dev`, 38 tablas, 19 migraciones, ordinal 6103).
 
 ---
 
 ## 1. Resumen de Ejecución de Suites
 
-El presente documento certifica que las suites de pruebas automatizadas y de verificación del servidor del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `d32bc5a`, obteniendo una tasa de éxito del 100%.
+El presente documento certifica que las suites de pruebas automatizadas y de verificación del servidor del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `fe36e7f` en la rama `main`, obteniendo una tasa de éxito del 100%.
 
 ```text
 ================================================================================
@@ -18,12 +18,12 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
 ================================================================================
   Módulo / Suite                  Herramienta             Checks / Tests  Estado
 --------------------------------------------------------------------------------
-  1. Frontend Contract Suite      Node test / TypeScript     213 tests    PASSED
+  1. Frontend Contract Suite      Node test / TypeScript     217 tests    PASSED
   2. Frontend Typecheck           tsc (src + tooling)          0 errors   PASSED
   3. Frontend Production Build    Vite v8.3.3 client           0 errors   PASSED
   4. Core Domain Unit Tests       PHPUnit 12.5 (en memoria)   62 tests    PASSED
                                                              (112 assertions)
-  5. Master Backend Runner        PHP 8.4 isolated runner    577 checks   PASSED
+  5. Master Backend Runner        PHP 8.4 isolated runner    742 checks   PASSED
      - Users & Credentials        verify-users-server.php     30 checks   PASSED
      - Institutional Reports      verify-reports-server.php   39 checks   PASSED
      - Qualitative Assessments    verify-assessments-server   56 checks   PASSED
@@ -34,9 +34,10 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
      - Academic Notifications     verify-notifications-server 52 checks   PASSED
      - Institutional Library      verify-library-server.php   43 checks   PASSED
      - Role Policies & Guards     verify-role-policy-server    7 checks   PASSED
+     - Institutional Audit Trail  verify-audit-server.php    165 checks   PASSED
   6. Dispositivo Físico LAN Wi-Fi Smartphone / Tablet        HTTPS:8443   VERIFICADO
 --------------------------------------------------------------------------------
-  TOTAL COMPROBACIONES PASADAS:                              852 checks   100% OK
+  TOTAL COMPROBACIONES PASADAS:                            1,021 checks   100% OK
 ================================================================================
 ```
 

@@ -1,6 +1,6 @@
 # EVAL Current Project Status
 
-Date: 2026-10-16. Reviewed baseline commit: `3c8173b` (on branch `test/school-tablets`).
+Date: 2026-10-16. Reviewed baseline commit: `fe36e7f` (on branch `main`).
 This assessment compares `openspec/config.yaml`, current approved change specifications, the functional-completion roadmap, automated test suites, and empirical verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
 
 ---
@@ -87,24 +87,23 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 
 ## 2.4. Baseline Promotion Definition
 
-- **Current Working Branch:** `test/school-tablets` (Commit `258de5b`).
-- **Target Branch for Promotion:** `main`.
-- **Promotion Recommendation:** Once the on-site physical tablet check at the school is completed, `test/school-tablets` should be merged into `main` via a fast-forward or clean squashed merge, serving as the official `v2.1` stable institutional baseline.
+- **Current Working Branch:** `main` (synchronized with `origin/main` at commit `fe36e7f`).
+- **Promotion Status:** Completed. All incremental developments from `test/school-tablets` have been consolidated and integrated into `main` as a single squashed baseline commit directly following the verified collaborator commit (`48a79c5`).
 
 ---
 
-## 3. Verified Engineering Evidence (Commit `258de5b`)
+## 3. Verified Engineering Evidence (Commit `fe36e7f` on branch `main`)
 
 ### Frontend
-- **Tests:** 213 automated contract/integration tests passing (0 failures, duration ~550ms via `npm test`).
-- **Build & Typing:** Full TypeScript check (`tsc --noEmit && tsc -p tsconfig.tooling.json`) and Vite production bundle (`npm run build`) passing cleanly in ~700ms.
-- **Bundle Optimization:** Route-level code-splitting with vendor chunking (`react-vendor`, `vendor`, `icons`, and lazy-loaded workspaces), reducing initial download size.
-- **Design System:** Arko editorial design inspired by modern digital products, Google Fonts (**Fraunces** for headings and **Inter** for UI), full dark mode support, accessible contrast (WCAG AA), responsive layouts (390px, 768px, 1440px), official transparent HD crest, and institutional palette: Navy-950 (`#10244A`) and Warm Gold (`#E0A526`).
+- **Tests:** 217 automated contract/integration tests passing (0 failures, duration ~350ms via `npm test`).
+- **Build & Typing:** Full TypeScript check (`tsc --noEmit && tsc -p tsconfig.tooling.json`) and Vite production bundle (`npm run build`) passing cleanly in ~370ms.
+- **Bundle Optimization:** Route-level code-splitting with vendor chunking (`react-vendor`, `vendor`, `icons`, and lazy-loaded workspaces: `AuditWorkspace`, `ReportWorkspace`, `AccountWorkspace`, `CalendarWorkspace`), keeping chunks lightweight.
+- **Design System:** Arko editorial design, Google Fonts (**Fraunces** for headings and **Inter** for UI), full dark mode support, accessible contrast (WCAG AA), responsive layouts (390px, 768px, 1440px), official transparent HD crest, and institutional palette: Navy-950 (`#10244A`) and Warm Gold (`#E0A526`).
 
 ### Backend & Database
 - **Database Schema:** 38 tables across 19 migrations (`2026_10_07_000001` through `2026_10_13_000002`).
 - **Catalog Integrity:** Cleaned and restricted strictly to secondary level (1.° a 5.° de Secundaria). 52 test verification grades deactivated in `eval_dev`.
-- **Server Verification Suites (10/10 Passed · 573 total checks):**
+- **Server Verification Suites (11/11 Passed · 742 total checks):**
   - `verify-users-server.php` (26 checks: authorization, retention, privileges).
   - `verify-reports-server.php` (39 checks, 52 rows: pagination, counts, grades).
   - `verify-assessments-server.php` (56 checks: corrections, evidence locking, closed periods).
@@ -115,7 +114,9 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
   - `verify-notifications-server.php` (52 checks: routing, private feed, revocation).
   - `verify-library-server.php` (43 checks: pagination, literal search, collations).
   - `verify-role-policy-server.php` (7 checks: director read-only, forced rollback).
-- **Network & Multi-Device Verification:** Verified running over local Wi-Fi on `0.0.0.0:8443` with successful physical mobile phone connection and TLS handshake.
+  - `verify-audit-server.php` (165 checks: append-only ledger, role guard, entity filtering, cursor pagination).
+- **Core Domain Unit Tests:** 62 PHPUnit unit tests (112 assertions) in memory.
+- **Network & Multi-Device Verification:** Local Wi-Fi reachability confirmed on `0.0.0.0:8443` with successful physical mobile phone connection and TLS handshake; formal on-site acceptance with school tablets and projector remains scheduled for the school premises.
 
 ---
 
@@ -123,10 +124,9 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 
 ### P0 — Prerequisites for Institutional School Operation
 1. **Automated Backup & Verified Clean Restore:**
-   - Automated scheduled backup scripts for MySQL database and physical `.local/eval-dev` file attachments.
-   - Clean restoration drill on a blank environment.
-   - Verification of 19 migrations integrity and data consistency after restore.
-   - Written disaster recovery procedure.
+   - Automated scheduled backup scripts for MySQL database and physical `.local/eval-dev` file attachments (`backup.ps1`).
+   - Clean restoration drill executed on `eval_dev` (`restore.ps1`).
+   - Windows Task Scheduler automation to be finalized.
 2. **On-Site School LAN / WLAN Deployment:**
    - Execute deployment in school network with local Windows Server or host laptop.
    - Install institutional TLS certificate on school tablets.
@@ -136,8 +136,8 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
    - Concurrency benchmarks under multi-classroom traffic.
 4. **Continuous Integration (CI):**
    - GitHub Actions workflow (`.github/workflows/ci.yml`) automating:
-     - Frontend typecheck, 213 tests, and build.
-     - Backend linting, migration validation, and suite execution.
+     - Frontend typecheck, 217 tests, and build.
+     - Backend linting, migration validation, and domain unit tests.
 
 ### P1 — Important Institutional Enhancements
 5. **Report Exports (PDF / XLSX):**

@@ -2,8 +2,8 @@
 
 **Proyecto:** EVAL — Plataforma Educativa Institucional  
 **Institución:** I.E. Nuestra Señora de las Mercedes (Ayacucho, Perú)  
-**Baseline Commit:** `8fe5a99`  
-**Fecha:** 2026-10-15  
+**Baseline Commit:** `fe36e7f` (rama `main`)  
+**Fecha:** 2026-10-16  
 
 Esta matriz establece la correlación formal y bidireccional entre los requisitos institucionales, las especificaciones OpenSpec, el código fuente (backend y frontend), el esquema persistente (migraciones MySQL), las suites de pruebas automatizadas y los recibos de evidencia técnica verificada.
 
@@ -27,6 +27,10 @@ Esta matriz establece la correlación formal y bidireccional entre los requisito
 | **REQ-12** | **Pantalla de Aula y Proyección Institucional:** Modo presentación para proyectores y pantallas interactivas; visor integrado de documentos PDF e imágenes protegidas. | `odd/tasks/classroom-presentation.md` | `frontend/src/features/academic-foundation/CourseClassroom.tsx`<br>`frontend/src/features/academic-foundation/classroom/PresentationModal.tsx` | Acceso a almacenamiento local (`.local/eval-dev`) | `scripts/launch-brave.mjs`<br>`frontend/tests/contracts.runner.mjs` | Vista libre de distracciones, compatibilidad con punteros táctiles y control por teclado. |
 | **REQ-13** | **Sistema de Diseño Editorial y Accesibilidad:** Identidad institucional (Azul marino `#10244A` y Dorado `#E0A526`), tipografía Fraunces e Inter, modo claro/oscuro, sin desbordes. | Requerimiento de diseño human-directed | `frontend/src/styles.css`<br>`frontend/src/features/academic-foundation/layout/`<br>`frontend/src/components/ui/` | Variables CSS personalizadas en `:root` y `.dark` | Capturas Playwright en 1440px y 390px (30 artefactos generados). `npm run build` sin errores. | Cumplimiento WCAG AA de contraste, áreas táctiles mínimas de 44px, paleta de comandos Ctrl+K. |
 | **REQ-14** | **Ledger de Ciclo de Vida y Guardias Atómicos:** Registro inmutable de transacciones académicas con contador ordinal secuencial que previene estados corruptos. | `openspec/changes/academic-foundation` | `app/Infrastructure/Persistence/Academic/AcademicWriteGuard.php`<br>`LifecycleLedger.php` | `2026_10_07_000003_create_academic_lifecycle_events_table.php`<br>`2026_10_07_000008_create_academic_write_guard_table.php` | `backend/tests/Feature/Academic/LifecycleLedgerTest.php`<br>`AcademicWriteTransactionTest.php` | Pruebas de concurrencia y rollback atómico validadas en todas las operaciones de escritura. |
+| **REQ-15** | **Visor de Auditoría Institucional (Audit Trail Explorer):** Exploración paginada por cursor de la bitácora inmutable de eventos de ciclo de vida con filtros por entidad/actor para Dirección y Subdirección (búsqueda en la página cargada de 50 registros). | `openspec/changes/audit-trail-explorer` | `app/Application/Academic/Queries/AuditLedgerQuery.php`<br>`frontend/src/features/academic-foundation/AuditWorkspace.tsx`<br>`audit.ts` | Triggers MySQL `ledger_no_update` y `ledger_no_delete` | `backend/dev-runtime/verify-audit-server.php`<br>`frontend/src/features/academic-foundation/audit.test.ts` | 165 checks en servidor (inmutabilidad, 403 para alumnos/docentes, cursor determinista). Pruebas de contrato en verde. |
+| **REQ-16** | **Consolidado CNEB y Exportaciones:** Resumen de aula con distribución AD/A/B/C y diagnóstico pedagógico (cierre formal bimestral pendiente); exportación SpreadsheetML (.xls), CSV UTF-8 e impresión/PDF de navegador. | `openspec/changes/classroom-reports` | `frontend/src/features/academic-foundation/ReportWorkspace.tsx`<br>`reports.ts` | Índices de entregas y evaluaciones | `frontend/src/features/academic-foundation/reports.test.ts`<br>`backend/dev-runtime/verify-reports-server.php` | 217 tests frontend pasando al 100%. Generación nativa de libro Excel SpreadsheetML e impresión oficial. |
+| **REQ-17** | **Respaldo y Restauración Limpia (Disaster Recovery):** Snapshot atómico criptográfico de base de datos MySQL y almacenamiento físico con script de restauración desatendido. | Requerimiento de operación institucional | `backend/scripts/backup.ps1`<br>`backend/scripts/restore.ps1` | MySQL dump y checksums SHA-256 | `docs/operaciones/backup-y-restauracion.md` | Drill de restauración verificado en base limpia `eval_dev` con 38 tablas, 19 migraciones y suites verdes post-restore. |
+| **REQ-18** | **Servidor Local para Tablets y Red Escolar (LAN/WLAN):** Despliegue offline en `0.0.0.0:8443` con certificado TLS multi-SAN, regla de firewall y panel interactivo; conectividad móvil comprobada localmente. | `openspec/changes/tablet-interface` | `backend/scripts/start-tablet-mode.ps1`<br>`setup-lan.ps1`<br>`backend/dev-runtime/https-proxy.mjs` | Configuración de red y certificados en `.local/eval-dev` | Conexión física verificada vía Wi-Fi desde smartphone a `https://192.168.0.207:8443` | 100% operativo sin Internet. Validación formal en el colegio con tablets MINEDU y proyector pendiente. |
 
 ---
 
@@ -36,10 +40,11 @@ Esta matriz establece la correlación formal y bidireccional entre los requisito
 +-----------------------------------------------------------+
 | RECUENTO TOTAL DE PRUEBAS AUTOMATIZADAS                   |
 +-----------------------------------------------------------+
-| 1. Pruebas Frontend de Contrato (Vitest / Node Test):     | 207 pasadas (100%)
-| 2. Comprobaciones de Servidor Backend (PHP 8.4):           | 573 checks pasados (100%)
-| 3. Pruebas de Integración E2E en Navegador (Playwright):  | 141 verificaciones pasadas
+| 1. Pruebas Frontend de Contrato (Vitest / Node Test):     | 217 pasadas (100%)
+| 2. Comprobaciones de Servidor Backend (PHP 8.4):           | 742 checks pasados (100%)
+| 3. Pruebas Unitarias de Dominio (PHPUnit 12.5):            | 62 pruebas (112 assertions)
 | 4. Migraciones de Base de Datos MySQL:                    | 19 aplicadas (38 tablas)
 | 5. Compilación TypeScript y Bundling Vite:                | 0 errores / 0 advertencias
+| 6. Total Comprobaciones Pasadas:                          | 1,021 checks (100% OK)
 +-----------------------------------------------------------+
 ```
