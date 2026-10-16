@@ -10,7 +10,7 @@ import { EnrollmentWorkspace } from './EnrollmentWorkspace.js';
 import { AssignmentWorkspace } from './AssignmentWorkspace.js';
 import { createMaterialClient } from './materials.js';
 import { createAccountClient,type OwnAccount } from './accounts.js';
-import { UsersWorkspace,OwnAccountWorkspace } from './AccountWorkspace.js';
+import { UsersWorkspace,OwnAccountWorkspace,MandatoryPasswordChangeWorkspace } from './AccountWorkspace.js';
 import { createActivityClient } from './activities.js';
 import { NotificationWorkspace } from './NotificationWorkspace.js';
 import { createNotificationClient } from './notifications.js';
@@ -47,11 +47,12 @@ export function SessionShell() {
   useEffect(()=>{void controller.refresh();return ()=>controller.invalidate();},[controller]);
   useEffect(()=>{setUnread(null);setSelected(null);setCourseClassroom(emptyClassroom());navigation.clear();return ()=>navigation.clear();},[view.phase,navigation]);
   useEffect(()=>{let active=true;setOwn(null);setRole(null);setProfileError(false);if(view.phase==='authenticated')void accounts.bootstrap().then(({account,role:profile,sections})=>{if(active){setOwn(account);setRole(profile);navigation.hydrate(sections);try{const stored=sessionStorage.getItem('eval-view:'+account.id+':'+profile);if(stored&&allowedSection(profile,stored))setSelected(stored);}catch{}}}).catch(()=>{if(active)setProfileError(true);});return ()=>{active=false;};},[view.phase,accounts]);  const safeSelected=role&&allowedSection(role,selected)?selected:null;
-  const choose=(id:string|null)=>{if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
+  const choose=(id:string|null)=>{if(own?.must_change_password)return;if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
   const menu=role?roleMenus[role]:[];
-  const activeLabel=menu.find(entry=>entry.id===safeSelected)?.label??'Inicio';
+  const activeLabel=own?.must_change_password?'Cambio obligatorio de contraseña':(menu.find(entry=>entry.id===safeSelected)?.label??'Inicio');
   function content(){
     if(!role||!own)return <><p role="status">{profileError?'No se pudo confirmar tu perfil.':'Consultando tu perfil…'}</p>{profileError&&<button onClick={()=>void controller.refresh()}>Volver a consultar</button>}</>;
+    if(own.must_change_password)return <MandatoryPasswordChangeWorkspace client={accounts} account={own} onExpired={controller.invalidate}/>;
     if(context.phase==='loading')return <p role="status">Consultando tus secciones…</p>;
     if(context.phase==='unavailable')return <><p role="alert">No se pudo confirmar la navegación.</p><button onClick={()=>void navigation.refresh()}>Volver a consultar</button></>;
     if(context.phase!=='ready')return null;
@@ -75,5 +76,5 @@ export function SessionShell() {
     }
     return <p>Esta sección no está disponible para tu perfil.</p>;
   }
-  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}>{content()}</SessionPanel>;
+  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}>{content()}</SessionPanel>;
 }
