@@ -4,10 +4,10 @@ context: |
   System: EVAL, for I.E. Nuestra Señora de las Mercedes.
   Product: Institutional hybrid educational web platform served primarily from the school network.
   Essential availability: Student functions must not require external Internet while local server, network, and power are available.
-  Repository state: Isolated U1 dependencies and PHPUnit harness plus unaccepted U2 candidate schema exist; no approved full application or CI. See docs/reconciliation-academic-foundation.md for current verified checks.
-  Planned stack: Windows Server, Laravel/PHP, MySQL, React/TypeScript, and Tailwind CSS; this is a decision, not detected implementation.
+  Repository state: Verified local academic foundation, 19 database migrations, 213 automated contract tests, LAN/WLAN multi-device runtime, and Arko design system on branch test/school-tablets (commit bbec3a0). See docs/project-status-current.md for verified baseline.
+  Planned stack: Windows Server, Laravel/PHP, MySQL, React/TypeScript, and Tailwind CSS; this is an approved direction and active local runtime.
   Access: Browser only over LAN/WLAN; a later remote component will synchronize selected functions.
-  Delivery: OpenSpec SDD, interactive pace, ask on risk, and a 400 changed-line review threshold.
+  Delivery: OpenSpec SDD, interactive pace, ask on risk, and sequential team handoff.
 
 project:
   official_name: EVAL
