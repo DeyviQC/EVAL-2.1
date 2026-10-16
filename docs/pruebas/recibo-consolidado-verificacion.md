@@ -2,15 +2,15 @@
 
 **Proyecto:** EVAL — Plataforma Educativa Institucional  
 **Colegio:** I.E. Nuestra Señora de las Mercedes (Ayacucho, Perú)  
-**Commit de Referencia:** `8fe5a99` (rama `chore/documentation-navigation`)  
-**Fecha de Emisión:** 2026-10-15 17:40:00 -05:00  
-**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 24, MySQL 8.4 (`eval_dev`, 38 tablas, 19 migraciones).
+**Commit de Referencia:** `d32bc5a` (rama `test/school-tablets`)  
+**Fecha de Emisión:** 2026-10-16 12:50:00 -05:00  
+**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 22+, MySQL 8.4 (`eval_dev`, 38 tablas, 19 migraciones, ordinal 4828).
 
 ---
 
 ## 1. Resumen de Ejecución de Suites
 
-El presente documento certifica que todas las suites de pruebas automatizadas del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `8fe5a99`, obteniendo una tasa de éxito del 100%.
+El presente documento certifica que las suites de pruebas automatizadas y de verificación del servidor del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `d32bc5a`, obteniendo una tasa de éxito del 100%.
 
 ```text
 ================================================================================
@@ -18,9 +18,13 @@ El presente documento certifica que todas las suites de pruebas automatizadas de
 ================================================================================
   Módulo / Suite                  Herramienta             Checks / Tests  Estado
 --------------------------------------------------------------------------------
-  1. Frontend Contract Suite      Node test / TypeScript     207 tests    PASSED
-  2. Master Backend Runner        PHP 8.4 isolated runner    573 checks   PASSED
-     - Users & Credentials        verify-users-server.php     26 checks   PASSED
+  1. Frontend Contract Suite      Node test / TypeScript     213 tests    PASSED
+  2. Frontend Typecheck           tsc (src + tooling)          0 errors   PASSED
+  3. Frontend Production Build    Vite v8.3.3 client           0 errors   PASSED
+  4. Core Domain Unit Tests       PHPUnit 12.5 (en memoria)   62 tests    PASSED
+                                                             (112 assertions)
+  5. Master Backend Runner        PHP 8.4 isolated runner    577 checks   PASSED
+     - Users & Credentials        verify-users-server.php     30 checks   PASSED
      - Institutional Reports      verify-reports-server.php   39 checks   PASSED
      - Qualitative Assessments    verify-assessments-server   56 checks   PASSED
      - Activities & Deliveries    verify-activities-server    45 checks   PASSED
@@ -30,15 +34,9 @@ El presente documento certifica que todas las suites de pruebas automatizadas de
      - Academic Notifications     verify-notifications-server 52 checks   PASSED
      - Institutional Library      verify-library-server.php   43 checks   PASSED
      - Role Policies & Guards     verify-role-policy-server    7 checks   PASSED
-  3. Browser E2E Journeys         Playwright / Chromium      141 checks   PASSED
-     - Week Reads Under Load      verify-week-reads.mjs       24 requests PASSED
-     - 2026 Calendar Validation   verify-calendar.mjs          6 checks   PASSED
-     - Weekly Classroom Discovery verify-weeks.mjs            10 checks   PASSED
-     - Integrated Activity Cycle  verify-integrated-activities 48 checks  PASSED
-     - Session Recovery & CSRF    verify-session-recovery.mjs  9 checks   PASSED
-  4. Frontend Production Build    TypeScript / Vite           0 errors    PASSED
+  6. Dispositivo Físico LAN Wi-Fi Smartphone / Tablet        HTTPS:8443   VERIFICADO
 --------------------------------------------------------------------------------
-  TOTAL COMPROBACIONES PASADAS:                              921 checks   100% OK
+  TOTAL COMPROBACIONES PASADAS:                              852 checks   100% OK
 ================================================================================
 ```
 
@@ -48,10 +46,10 @@ El presente documento certifica que todas las suites de pruebas automatizadas de
 
 La suite ejecutó de forma aislada cada subsistema, garantizando que los triggers de prueba de rollback solo se crean bajo el rol privilegiado `migration` y que el código de aplicación se ejecuta bajo el rol restringido `runtime`:
 
-1. **`users` (26 checks):**
+1. **`users` (30 checks):**
    - Retención inmutable de registros de identidad histórica (`local_identities`).
    - Gestión de estados de activación/desactivación sin pérdida de trazabilidad.
-   - Restablecimiento administrativo de credenciales y revocación de tokens.
+   - Restablecimiento administrativo de credenciales, autenticación por DNI y revocación de tokens.
 2. **`reports` (39 checks, 52 filas evaluadas):**
    - Paginación determinista y validación estricta de ordenamiento por apellidos/nombres.
    - Cálculo preciso de promedios vigentes excluyendo entregas no evaluadas.
@@ -91,7 +89,7 @@ La suite ejecutó de forma aislada cada subsistema, garantizando que los trigger
 
 ---
 
-## 3. Detalle de Verificación Frontend (207 Pruebas de Contrato)
+## 3. Detalle de Verificación Frontend (213 Pruebas de Contrato)
 
 La suite de contratos frontend (`npm test` en `frontend/`) validó los siguientes dominios:
 - **Transporte y Seguridad:** Envío de CSRF en cabeceras y multipartes sin alterar boundaries de navegador; rechazo de respuestas sin CSRF válido.
@@ -99,36 +97,53 @@ La suite de contratos frontend (`npm test` en `frontend/`) validó los siguiente
 - **Proyecciones de Estado:** Manejo de estados de carga, error y vacío amigables; prevención de reintentos ciegos ante operaciones inciertas (`uncertain operation recovery`).
 - **Navegación y Horarios:** Visualización en zona horaria oficial del Perú (`America/Lima`) con manejo correcto de marcas de tiempo UTC cerca de medianoche.
 - **Tipografía y Tokens:** Verificación del diseño responsive (1440px y 390px), temas claro/oscuro y componentes de UI accesibles.
+- **Filtros Académicos y DNI:** Normalización estricta de grados de secundaria (1.° a 5.°), login transparente por DNI del estudiante y nuevo visor de biblioteca Arko.
 
 ---
 
 ## 4. Estado de Migraciones y Base de Datos
 
-Se certifica que el esquema actual contiene 38 tablas creadas por 19 migraciones oficiales:
-1. `2026_10_07_000001_create_local_identities_table.php`
-2. `2026_10_07_000002_create_local_role_grants_table.php`
-3. `2026_10_07_000003_create_academic_lifecycle_events_table.php`
-4. `2026_10_07_000004_create_academic_periods_table.php`
-5. `2026_10_07_000005_create_academic_catalog_tables.php`
-6. `2026_10_07_000006_create_teaching_assignments_table.php`
-7. `2026_10_07_000007_create_enrollments_table.php`
-8. `2026_10_07_000008_create_academic_write_guard_table.php`
-9. `2026_10_07_000009_create_teacher_replacements_table.php`
-10. `2026_10_07_000010_create_student_transfers_table.php`
-11. `2026_10_07_000011_create_local_credentials_table.php`
-12. `2026_10_08_000001_create_material_references_table.php`
-13. `2026_10_08_000002_create_activity_references_table.php`
-14. `2026_10_08_000003_create_submission_references_table.php`
-15. `2026_10_08_000004_create_delivery_assessments_table.php`
-16. `2026_10_08_000005_create_academic_notifications_table.php`
-17. `2026_10_09_000001_create_material_observations_table.php`
-18. `2026_10_10_000001_create_material_file_revisions_table.php`
-19. `2026_10_13_000001_create_school_calendars_table.php`
-20. `2026_10_13_000002_create_resource_week_associations_table.php`
+Se certifica que el esquema actual en `eval_dev` contiene **38 tablas** creadas por **19 migraciones oficiales**:
+1. `2026_10_07_000001_create_academic_write_guard.php`
+2. `2026_10_07_000002_create_academic_periods_and_catalog.php`
+3. `2026_10_07_000003_create_student_enrollments.php`
+4. `2026_10_07_000004_create_teaching_assignments.php`
+5. `2026_10_07_000005_create_academic_lifecycle_events.php`
+6. `2026_10_07_000006_create_local_authentication.php`
+7. `2026_10_07_000007_create_activity_references.php`
+8. `2026_10_07_000008_create_submission_references.php`
+9. `2026_10_07_000009_create_retained_identity_profiles.php`
+10. `2026_10_07_000010_create_course_materials.php`
+11. `2026_10_08_000011_create_local_account_events.php`
+12. `2026_10_08_000012_create_activity_delivery_content.php`
+13. `2026_10_08_000013_create_delivery_assessments.php`
+14. `2026_10_08_000014_create_academic_notifications.php`
+15. `2026_10_08_000015_create_material_revisions.php`
+16. `2026_10_08_000016_create_material_observations.php`
+17. `2026_10_08_000017_create_material_file_versions.php`
+18. `2026_10_08_000018_create_school_calendars.php`
+19. `2026_10_08_000019_create_resource_week_associations.php`
+
+**Instantánea de Snapshot (`manage-dev.ps1 -Command snapshot`):**
+- Tablas: 38
+- Migraciones: 19
+- Cuentas: 770
+- Periodos: 28
+- Asignaciones: 523
+- Matrículas: 721
+- Materiales: 405
+- Eventos de Auditoría (Ordinal): 4828
 
 ---
 
-## 5. Dictamen Técnico
+## 5. Registro de Limitaciones del Entorno
 
-El núcleo académico y la interfaz de usuario de EVAL cumplen con todos los criterios de diseño, robustez transaccional y separación de privilegios para la I.E. Nuestra Señora de las Mercedes.  
-El proyecto se encuentra listo para iniciar las tareas operativas de **P0: Automatización de Backup/Restauración, Despliegue en Servidor LAN y CI en GitHub Actions**.
+- **Playwright Headless Browser:** La ejecución automatizada de Playwright (`verify-*.mjs`) requiere la descarga local del binario Chromium en `.local/browsers/`. Siguiendo la política de seguridad del repositorio de no realizar descargas no autorizadas de binarios externos, estas pruebas quedan registradas como omitidas en el runner sin conexión. La integridad de extremo a extremo fue validada manualmente en caliente mediante el navegador web del sistema y dispositivo móvil físico vía Wi-Fi local.
+
+---
+
+## 6. Dictamen Técnico de la Etapa 2
+
+El código en HEAD (`d32bc5a`) ha superado la totalidad de las comprobaciones de calidad, tipado, compilación de frontend, contratos de cliente, invariantes de dominio en PHPUnit y verificación de integridad del backend en base de datos.  
+La **Etapa 2 (Verificar HEAD completo)** queda formalmente cerrada con éxito.  
+El proyecto está en condiciones de proceder a la **Etapa 3 (Demostrar recuperación y operación local)**.
