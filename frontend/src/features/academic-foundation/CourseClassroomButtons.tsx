@@ -1,11 +1,13 @@
 import {type CourseClassroom,type CourseClassroomSelection} from './course-classrooms.js';
 
 export function isCleanSecondaryGrade(name: string): boolean {
-  const lower = name.trim().toLowerCase();
-  if (lower.includes('verification') || lower.includes('test') || lower.includes('prueba') || lower.includes('synthetic')) {
+  const clean = name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/verificaci|test|prueba|synthetic|nota|actividad|file|report|maintenance|observation|library|notification/i.test(clean)) {
     return false;
   }
-  return true;
+  const isNumbered = /^[1-5](\.?[°º]|ero|do|ro|to)?(\s*(de\s+)?secundaria)?$/i.test(clean);
+  const isNamed = /^(primero|segundo|tercero|cuarto|quinto)(\s*(de\s+)?secundaria)?$/i.test(clean);
+  return isNumbered || isNamed;
 }
 
 const secondaryRank: Record<string, number> = {
