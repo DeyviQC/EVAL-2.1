@@ -70,7 +70,7 @@ export const bulkImportCases: [string, () => unknown][] = [
       const student = result.valid[0];
       if (!student) throw new Error('Expected student to be defined');
       assert.equal(student.dni, '71234567');
-      assert.equal(student.username, 'estudiante.71234567');
+      assert.equal(student.username, '71234567');
       assert.equal(student.gradeId, '1');
       assert.equal(student.sectionId, '10');
 

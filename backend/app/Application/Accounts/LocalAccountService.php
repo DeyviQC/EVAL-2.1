@@ -53,14 +53,14 @@ final class LocalAccountService {
         if($create){
             Checks::fields($input,['name','username','role'],['name','username','role']);
             if(!is_string($input['name'])||!mb_check_encoding($input['name'],'UTF-8')||trim($input['name'])===''||mb_strlen($input['name'])>255||!is_string($input['username'])||!in_array($input['role'],['teacher','student'],true))throw new AcademicCommandFailure('invalid_input');
-            $name=trim($input['name']);$username=strtolower(trim($input['username']));$role=$input['role'];if(!preg_match('/^[a-z][a-z0-9._-]{2,63}$/D',$username))throw new AcademicCommandFailure('invalid_input');
+            $name=trim($input['name']);$username=strtolower(trim($input['username']));$role=$input['role'];if(!preg_match('/^[a-z0-9][a-z0-9._-]{2,63}$/D',$username))throw new AcademicCommandFailure('invalid_input');
         }elseif($self){
             Checks::fields($input,['current_password','password'],['current_password','password']);
             if(!is_string($input['current_password'])||strlen($input['current_password'])>72||!is_string($input['password'])||!mb_check_encoding($input['password'],'UTF-8')||strlen($input['password'])<12||strlen($input['password'])>72)throw new AcademicCommandFailure('invalid_input');
             if($input['current_password']===$input['password'])throw new AcademicCommandFailure('password_unchanged');
             $target=$actor->identityId;$hash=password_hash($input['password'],PASSWORD_BCRYPT,['cost'=>12]);
         }else{Checks::fields($input,[]);if(!in_array($operation,['password_reset','deactivated','reactivated'],true))throw new AcademicCommandFailure('invalid_input');}
-        if($create||$operation==='password_reset'){$alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';$secret='';for($i=0;$i<20;$i++)$secret.=$alphabet[random_int(0,strlen($alphabet)-1)];$hash=password_hash($secret,PASSWORD_BCRYPT,['cost'=>12]);}
+        if($create||$operation==='password_reset'){if($create&&$role==='student'){$secret=$username;}else{$alphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';$secret='';for($i=0;$i<20;$i++)$secret.=$alphabet[random_int(0,strlen($alphabet)-1)];}$hash=password_hash($secret,PASSWORD_BCRYPT,['cost'=>12]);}
         return (new AcademicWriteTransaction($this->db))->execute($actor->identityId,
             fn()=>new AcademicLockSet($target===null?[]:['retained_identities'=>[$target]]),
             function()use($actor,$self,$create,$target,$input,$username){

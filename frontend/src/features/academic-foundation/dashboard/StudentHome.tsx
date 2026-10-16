@@ -16,7 +16,7 @@ import { Card, StatCard, CourseCard, TaskItem, ProgressBar, Button, EmptyState }
 
 type Props = {
   name: string;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
   client?: AccountClient | undefined;
 };
 
@@ -114,7 +114,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
             variant="accent"
             size="md"
             rightIcon={<ArrowRight className="w-4 h-4" />}
-            onClick={() => onSelect('activities')}
+            onClick={() => onSelect('activities', 'pending')}
             className="shrink-0 self-start md:self-center"
           >
             Continuar actividad
@@ -130,7 +130,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
           emptyMessage="¡Al día!"
           icon={<ClipboardList className="w-5 h-5" />}
           iconColor="text-amber-500"
-          onClick={() => onSelect('activities')}
+          onClick={() => onSelect('activities', 'pending')}
         />
         <StatCard
           label="Entregadas"
@@ -139,7 +139,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
           icon={<CheckCircle2 className="w-5 h-5" />}
           iconColor="text-emerald-500"
           trend="+2 esta semana"
-          onClick={() => onSelect('activities')}
+          onClick={() => onSelect('activities', 'submitted')}
         />
         <StatCard
           label="Promedio"
@@ -173,7 +173,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
               </div>
               <button
                 type="button"
-                onClick={() => onSelect('activities')}
+                onClick={() => onSelect('activities', 'pending')}
                 className="text-xs font-semibold text-primary hover:text-primary-hover transition-colors"
               >
                 Ver todas →
@@ -187,7 +187,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
                 courseTitle="Ciencia y Tecnología · 2.º B"
                 dueDate="Hoy · Laboratorio"
                 dueCategory="today"
-                onClick={() => onSelect('activities')}
+                onClick={() => onSelect('activities', 'pending')}
               />
               <TaskItem
                 id="task-2"
@@ -195,7 +195,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
                 courseTitle="Comunicación · 2.º B"
                 dueDate="Mañana a las 11:59 pm"
                 dueCategory="tomorrow"
-                onClick={() => onSelect('activities')}
+                onClick={() => onSelect('activities', 'pending')}
               />
               <TaskItem
                 id="task-3"
@@ -203,7 +203,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
                 courseTitle="Matemática · 2.º B"
                 dueDate="En 4 días (19 de octubre)"
                 dueCategory="later"
-                onClick={() => onSelect('activities')}
+                onClick={() => onSelect('activities', 'pending')}
               />
             </div>
           </div>

@@ -179,17 +179,17 @@ export function validateStudentImport(
       rowValid = false;
     }
 
-    // 3. Determinar y validar Nombre de usuario
+    // 3. Determinar y validar Nombre de usuario (DNI de 8 dígitos para estudiantes)
     const username = rawUser
       ? rawUser.toLowerCase().trim()
-      : `estudiante.${cleanDni}`;
+      : cleanDni;
 
-    if (!/^[a-z][a-z0-9._-]{2,63}$/.test(username)) {
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(username)) {
       errors.push({
         row: rowNum,
         field: 'Usuario',
         value: username,
-        message: 'El usuario debe tener de 3 a 64 caracteres válidos (letras, números, punto o guion).',
+        message: 'El usuario debe tener de 3 a 64 caracteres válidos (DNI numérico o letras, números, punto o guion).',
       });
       rowValid = false;
     } else if (seenUsernames.has(username)) {
@@ -319,7 +319,7 @@ export function validateTeacherImport(rawHeaders: string[], rawRows: string[][])
       ? rawUser.toLowerCase().trim()
       : `docente.${cleanDni}`;
 
-    if (!/^[a-z][a-z0-9._-]{2,63}$/.test(username)) {
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(username)) {
       errors.push({
         row: rowNum,
         field: 'Usuario',

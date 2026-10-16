@@ -141,7 +141,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
           try {
             // 1. Crear cuenta institucional de estudiante
             const res = await client.create(row.name, row.username, 'student');
-            const password = res.password ?? 'Generada';
+            const password = res.password ?? row.dni;
 
             let enrollmentStatus: 'enrolled' | 'skipped' | 'failed' = 'skipped';
 
