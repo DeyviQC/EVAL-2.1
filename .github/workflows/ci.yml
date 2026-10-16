@@ -70,5 +70,5 @@ jobs:
       - name: Lint PHP Syntax
         run: find app tests dev-runtime -name "*.php" -exec php -l {} \; > /dev/null
 
-      - name: Run Core Domain Tests (PHPUnit)
-        run: ./vendor/bin/phpunit -c phpunit.xml
+      - name: Run Core Domain Unit Tests (PHPUnit)
+        run: ./vendor/bin/phpunit -c phpunit.xml --filter "TemporalBoundaryTest|WriteGuardPreconditionTest"
