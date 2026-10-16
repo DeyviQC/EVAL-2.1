@@ -24,6 +24,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
   const [report, setReport] = useState<ClassroomReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeTab, setActiveTab] = useState<'consolidado' | 'nomina'>('consolidado');
 
   // Filtros interactivos del reporte
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,7 +240,33 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               </div>
             </div>
 
-            {/* Tarjetas de Resumen */}
+            {/* Switcher de Vistas */}
+            <div className="flex items-center gap-2 mt-4 border-b border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'consolidado'
+                    ? 'border-eval-teal text-eval-teal dark:text-teal-400 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                onClick={() => setActiveTab('consolidado')}
+              >
+                📊 Consolidado de Calificaciones (CNEB)
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'nomina'
+                    ? 'border-eval-teal text-eval-teal dark:text-teal-400 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                onClick={() => setActiveTab('nomina')}
+              >
+                📋 Nómina y Seguimiento de Aula
+              </button>
+            </div>
+
+            {/* Tarjetas de Resumen (Métricas Base CNEB) */}
             <div className="my-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
               <article aria-label="Entregas recibidas" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-3.5 shadow-sm">
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Recibidas</span>
@@ -271,77 +298,275 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               </article>
             </div>
 
-            {/* Barra de Filtros en Vivo */}
-            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between my-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-sm">
-              <div className="w-full sm:w-72">
-                <input
-                  type="text"
-                  placeholder="Buscar estudiante..."
-                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <select
-                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
-                >
-                  <option value="all">Condición: Todos</option>
-                  <option value="active">Solo Activos</option>
-                  <option value="historical">Solo Históricos</option>
-                </select>
-                <select
-                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium"
-                  value={pendingFilter}
-                  onChange={e => setPendingFilter(e.target.value as typeof pendingFilter)}
-                >
-                  <option value="all">Entregas: Todas</option>
-                  <option value="pending">Con pendientes</option>
-                </select>
-              </div>
-            </div>
+            {/* VISTA 1: CONSOLIDADO DE CALIFICACIONES (CNEB) */}
+            {activeTab === 'consolidado' && (
+              <div className="space-y-5">
+                {/* Panel de Rendimiento y Distribución Pedagógica */}
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                    <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <span>Distribución de Logro del Aprendizaje (Norma CNEB)</span>
+                    </h4>
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Total Evaluaciones: {report.totals.graded}
+                    </span>
+                  </div>
 
-            {/* Tabla de Estudiantes */}
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Estudiantes del aula</h3>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shadow-sm">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                    <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">Estudiante</th>
-                    <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Entregas</th>
-                    <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Calificadas</th>
-                    <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Pendientes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredItems.map(row => (
-                    <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
-                      <td className="p-3">
-                        <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
-                        {row.historical && (
-                          <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded">
-                            Histórico
+                  {/* Barra Visual Segmentada de Notas */}
+                  {report.totals.graded > 0 ? (
+                    <div>
+                      <div className="w-full h-5 rounded-full bg-slate-100 dark:bg-slate-700/50 overflow-hidden flex shadow-inner">
+                        <div
+                          style={{ width: `${Math.round((report.totals.AD / report.totals.graded) * 100)}%` }}
+                          className="bg-emerald-500 h-full transition-all"
+                          title={`AD (Logro Destacado): ${report.totals.AD} (${Math.round((report.totals.AD / report.totals.graded) * 100)}%)`}
+                        />
+                        <div
+                          style={{ width: `${Math.round((report.totals.A / report.totals.graded) * 100)}%` }}
+                          className="bg-teal-500 h-full transition-all"
+                          title={`A (Logro Esperado): ${report.totals.A} (${Math.round((report.totals.A / report.totals.graded) * 100)}%)`}
+                        />
+                        <div
+                          style={{ width: `${Math.round((report.totals.B / report.totals.graded) * 100)}%` }}
+                          className="bg-sky-500 h-full transition-all"
+                          title={`B (En Proceso): ${report.totals.B} (${Math.round((report.totals.B / report.totals.graded) * 100)}%)`}
+                        />
+                        <div
+                          style={{ width: `${Math.round((report.totals.C / report.totals.graded) * 100)}%` }}
+                          className="bg-rose-500 h-full transition-all"
+                          title={`C (En Inicio): ${report.totals.C} (${Math.round((report.totals.C / report.totals.graded) * 100)}%)`}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40">
+                          <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></span>
+                          <div>
+                            <strong className="block text-emerald-800 dark:text-emerald-300 font-bold">AD · Destacado</strong>
+                            <span className="text-emerald-700 dark:text-emerald-400">
+                              {report.totals.AD} ({Math.round((report.totals.AD / report.totals.graded) * 100)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/40">
+                          <span className="w-3 h-3 rounded-full bg-teal-500 shrink-0"></span>
+                          <div>
+                            <strong className="block text-teal-800 dark:text-teal-300 font-bold">A · Esperado</strong>
+                            <span className="text-teal-700 dark:text-teal-400">
+                              {report.totals.A} ({Math.round((report.totals.A / report.totals.graded) * 100)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/40">
+                          <span className="w-3 h-3 rounded-full bg-sky-500 shrink-0"></span>
+                          <div>
+                            <strong className="block text-sky-800 dark:text-sky-300 font-bold">B · En Proceso</strong>
+                            <span className="text-sky-700 dark:text-sky-400">
+                              {report.totals.B} ({Math.round((report.totals.B / report.totals.graded) * 100)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40">
+                          <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0"></span>
+                          <div>
+                            <strong className="block text-rose-800 dark:text-rose-300 font-bold">C · En Inicio</strong>
+                            <span className="text-rose-700 dark:text-rose-400">
+                              {report.totals.C} ({Math.round((report.totals.C / report.totals.graded) * 100)}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Métricas de Diagnóstico Institucional */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800">
+                          <strong className="text-slate-800 dark:text-slate-200 font-semibold block">
+                            🎯 Nivel Satisfactorio (AD + A): {Math.round(((report.totals.AD + report.totals.A) / report.totals.graded) * 100)}%
+                          </strong>
+                          <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">
+                            {report.totals.AD + report.totals.A} de {report.totals.graded} calificaciones alcanzaron o superaron el estándar del nivel.
                           </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">{row.received}</td>
-                      <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 font-medium">{row.graded}</td>
-                      <td className="p-3 text-center">
-                        {row.pending > 0 ? (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400">
-                            {row.pending}
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800">
+                          <strong className="text-slate-800 dark:text-slate-200 font-semibold block">
+                            💡 Refuerzo Pedagógico (B + C): {Math.round(((report.totals.B + report.totals.C) / report.totals.graded) * 100)}%
+                          </strong>
+                          <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">
+                            {report.totals.B + report.totals.C} calificaciones requieren acompañamiento pedagógico específico.
                           </span>
-                        ) : (
-                          <span className="text-slate-400">0</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 py-3 text-center">
+                      No hay calificaciones registradas aún en este período y aula.
+                    </p>
+                  )}
+                </div>
+
+                {/* Tabla de Registro Consolidado */}
+                <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                  Registro Auxiliar Consolidado de Estudiantes ({filteredItems.length} evaluados)
+                </h4>
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 w-12 text-center">N°</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">Estudiante</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Condición</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-36">Avance</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Calificadas</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Pendientes</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-32">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filteredItems.map((row, idx) => {
+                        const completion = row.received > 0 ? Math.round((row.graded / row.received) * 100) : 0;
+                        const isUpToDate = row.received > 0 && row.pending === 0;
+                        const hasPending = row.pending > 0;
+
+                        return (
+                          <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                            <td className="p-3 text-center text-xs text-slate-400 font-mono">{idx + 1}</td>
+                            <td className="p-3">
+                              <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
+                              <span className="block text-[11px] font-mono text-slate-400 mt-0.5">DNI/ID: {row.id}</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                row.historical
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                              }`}>
+                                {row.historical ? 'Histórico' : 'Activo'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="w-24 mx-auto">
+                                <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                  <span>{row.graded}/{row.received}</span>
+                                  <span>{completion}%</span>
+                                </div>
+                                <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                  <div
+                                    style={{ width: `${completion}%` }}
+                                    className={`h-full rounded-full ${isUpToDate ? 'bg-emerald-500' : hasPending ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 font-bold">{row.graded}</td>
+                            <td className="p-3 text-center">
+                              {row.pending > 0 ? (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400">
+                                  {row.pending}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">0</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {isUpToDate ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                                  ✓ Al día
+                                </span>
+                              ) : hasPending ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
+                                  ⏳ Pendiente
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  Sin entregas
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* VISTA 2: NÓMINA Y SEGUIMIENTO DETALLADO DE AULA */}
+            {activeTab === 'nomina' && (
+              <div>
+                {/* Barra de Filtros en Vivo */}
+                <div className="flex flex-col sm:flex-row gap-3 items-center justify-between my-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-sm">
+                  <div className="w-full sm:w-72">
+                    <input
+                      type="text"
+                      placeholder="Buscar estudiante..."
+                      className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <select
+                      className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium"
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+                    >
+                      <option value="all">Condición: Todos</option>
+                      <option value="active">Solo Activos</option>
+                      <option value="historical">Solo Históricos</option>
+                    </select>
+                    <select
+                      className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium"
+                      value={pendingFilter}
+                      onChange={e => setPendingFilter(e.target.value as typeof pendingFilter)}
+                    >
+                      <option value="all">Entregas: Todas</option>
+                      <option value="pending">Con pendientes</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tabla de Estudiantes */}
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Estudiantes del aula</h3>
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">Estudiante</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Entregas</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Calificadas</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Pendientes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filteredItems.map(row => (
+                        <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                          <td className="p-3">
+                            <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
+                            {row.historical && (
+                              <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded">
+                                Histórico
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">{row.received}</td>
+                          <td className="p-3 text-center text-emerald-600 dark:text-emerald-400 font-medium">{row.graded}</td>
+                          <td className="p-3 text-center">
+                            {row.pending > 0 ? (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400">
+                                {row.pending}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">0</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {filteredItems.length === 0 && (
               <p className="my-4 text-center text-sm text-slate-500 py-6">
