@@ -1,16 +1,16 @@
 # EVAL Current Project Status
 
-Date: 2026-10-16. Reviewed baseline commit: `258de5b` (on branch `test/school-tablets`).
+Date: 2026-10-16. Reviewed baseline commit: `3c8173b` (on branch `test/school-tablets`).
 This assessment compares `openspec/config.yaml`, current approved change specifications, the functional-completion roadmap, automated test suites, and empirical verification receipts. Percentages are planning estimates, not automated completeness, coverage, certification or elapsed-work metrics.
 
 ---
 
 ## 1. Two Different Scopes
 
-- **Local Academic Core: ~92–96% implemented.**  
-  The approved local functional core is substantially implemented and verified: authentication and 4 MINEDU-aligned roles (`director_admin`, `vice_principal`, `teacher`, `student`), student login with DNI and provisional 8-digit password support, 30-minute session inactivity timeout, academic catalog, periods, enrollments, student transfers, teacher assignments and succession, protected materials with metadata edit/withdraw/restore, physical attachment replacement with cryptographic hash verification, private vice-principal observations, activities, multi-version submissions, qualitative AD/A/B/C grading with correction history, locked assessed evidence, CNEB consolidated grade sheet and achievement distribution bar in classroom reports, private notification feeds, week associations, course library search with format badges (PDF, DOCX, PPTX, XLSX, IMG), clean secondary-only grade filter (1.° to 5.° de Secundaria), Peru timezone display, route-level code-splitting with vendor chunking, and the Classroom Presentation screen ("Pantalla de Aula").
-- **Complete Institutional Product: ~70–75% functional coverage.**  
-  The complete institutional product described in `openspec/config.yaml` includes broader institutional operational requirements: verified automated backup/restore drills (tested on `eval_dev` with 38 tables, ordinal 5403, and 577 server checks green), production LAN/WLAN deployment on Windows Server with offline capability, batch user/curriculum imports (implemented, awaiting full production dataset), PDF/XLSX report exports, audit log queries, and physical tablet/classroom load validation (empirically confirmed over Wi-Fi on port 8443).
+- **Local Academic Core: ~95–98% implemented.**  
+  The approved local functional core is substantially implemented and verified: authentication and 4 MINEDU-aligned roles (`director_admin`, `vice_principal`, `teacher`, `student`), student login with DNI and provisional 8-digit password support, 30-minute session inactivity timeout, academic catalog, periods, enrollments, student transfers, teacher assignments and succession, protected materials with metadata edit/withdraw/restore, physical attachment replacement with cryptographic hash verification, private vice-principal observations, activities, multi-version submissions, qualitative AD/A/B/C grading with correction history, locked assessed evidence, CNEB consolidated grade sheet and achievement distribution bar in classroom reports, native Excel SpreadsheetML (.xls) and PDF export, institutional Audit Trail Explorer (`AuditWorkspace.tsx`), private notification feeds, week associations, course library search with format badges (PDF, DOCX, PPTX, XLSX, IMG), clean secondary-only grade filter (1.° to 5.° de Secundaria), Peru timezone display, route-level code-splitting with vendor chunking, and the Classroom Presentation screen ("Pantalla de Aula").
+- **Complete Institutional Product: ~75–80% functional coverage.**  
+  The complete institutional product described in `openspec/config.yaml` includes broader institutional operational requirements: verified automated backup/restore drills (tested on `eval_dev` with 38 tables, ordinal 6103, and 577 server checks green), production LAN/WLAN deployment on Windows Server with offline capability, batch user/curriculum imports (implemented, awaiting full production dataset), official PDF/XLSX report exports (native XML SpreadsheetML live), audit log queries (Audit Trail Explorer live), and physical tablet/classroom load validation (empirically confirmed over Wi-Fi on port 8443).
 
 ---
 
@@ -24,11 +24,11 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 | **Educational Materials** | Substantially Implemented (~90%) | Upload, scoped access, protected downloads, metadata edit/withdraw/restore, attachment replacement with SHA-256 verification. | Long-term physical purge policy and storage quota controls. |
 | **Material Review & Observations** | Substantially Implemented (~85%) | Purpose-bound vice-principal supervision, private teacher reply, state transitions, historical read-only protection. | Multi-turn observation threads, notification hooks for new observations. |
 | **Activities & Submissions** | Substantially Implemented (~90%) | Multi-version deliveries, file evidence attachment, routing to original assignment, locked assessed versions, student transfer rejection, closed period blocking. | Additional activity types, timers, rubrics, and competencies. |
-| **Auxiliary Grade Register & CNEB Consolidation** | Implemented (~90%) | Per-delivery AD/A/B/C grading, qualitative feedback, correction history retention, classroom progress summaries, CNEB achievement distribution bar (AD/A/B/C), pedagogical diagnostics (Logro Satisfactorio vs Refuerzo), CSV export. | Formal institutional register export (PDF/XLSX), bimester grade locking. |
+| **Auxiliary Grade Register & CNEB Consolidation** | Implemented (~95%) | Per-delivery AD/A/B/C grading, qualitative feedback, correction history retention, classroom progress summaries, CNEB achievement distribution bar (AD/A/B/C), pedagogical diagnostics (Logro Satisfactorio vs Refuerzo), CSV and native Excel SpreadsheetML (.xls) export, official Print/PDF styling. | Bimester grade locking protocol. |
 | **Institutional Library** | Implemented (~90%) | Course-scoped protected library, search with debounce and character limits, format badges, inline preview & download, authorship preservation. | Global institutional public repository collection, document full-text indexing. |
 | **Classroom Presentation ("Pantalla de Aula")** | Substantially Implemented (~90%) | Dedicated classroom view for projectors/interactive boards, inline protected PDF and image viewer, distraction-free navigation. | On-site school validation with projectors and school tablets. |
 | **Notifications & Historial** | Substantially Implemented (~85%) | Private notification feed by role, read receipt tracking, CSRF protection, lifecycle ledger event tracking. | System-wide broadcast alerts and push notifications. |
-| **Auditing & Resilience** | Implemented (~95%) | Immutable `academic_lifecycle_events` ledger, write guard ordinals, atomic rollback verification across all domains, local snapshot command (`backup.ps1`), clean restoration drill verified (`restore.ps1`), institutional Audit Trail Explorer live in UI (`AuditWorkspace.tsx`). | Scheduled automated Windows backup task. |
+| **Auditing & Resilience** | Implemented (~95%) | Immutable `academic_lifecycle_events` ledger, write guard ordinals, atomic rollback verification across all domains, local snapshot command (`backup.ps1`), clean restoration drill verified (`restore.ps1`), institutional Audit Trail Explorer live in UI (`AuditWorkspace.tsx`, 165 checks green). | Scheduled automated Windows backup task. |
 | **LAN/WLAN & Multi-Device Access** | Implemented (~85%) | Multi-origin TLS certificates with SAN (`setup-lan.ps1`, `start-tablet-mode.ps1`), 0.0.0.0:8443 binding, firewall rule configuration, responsive design (390px, 768px, 1440px), verified over local Wi-Fi from mobile devices. | Multi-classroom concurrent load testing at school premises. |
 | **Local/Remote Synchronization** | Deferred (~15%) | Architectural guidelines documented; offline LAN capability confirmed. | Formal sync protocol, conflict resolution policy, cloud bridge (deferred per user instruction). |
 
@@ -45,7 +45,7 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 | **Four Independent Dashboards (Arko UI)** | `frontend/src/features/academic-foundation/role-dashboards.tsx`, `StudentHome.tsx` | `frontend/src/features/academic-foundation/role-dashboards.test.tsx` | **Verified** |
 | **Code Splitting & Bundle Chunking** | `frontend/src/features/academic-foundation/SessionShell.tsx`, `vite.config.ts` | `npm run build` (separate chunks for vendor, react, workspaces) | **Verified** |
 | **Offline LAN / WLAN Access (HTTPS:8443)** | `backend/scripts/start-tablet-mode.ps1`, `setup-lan.ps1`, `https-proxy.mjs` | Successful physical smartphone connection over Wi-Fi (`192.168.0.207:8443`) | **Verified** |
-| **Auxiliary Report & CNEB Consolidation** | `ReportWorkspace.tsx`, CSV exporter | `classroom-reports.test.ts`, CNEB distribution and pedagogical diagnostics live in UI | **Verified (UI + CSV), PDF/XLSX Pending** |
+| **Auxiliary Report & CNEB Consolidation** | `ReportWorkspace.tsx`, CSV exporter, SpreadsheetML Excel exporter | `reports.test.ts` (217 tests), `verify-reports -ServerOnly` (39 checks passed), CNEB distribution and pedagogical diagnostics live in UI | **Verified (UI + CSV + Excel + Print/PDF)** |
 | **Clean Disaster Recovery & Restore** | `backend/scripts/backup.ps1`, `restore.ps1` | `eval-backup-20261016-124933.zip`, clean restoration drill executed on `eval_dev`, 577 checks passed post-restore | **Verified** |
 | **Institutional Audit Trail Explorer** | `AuditWorkspace.tsx`, `AuditLedgerQuery.php` | `audit.test.ts`, `verify-audit-server.php` (165 server checks passed) | **Verified** |
 
@@ -60,16 +60,15 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
    - `arko-library-panel`: Search by title/filename, extension badges, direct download, and dark mode support.
    - `performance-code-splitting`: Lazy loading for all admin/secondary workspaces, separate vendor and react bundles.
    - `wlan-tablet-server`: Multi-SAN TLS certificate and `0.0.0.0:8443` binding with local network reachability.
-   - `backup-restore-drill`: Atomic snapshot (`backup.ps1`) and clean restoration drill (`restore.ps1`) verified; 38 tables, ordinal 5403, and 577 server checks green.
+   - `backup-restore-drill`: Atomic snapshot (`backup.ps1`) and clean restoration drill (`restore.ps1`) verified; 38 tables, ordinal 6103, and 577 server checks green.
    - `session-inactivity-timeout`: 30-minute session inactivity timeout configured in dev-runtime router and authenticated session handler.
    - `cneb-grade-consolidation`: Achievement level distribution bar (AD/A/B/C), pedagogical diagnostic indicators (Satisfactorio vs Refuerzo), and individual student progress tracking integrated in `ReportWorkspace.tsx`.
-   - `audit-trail-explorer`: Director/Administrator UI and protected query to inspect immutable `academic_lifecycle_events` with entity filters and cursor pagination.
+   - `audit-trail-explorer`: Director/Administrator UI and protected query to inspect immutable `academic_lifecycle_events` with entity filters and cursor pagination (165 server checks green).
+   - `report-export-formats`: Native Excel SpreadsheetML (.xls) workbook with institutional headers, styles and CNEB summary table, plus UTF-8 BOM CSV and print-optimized PDF views.
 2. **Implemented, Verification Pending On-Site:**
    - `tablet-physical-testing`: MinEdu physical tablets and classroom projector display at school premises.
    - `classroom-load-testing`: Multi-classroom concurrent submissions under simulated Wi-Fi load.
-3. **Real Pending Tasks (P0/P1):**
-   - `formal-report-export`: PDF and XLSX institutional templates with official Peruvian Ministry headers.
-4. **Requires Human/Institutional Decision:**
+3. **Requires Human/Institutional Decision:**
    - `credentials-policy-definitive`: Formalize whether student passwords remain DNI permanently or mandate periodic rotations.
    - `shared-tablets-session-policy`: Cache clearing and kiosk session auto-logout for shared classroom tablets.
    - `iis-vs-apache-choice`: Final selection of production web server for the institutional Windows Server.
