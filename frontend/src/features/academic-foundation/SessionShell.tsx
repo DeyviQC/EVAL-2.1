@@ -69,7 +69,7 @@ export function SessionShell() {
       case 'enrollments':return <EnrollmentWorkspace client={academic} onExpired={controller.invalidate}/>;
       case 'assignments':return <AssignmentWorkspace client={academic} onExpired={controller.invalidate}/>;
       case 'calendar':return <CalendarWorkspace academic={academic} client={calendars} onExpired={controller.invalidate}/>;
-      case 'users':return <UsersWorkspace client={accounts} onExpired={controller.invalidate}/>;
+      case 'users':return <UsersWorkspace client={accounts} academic={academic} onExpired={controller.invalidate}/>;
       case 'supervision':return <SupervisionWorkspace client={materials.observations} onExpired={controller.invalidate}/>;
       case 'notifications':return <NotificationWorkspace client={notices} onExpired={controller.invalidate} onCount={setUnread} onSection={()=>choose('activities')}/>;
       case 'account':return role==='director_admin'?<section className="eval-read-profile"><h3>Mi perfil</h3><dl><dt>Nombre</dt><dd>{own.name}</dd><dt>Usuario</dt><dd>{own.username}</dd><dt>Perfil</dt><dd>Director · Solo lectura</dd></dl></section>:<OwnAccountWorkspace client={accounts} account={own} onExpired={controller.invalidate}/>;

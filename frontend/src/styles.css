@@ -559,6 +559,22 @@ body { background:var(--bg); }
     border-top: 1px solid #475569 !important;
     margin-bottom: 4px !important;
   }
+
+  .eval-credential-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .eval-credential-card {
+    border: 1px dashed #64748b !important;
+    padding: 10px 14px !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }
 
 
