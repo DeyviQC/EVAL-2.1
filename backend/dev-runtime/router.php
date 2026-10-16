@@ -18,9 +18,10 @@ try{
     \Illuminate\Http\Request::setTrustedProxies([],0);
     $request=\Illuminate\Http\Request::capture();
     $db=\Illuminate\Database\Capsule\Manager::connection();
+    $sessionMinutes=(int)(getenv('EVAL_SESSION_MINUTES')?:30);
     $auth=new \App\Infrastructure\Authentication\LocalSessionAuthentication($db,
         new \Illuminate\Encryption\Encrypter(base64_decode(getenv('EVAL_RUNTIME_KEY')?:'',true),'AES-256-CBC'),
-        $origin,5,5,60,new \Illuminate\Hashing\BcryptHasher(['rounds'=>4]));
+        $origin,$sessionMinutes,5,60,new \Illuminate\Hashing\BcryptHasher(['rounds'=>4]));
     // Retained local profiles support authorized history; no public U10/U11 writer is exposed.
     $compose=require dirname(__DIR__).'/routes/academic.php';
     $handler=$compose($auth,new \App\Http\Controllers\Academic\FoundationController($db,new \App\Infrastructure\Persistence\Academic\PersistedAcademicReferences($db),
