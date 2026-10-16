@@ -22,3 +22,57 @@ export function createReportClient(transport:typeof fetch=fetch){
  return {classroom:(period:string,grade:string,section:string,after:string|null=null)=>{period=decimalId(period);grade=decimalId(grade);section=decimalId(section);after=after===null?null:decimalId(after);return request('/reports/classroom?'+new URLSearchParams({period_id:period,grade_id:grade,section_id:section,...after?{after}:{}}),period,grade,section,after);}};
 }
 export type ReportClient=ReturnType<typeof createReportClient>;
+
+export function exportClassroomCsv(report: ClassroomReport, exportedBy: string = 'Dirección / Subdirección'): string {
+ const sanitize = (val: string | number) => `"${String(val).replace(/"/g, '""')}"`;
+ const lines: string[] = [];
+ lines.push(`\uFEFF${sanitize('I.E. NUESTRA SEÑORA DE LAS MERCEDES - AYACUCHO')}`);
+ lines.push(sanitize('SISTEMA EVAL v2.1 - CONSOLIDADO INSTITUCIONAL DE AULA'));
+ lines.push(`${sanitize('Período:')},${sanitize(report.scope.period_name)}`);
+ lines.push(`${sanitize('Grado y Sección:')},${sanitize(`${report.scope.grade_name} ${report.scope.section_name}`)}`);
+ lines.push(`${sanitize('Estado del Período:')},${sanitize(report.scope.period_state === 'closed' ? 'Cerrado (Histórico)' : report.scope.period_state === 'planned' ? 'Planificado' : 'Activo')}`);
+ lines.push(`${sanitize('Emitido por:')},${sanitize(exportedBy)}`);
+ lines.push('');
+ lines.push(sanitize('RESUMEN DE ENTREGAS Y CALIFICACIONES'));
+ lines.push(`${sanitize('Total Entregas Recibidas')},${sanitize(report.totals.received)}`);
+ lines.push(`${sanitize('Total Calificadas')},${sanitize(report.totals.graded)}`);
+ lines.push(`${sanitize('Total Pendientes de Calificar')},${sanitize(report.totals.pending)}`);
+ lines.push(`${sanitize('Calificación AD (Logro Destacado)')},${sanitize(report.totals.AD)}`);
+ lines.push(`${sanitize('Calificación A (Logro Esperado)')},${sanitize(report.totals.A)}`);
+ lines.push(`${sanitize('Calificación B (En Proceso)')},${sanitize(report.totals.B)}`);
+ lines.push(`${sanitize('Calificación C (En Inicio)')},${sanitize(report.totals.C)}`);
+ lines.push('');
+ lines.push(`${sanitize('N°')},${sanitize('ID Estudiante')},${sanitize('Apellidos y Nombres')},${sanitize('Condición')},${sanitize('Entregas Recibidas')},${sanitize('Calificadas')},${sanitize('Pendientes')}`);
+
+ report.items.forEach((item, index) => {
+  lines.push([
+   sanitize(index + 1),
+   sanitize(item.id),
+   sanitize(item.name),
+   sanitize(item.historical ? 'Histórico' : 'Activo'),
+   sanitize(item.received),
+   sanitize(item.graded),
+   sanitize(item.pending),
+  ].join(','));
+ });
+
+ return lines.join('\r\n');
+}
+
+export function downloadClassroomCsv(report: ClassroomReport, exportedBy: string = 'Dirección / Subdirección'): void {
+ if (typeof document === 'undefined' || typeof window === 'undefined') return;
+ const csvContent = exportClassroomCsv(report, exportedBy);
+ const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+ const url = URL.createObjectURL(blob);
+ const anchor = document.createElement('a');
+ const cleanGrade = report.scope.grade_name.replace(/[^A-Za-z0-9]/g, '');
+ const cleanSection = report.scope.section_name.replace(/[^A-Za-z0-9]/g, '');
+ const filename = `eval-consolidado-${cleanGrade}-${cleanSection}-${report.scope.period_name}.csv`;
+ anchor.href = url;
+ anchor.download = filename;
+ document.body.appendChild(anchor);
+ anchor.click();
+ document.body.removeChild(anchor);
+ URL.revokeObjectURL(url);
+}
+

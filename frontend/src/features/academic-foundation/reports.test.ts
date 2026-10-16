@@ -1,4 +1,4 @@
-import { classroomReport,createReportClient } from './reports.js';
+import { classroomReport,createReportClient,exportClassroomCsv } from './reports.js';
 import { AcademicApiError } from './api.js';
 const assert=(v:unknown)=>{if(!v)throw new Error('Report assertion failed');};
 function rejects(fn:()=>unknown){try{fn();}catch{return;}throw new Error('Expected report rejection');}
@@ -10,4 +10,17 @@ export const reportCases:[string,()=>void|Promise<void>][]=[
  ['report transport is read-only, uncached and scope-bound',async()=>{let calls=0;const client=createReportClient((async(path,options)=>{calls++;assert(path==='/reports/classroom?period_id=1&grade_id=2&section_id=3');assert(options?.method==='GET'&&options.cache==='no-store'&&options.credentials==='same-origin'&&options.body===undefined);return new Response(JSON.stringify({data:sample}));}) as typeof fetch);await client.classroom('1','2','3');assert(calls===1);rejects(()=>client.classroom('1/../../private','2','3'));}],
  ['report access rejection never produces a fabricated zero report',async()=>{const client=createReportClient((async()=>new Response(JSON.stringify({error:'forbidden'}),{status:403})) as typeof fetch);try{await client.classroom('1','2','3');throw new Error('Expected denial');}catch(e){assert(e instanceof AcademicApiError&&e.status===403);}}],
  ['report transport rejects another scope and a repeated cursor page',async()=>{const client=createReportClient((async()=>new Response(JSON.stringify({data:sample}))) as typeof fetch);for(const run of [()=>client.classroom('1','2','4'),()=>client.classroom('1','2','3','9007199254740993')]){try{await run();throw new Error('Expected response rejection');}catch(e){assert(e instanceof AcademicApiError&&e.category==='invalid_response');}}}],
+ ['classroom report exports valid institutional CSV with UTF-8 BOM, school header and correct records',()=>{
+  const r=classroomReport({data:sample});
+  const csv=exportClassroomCsv(r,'Subdirección de Formación General');
+  assert(csv.startsWith('\uFEFF"I.E. NUESTRA SEÑORA DE LAS MERCEDES - AYACUCHO"'));
+  assert(csv.includes('"SISTEMA EVAL v2.1 - CONSOLIDADO INSTITUCIONAL DE AULA"'));
+  assert(csv.includes('"Período:","2026"'));
+  assert(csv.includes('"Grado y Sección:","2.º B"'));
+  assert(csv.includes('"Emitido por:","Subdirección de Formación General"'));
+  assert(csv.includes('"Total Entregas Recibidas","3"'));
+  assert(csv.includes('"Calificación AD (Logro Destacado)","1"'));
+  assert(csv.includes('"1","9007199254740993","Student","Activo","3","2","1"'));
+ }],
 ];
+

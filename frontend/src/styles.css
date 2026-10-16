@@ -431,3 +431,134 @@ body { background:var(--bg); }
 .dark .eval-academic-dialog { background: var(--surface); border-color: var(--border); color: var(--text); }
 .dark .eval-academic-dialog header button { background: var(--surface-2); border-color: var(--border); color: var(--text); }
 
+/* Official Report Print Stylesheet */
+@media screen {
+  .eval-print-only {
+    display: none !important;
+  }
+}
+
+@media print {
+  /* Hide application navigation, header, sidebar and buttons */
+  aside, nav, header, footer,
+  .eval-app-header, .eval-sidebar, .eval-mobile-nav,
+  .no-print, button, select, input,
+  .eval-period-picker, .eval-section-heading button {
+    display: none !important;
+  }
+
+  body, html, main, #root, .eval-workspace-content {
+    background: white !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .eval-screen-only {
+    display: none !important;
+  }
+
+  .eval-print-only {
+    display: block !important;
+    width: 100% !important;
+    padding: 10mm 15mm !important;
+    margin: 0 auto !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+    color: #1e293b !important;
+  }
+
+  .eval-print-sheet {
+    page-break-after: always;
+  }
+
+  .eval-print-header {
+    border-bottom: 2px solid #1e3a8a !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 16px !important;
+    text-align: center !important;
+  }
+
+  .eval-print-header h1 {
+    font-size: 13pt !important;
+    font-weight: bold !important;
+    margin: 0 0 4px 0 !important;
+    color: #1e3a8a !important;
+    text-transform: uppercase !important;
+  }
+
+  .eval-print-header h2 {
+    font-size: 11pt !important;
+    font-weight: 600 !important;
+    margin: 0 0 4px 0 !important;
+  }
+
+  .eval-print-meta {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    font-size: 9pt !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px !important;
+    background: #f8fafc !important;
+  }
+
+  .eval-print-summary-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 16px !important;
+    font-size: 9.5pt !important;
+  }
+
+  .eval-print-summary-table th, .eval-print-summary-table td {
+    border: 1px solid #94a3b8 !important;
+    padding: 5px 8px !important;
+    text-align: center !important;
+  }
+
+  .eval-print-summary-table th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+  }
+
+  .eval-print-roster-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+    margin-top: 10px !important;
+  }
+
+  .eval-print-roster-table th, .eval-print-roster-table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 8px !important;
+  }
+
+  .eval-print-roster-table th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    text-align: left !important;
+  }
+
+  .eval-print-signatures {
+    margin-top: 50px !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    page-break-inside: avoid !important;
+  }
+
+  .eval-print-sig-box {
+    text-align: center !important;
+    width: 220px !important;
+  }
+
+  .eval-print-sig-line {
+    border-top: 1px solid #475569 !important;
+    margin-bottom: 4px !important;
+  }
+}
+
+
