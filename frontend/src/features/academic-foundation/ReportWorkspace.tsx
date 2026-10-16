@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademicApiError, createAcademicClient } from './api.js';
 import { periodPage, catalogPage, type CatalogRow } from './directory.js';
 import { type period } from './contracts.js';
-import { type ClassroomReport, type ReportClient, downloadClassroomCsv } from './reports.js';
+import { type ClassroomReport, type ReportClient, downloadClassroomCsv, downloadClassroomExcel } from './reports.js';
 
 const button = 'rounded-lg border border-eval-teal px-4 py-2 font-medium transition hover:bg-eval-teal/10 disabled:opacity-50';
 const primaryButton = 'rounded-lg bg-eval-teal text-white px-4 py-2 font-medium shadow-sm transition hover:bg-eval-teal/90 disabled:opacity-50';
@@ -143,16 +143,25 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 title="Imprimir o guardar como PDF oficial"
               >
                 <span>🖨️</span>
-                <span>Imprimir / Guardar PDF</span>
+                <span>Imprimir / PDF</span>
+              </button>
+              <button
+                type="button"
+                className={exportButton}
+                onClick={() => downloadClassroomExcel(report)}
+                title="Descargar libro Excel formateado (.xls)"
+              >
+                <span>📗</span>
+                <span>Exportar Excel (.xls)</span>
               </button>
               <button
                 type="button"
                 className={exportButton}
                 onClick={() => downloadClassroomCsv(report)}
-                title="Descargar en formato Excel / CSV"
+                title="Descargar en formato plano CSV"
               >
                 <span>📊</span>
-                <span>Exportar Excel (CSV)</span>
+                <span>Exportar CSV</span>
               </button>
             </div>
           )}

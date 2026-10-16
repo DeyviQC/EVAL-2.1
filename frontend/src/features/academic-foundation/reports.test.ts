@@ -1,4 +1,4 @@
-import { classroomReport,createReportClient,exportClassroomCsv } from './reports.js';
+import { classroomReport,createReportClient,exportClassroomCsv,exportClassroomSpreadsheet } from './reports.js';
 import { AcademicApiError } from './api.js';
 const assert=(v:unknown)=>{if(!v)throw new Error('Report assertion failed');};
 function rejects(fn:()=>unknown){try{fn();}catch{return;}throw new Error('Expected report rejection');}
@@ -21,6 +21,22 @@ export const reportCases:[string,()=>void|Promise<void>][]=[
   assert(csv.includes('"Total Entregas Recibidas","3"'));
   assert(csv.includes('"Calificación AD (Logro Destacado)","1"'));
   assert(csv.includes('"1","9007199254740993","Student","Activo","3","2","1"'));
+ }],
+ ['classroom report exports valid SpreadsheetML Excel workbook with styles, headers and student data',()=>{
+  const r=classroomReport({data:sample});
+  const xml=exportClassroomSpreadsheet(r,'Subdirección de Formación General');
+  assert(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
+  assert(xml.includes('progid="Excel.Sheet"'));
+  assert(xml.includes('<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'));
+  assert(xml.includes('I.E. NUESTRA SEÑORA DE LAS MERCEDES - AYACUCHO'));
+  assert(xml.includes('CONSOLIDADO OFICIAL DE EVALUACIONES Y SEGUIMIENTO DE AULA'));
+  assert(xml.includes('2.º B'));
+  assert(xml.includes('Subdirección de Formación General'));
+  assert(xml.includes('<Data ss:Type="Number">3</Data>'));
+  assert(xml.includes('<Data ss:Type="Number">1</Data>'));
+  assert(xml.includes('9007199254740993'));
+  assert(xml.includes('Student'));
+  assert(xml.includes('</Workbook>'));
  }],
 ];
 
