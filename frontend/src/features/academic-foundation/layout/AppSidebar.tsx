@@ -78,6 +78,7 @@ export function AppSidebar({
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
     { id: 'institution', label: 'Información institucional', icon: BookOpen },
     { id: 'history', label: 'Historial', icon: Library },
+    { id: 'audit', label: 'Auditoría', icon: ShieldAlert },
     { id: 'account', label: 'Mi perfil', icon: User },
   ] : [
     { id: null, label: 'Inicio', icon: Home },
@@ -89,6 +90,7 @@ export function AppSidebar({
     { id: 'users', label: 'Usuarios', icon: Settings },
     { id: 'supervision', label: 'Supervisión', icon: ShieldAlert },
     { id: 'reports', label: 'Reportes', icon: TrendingUp },
+    { id: 'audit', label: 'Auditoría', icon: ShieldAlert },
   ];
 
   const initials = account?.name

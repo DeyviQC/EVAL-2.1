@@ -47,5 +47,6 @@ import { recordedTimeCases } from '../.test-build/features/academic-foundation/r
 import { materialMaintenanceCases } from '../.test-build/features/academic-foundation/material-maintenance.test.js';
 import { observationCases } from '../.test-build/features/academic-foundation/material-observations.test.js';
 import { bulkImportCases } from '../.test-build/features/academic-foundation/bulk-import.test.js';
-for (const [name, run] of [...cases,...uiCases,...navigationCases,...directoryCases,...courseCases,...materialCases,...enrollmentCases,...assignmentCases,...accountCases,...bulkImportCases,...activityCases,...assessmentCases,...reportCases,...notificationCases,...historyCases,...recordedTimeCases,...materialMaintenanceCases,...observationCases,...materialFileCases,...calendarCases,...weekCases]) test(name, run);
+import { auditCases } from '../.test-build/features/academic-foundation/audit.test.js';
+for (const [name, run] of [...cases,...uiCases,...navigationCases,...directoryCases,...courseCases,...materialCases,...enrollmentCases,...assignmentCases,...accountCases,...bulkImportCases,...activityCases,...assessmentCases,...reportCases,...notificationCases,...historyCases,...recordedTimeCases,...materialMaintenanceCases,...observationCases,...materialFileCases,...calendarCases,...weekCases,...auditCases]) test(name, run);
 

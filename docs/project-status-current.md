@@ -28,7 +28,7 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 | **Institutional Library** | Implemented (~90%) | Course-scoped protected library, search with debounce and character limits, format badges, inline preview & download, authorship preservation. | Global institutional public repository collection, document full-text indexing. |
 | **Classroom Presentation ("Pantalla de Aula")** | Substantially Implemented (~90%) | Dedicated classroom view for projectors/interactive boards, inline protected PDF and image viewer, distraction-free navigation. | On-site school validation with projectors and school tablets. |
 | **Notifications & Historial** | Substantially Implemented (~85%) | Private notification feed by role, read receipt tracking, CSRF protection, lifecycle ledger event tracking. | System-wide broadcast alerts and push notifications. |
-| **Auditing & Resilience** | Substantially Implemented (~85%) | Immutable `academic_lifecycle_events` ledger, write guard ordinals, atomic rollback verification across all domains, local snapshot command (`backup.ps1`), clean restoration drill verified (`restore.ps1`). | Scheduled automated backup task and audit log viewer in UI. |
+| **Auditing & Resilience** | Implemented (~95%) | Immutable `academic_lifecycle_events` ledger, write guard ordinals, atomic rollback verification across all domains, local snapshot command (`backup.ps1`), clean restoration drill verified (`restore.ps1`), institutional Audit Trail Explorer live in UI (`AuditWorkspace.tsx`). | Scheduled automated Windows backup task. |
 | **LAN/WLAN & Multi-Device Access** | Implemented (~85%) | Multi-origin TLS certificates with SAN (`setup-lan.ps1`, `start-tablet-mode.ps1`), 0.0.0.0:8443 binding, firewall rule configuration, responsive design (390px, 768px, 1440px), verified over local Wi-Fi from mobile devices. | Multi-classroom concurrent load testing at school premises. |
 | **Local/Remote Synchronization** | Deferred (~15%) | Architectural guidelines documented; offline LAN capability confirmed. | Formal sync protocol, conflict resolution policy, cloud bridge (deferred per user instruction). |
 
@@ -47,6 +47,7 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 | **Offline LAN / WLAN Access (HTTPS:8443)** | `backend/scripts/start-tablet-mode.ps1`, `setup-lan.ps1`, `https-proxy.mjs` | Successful physical smartphone connection over Wi-Fi (`192.168.0.207:8443`) | **Verified** |
 | **Auxiliary Report & CNEB Consolidation** | `ReportWorkspace.tsx`, CSV exporter | `classroom-reports.test.ts`, CNEB distribution and pedagogical diagnostics live in UI | **Verified (UI + CSV), PDF/XLSX Pending** |
 | **Clean Disaster Recovery & Restore** | `backend/scripts/backup.ps1`, `restore.ps1` | `eval-backup-20261016-124933.zip`, clean restoration drill executed on `eval_dev`, 577 checks passed post-restore | **Verified** |
+| **Institutional Audit Trail Explorer** | `AuditWorkspace.tsx`, `AuditLedgerQuery.php` | `audit.test.ts`, `verify-audit-server.php` (165 server checks passed) | **Verified** |
 
 ---
 
@@ -62,12 +63,12 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
    - `backup-restore-drill`: Atomic snapshot (`backup.ps1`) and clean restoration drill (`restore.ps1`) verified; 38 tables, ordinal 5403, and 577 server checks green.
    - `session-inactivity-timeout`: 30-minute session inactivity timeout configured in dev-runtime router and authenticated session handler.
    - `cneb-grade-consolidation`: Achievement level distribution bar (AD/A/B/C), pedagogical diagnostic indicators (Satisfactorio vs Refuerzo), and individual student progress tracking integrated in `ReportWorkspace.tsx`.
+   - `audit-trail-explorer`: Director/Administrator UI and protected query to inspect immutable `academic_lifecycle_events` with entity filters and cursor pagination.
 2. **Implemented, Verification Pending On-Site:**
    - `tablet-physical-testing`: MinEdu physical tablets and classroom projector display at school premises.
    - `classroom-load-testing`: Multi-classroom concurrent submissions under simulated Wi-Fi load.
 3. **Real Pending Tasks (P0/P1):**
    - `formal-report-export`: PDF and XLSX institutional templates with official Peruvian Ministry headers.
-   - `audit-trail-explorer`: Director/Administrator UI to inspect `academic_lifecycle_events`.
 4. **Requires Human/Institutional Decision:**
    - `credentials-policy-definitive`: Formalize whether student passwords remain DNI permanently or mandate periodic rotations.
    - `shared-tablets-session-policy`: Cache clearing and kiosk session auto-logout for shared classroom tablets.

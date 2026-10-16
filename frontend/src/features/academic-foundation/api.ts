@@ -29,6 +29,12 @@ export function createAcademicClient(transport:typeof fetch,csrf:()=>string) {
   const locator=decimalId;
   return {
     history:<T>(kind:'enrollments'|'assignments',decode:(value:unknown)=>T,after:string|null=null)=>{if(!['enrollments','assignments'].includes(kind))throw new Error('Invalid history');return request('history?kind='+kind+(after?'&after='+locator(after):''),decode);},
+    auditLedger:<T>(decode:(value:unknown)=>T,after:string|null=null,entityType?:string)=>{
+      const params=new URLSearchParams();
+      if(after)params.set('after',locator(after));
+      if(entityType)params.set('entity_type',text(entityType));
+      return request('audit-ledger'+(params.size?'?'+params.toString():''),decode);
+    },
     assignmentDirectory:<T>(kind:'assignments'|'teachers'|'periods'|'entries'|'grades'|'sections',decode:(value:unknown)=>T,after:string|null=null,filters:DirectoryFilters={})=>{
       if(!['assignments','teachers','periods','entries','grades','sections'].includes(kind))throw new Error('Invalid assignment directory');
       const query=filterQuery(filters,true);

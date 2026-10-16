@@ -50,6 +50,13 @@ final class FoundationController
                 $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
                 return $this->ok((new \App\Application\Academic\Queries\AcademicHistoryQuery($this->db))->page($actor,$kind,$after));
             }
+            if($method==='GET'&&$path==='/academic/audit-ledger'){
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['after','entity_type']);
+                $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
+                $entityType=$request->query->all()['entity_type']??null;
+                if($entityType!==null&&!is_string($entityType))throw new AcademicCommandFailure('invalid_input');
+                return $this->ok((new \App\Application\Academic\Queries\AuditLedgerQuery($this->db))->page($actor,$after,$entityType));
+            }
             if($method==='GET'&&$path==='/academic/assignment-workspace'){
                 $query=$request->query->all();
                 FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($query,['kind','after','academic_period_id','grade_id','section_id','teacher_id','instructional_entry_id','state','search'],['kind']);

@@ -28,6 +28,7 @@ const ReportWorkspace = lazy(() => import('./ReportWorkspace.js').then(m => ({ d
 const SupervisionWorkspace = lazy(() => import('./SupervisionWorkspace.js').then(m => ({ default: m.SupervisionWorkspace })));
 const HistoryWorkspace = lazy(() => import('./HistoryWorkspace.js').then(m => ({ default: m.HistoryWorkspace })));
 const CalendarWorkspace = lazy(() => import('./CalendarWorkspace.js').then(m => ({ default: m.CalendarWorkspace })));
+const AuditWorkspace = lazy(() => import('./AuditWorkspace.js').then(m => ({ default: m.AuditWorkspace })));
 export {SessionPanel} from './InstitutionalShell.js';
 export function SessionShell() {
   const session=useMemo(()=>createSessionClient(),[]);
@@ -69,6 +70,7 @@ export function SessionShell() {
       case 'institution':return <InstitutionReadView client={academic} onExpired={controller.invalidate}/>;
       case 'reports':return <ReportWorkspace client={reports} academic={academic} onExpired={controller.invalidate}/>;
       case 'history':return <HistoryWorkspace client={academic} kinds={role==='director_admin'||role==='vice_principal'?['enrollments','assignments']:role==='student'?['enrollments']:['assignments']} onExpired={controller.invalidate}/>;
+      case 'audit':return <AuditWorkspace client={academic} onExpired={controller.invalidate}/>;
       case 'periods':case 'catalog':return <FoundationWorkspace key={safeSelected} section={safeSelected} client={academic} onExpired={controller.invalidate}/>;
       case 'enrollments':return <EnrollmentWorkspace client={academic} onExpired={controller.invalidate}/>;
       case 'assignments':return <AssignmentWorkspace client={academic} onExpired={controller.invalidate}/>;

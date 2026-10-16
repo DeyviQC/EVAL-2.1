@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo')][string]$Command='status',
+    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo')][string]$Command='status',
     [switch]$Maintenance,
     [switch]$AccountsOnly,
     [switch]$BrowserOnly,
@@ -333,7 +333,7 @@ try {
         do{Start-Sleep -Milliseconds 200;$worker.Refresh();if($worker.HasExited){throw 'Owned browser failed to open; no trust settings were changed.'}}while(!(Test-Path -LiteralPath $readyPath) -and [DateTime]::UtcNow -lt $deadline)
         if(!(Test-Path -LiteralPath $readyPath)){throw 'Browser authentication was not confirmed.'}
         Write-Output ('EVAL opened and authenticated: '+$Role)
-    } elseif($Command -in @('verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample')){
+    } elseif($Command -in @('verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample')){
         if($Command -eq 'verify-activities'){
             $stage='activity_transaction_fixture';$null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\activity-rollback-fixture.php')+'" prepare') (Db-Environment 'migration') '' $null $true
             try{$stage='activity_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-activities-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()}
@@ -355,6 +355,9 @@ try {
         }
         if($Command -eq 'verify-library' -and !$BrowserOnly){
             $stage='library_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-library-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
+        }
+        if($Command -eq 'verify-audit' -and !$BrowserOnly){
+            $stage='audit_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-audit-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
         }
         if($Command -eq 'verify-material-maintenance' -and !$BrowserOnly){
             $stage='material_rollback_fixture';$null=Start-Child $php ('-c "'+$ini+'" "'+(Join-Path $repo 'backend\dev-runtime\material-rollback-fixture.php')+'" prepare') (Db-Environment 'migration') '' $null $true
