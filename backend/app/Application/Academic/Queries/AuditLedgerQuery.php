@@ -12,7 +12,7 @@ final class AuditLedgerQuery
 {
     public function __construct(private Connection $db) {}
 
-    public function page(AuthenticatedActor $actor, ?string $after = null, ?string $entityType = null): array
+    public function page(AuthenticatedActor $actor, ?string $after = null, ?string $entityType = null, ?string $search = null): array
     {
         FoundationCommandChecks::credentials($this->db, $actor);
         if ($this->db->table('retained_identities')->where('id', $actor->identityId)->value('credential_status') !== 'active') {
@@ -25,6 +25,10 @@ final class AuditLedgerQuery
         }
 
         if ($entityType !== null && !in_array($entityType, ['period', 'entry', 'grade', 'section', 'enrollment', 'assignment'], true)) {
+            throw new AcademicCommandFailure('invalid_input');
+        }
+
+        if ($search !== null && (!is_string($search) || mb_strlen($search) > 100)) {
             throw new AcademicCommandFailure('invalid_input');
         }
 
@@ -52,6 +56,26 @@ final class AuditLedgerQuery
 
         if ($entityType !== null) {
             $q->where('l.entity_type', $entityType);
+        }
+
+        if ($search !== null && trim($search) !== '') {
+            $term = mb_strtolower(trim($search));
+            $q->where(function ($sub) use ($term) {
+                $sub->whereRaw("LOCATE(?, LOWER(COALESCE(p.display_name, ''))) > 0", [$term])
+                    ->orWhereRaw("LOCATE(?, LOWER(COALESCE(l.operation_key, ''))) > 0", [$term])
+                    ->orWhereRaw("LOCATE(?, LOWER(COALESCE(l.correlation_id, ''))) > 0", [$term])
+                    ->orWhereRaw("LOCATE(?, LOWER(COALESCE(l.event_type, ''))) > 0", [$term])
+                    ->orWhereRaw("LOCATE(?, LOWER(COALESCE(l.entity_type, ''))) > 0", [$term]);
+                if (ctype_digit($term)) {
+                    $sub->orWhere('l.actor_id', (int)$term)
+                        ->orWhere('l.period_id', (int)$term)
+                        ->orWhere('l.entry_id', (int)$term)
+                        ->orWhere('l.grade_id', (int)$term)
+                        ->orWhere('l.section_id', (int)$term)
+                        ->orWhere('l.enrollment_id', (int)$term)
+                        ->orWhere('l.assignment_id', (int)$term);
+                }
+            });
         }
 
         if ($after !== null) {

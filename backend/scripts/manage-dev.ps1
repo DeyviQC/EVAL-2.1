@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo')][string]$Command='status',
+    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo','bimester-maintenance','verify-bimesters','verify-all','migrate-all')][string]$Command='status',
     [switch]$Maintenance,
     [switch]$AccountsOnly,
     [switch]$BrowserOnly,
@@ -220,6 +220,11 @@ try {
         $null=Verify-MySQL
         $stage='calendar_maintenance'
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\calendar-maintenance.php')+'"') (Db-Environment 'migration') '' $null $true).Trim()
+    } elseif($Command -eq 'bimester-maintenance'){
+        $stage='bimester_authority';if(!$Maintenance){throw 'Bimester maintenance requires explicit -Maintenance.'}
+        $null=Verify-MySQL
+        $stage='bimester_maintenance'
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\bimester-maintenance.php')+'"') (Db-Environment 'migration') '' $null $true).Trim()
     } elseif($Command -in @('verify-calendar','verify-weeks','verify-week-reads','configure-calendar-demo')){
         $stage='calendar_runtime_check';$null=Verify-MySQL
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before calendar verification.'}
@@ -333,7 +338,7 @@ try {
         do{Start-Sleep -Milliseconds 200;$worker.Refresh();if($worker.HasExited){throw 'Owned browser failed to open; no trust settings were changed.'}}while(!(Test-Path -LiteralPath $readyPath) -and [DateTime]::UtcNow -lt $deadline)
         if(!(Test-Path -LiteralPath $readyPath)){throw 'Browser authentication was not confirmed.'}
         Write-Output ('EVAL opened and authenticated: '+$Role)
-    } elseif($Command -in @('verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample')){
+    } elseif($Command -in @('verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-bimesters','verify-all','migrate-all','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample')){
         if($Command -eq 'verify-activities'){
             $stage='activity_transaction_fixture';$null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\activity-rollback-fixture.php')+'" prepare') (Db-Environment 'migration') '' $null $true
             try{$stage='activity_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-activities-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()}
@@ -359,6 +364,19 @@ try {
         if($Command -eq 'verify-audit' -and !$BrowserOnly){
             $stage='audit_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-audit-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
         }
+        if($Command -eq 'verify-bimesters' -and !$BrowserOnly){
+            $stage='bimester_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-bimesters-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
+        }
+        if($Command -eq 'verify-all' -and !$BrowserOnly){
+            $allEnv = Db-Environment 'runtime'
+            $allEnv['EVAL_RUNTIME_PASSWORD'] = Decrypt $state.runtime
+            $allEnv['EVAL_MIGRATION_USER'] = 'eval_dev_migration'
+            $allEnv['EVAL_MIGRATION_PASSWORD'] = Decrypt $state.migration
+            $stage='all_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-all-backend.php')+'"') $allEnv '' $null $true).Trim()
+        }
+        if($Command -eq 'migrate-all' -and !$BrowserOnly){
+            $stage='all_migrations';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\migrate-all.php')+'"') (Db-Environment 'migration') '' $null $true).Trim()
+        }
         if($Command -eq 'verify-material-maintenance' -and !$BrowserOnly){
             $stage='material_rollback_fixture';$null=Start-Child $php ('-c "'+$ini+'" "'+(Join-Path $repo 'backend\dev-runtime\material-rollback-fixture.php')+'" prepare') (Db-Environment 'migration') '' $null $true
             try{$stage='material_maintenance_server_verification';Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-material-maintenance-server.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()}
@@ -383,7 +401,7 @@ try {
         if($Command -eq 'verify-assignments'){
             $stage='assignment_fixture';$null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\assignment-fixture.php')+'"') (Db-Environment 'migration') '' $null $true
         }
-        if ($ServerOnly) { exit 0 }
+        if ($ServerOnly -or $Command -in @('verify-all','migrate-all')) { exit 0 }
         $stage='browser_verification';$helper=Join-Path $repo $(if($Command -eq 'verify-enrollments'){'backend\dev-runtime\verify-enrollments.mjs'}elseif($Command -eq 'verify-assignments'){'backend\dev-runtime\verify-assignments.mjs'}elseif($Command -eq 'verify-users'){'backend\dev-runtime\verify-users.mjs'}elseif($Command -eq 'verify-activities'){'backend\dev-runtime\verify-activities.mjs'}elseif($Command -eq 'verify-assessments'){'backend\dev-runtime\verify-assessments.mjs'}elseif($Command -eq 'verify-reports'){'backend\dev-runtime\verify-reports.mjs'}elseif($Command -eq 'verify-notifications'){'backend\dev-runtime\verify-notifications.mjs'}elseif($Command -eq 'verify-history'){'backend\dev-runtime\verify-history.mjs'}elseif($Command -eq 'verify-activity-recovery'){'backend\dev-runtime\verify-activity-recovery.mjs'}elseif($Command -eq 'verify-delivery-context'){'backend\dev-runtime\verify-delivery-context.mjs'}elseif($Command -eq 'verify-library'){'backend\dev-runtime\verify-library.mjs'}elseif($Command -eq 'verify-write-recovery'){'backend\dev-runtime\verify-write-recovery.mjs'}elseif($Command -eq 'verify-recorded-time'){'backend\dev-runtime\verify-recorded-time.mjs'}elseif($Command -eq 'verify-material-maintenance'){'backend\dev-runtime\verify-material-maintenance.mjs'}elseif($Command -eq 'verify-observations'){'backend\dev-runtime\verify-observations.mjs'}elseif($Command -eq 'verify-file-replacement'){'backend\dev-runtime\verify-file-replacement.mjs'}elseif($Command -eq 'verify-tablet-interface'){'backend\dev-runtime\verify-tablet-interface.mjs'}elseif($Command -eq 'verify-school-sample'){'backend\dev-runtime\verify-school-sample.mjs'}else{'backend\dev-runtime\verify-dev.mjs'})
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
         $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}

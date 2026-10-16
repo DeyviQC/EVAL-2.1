@@ -93,7 +93,37 @@ if (count($directorPage['items']) >= 2) {
     }
 }
 
-// 9. Append-only trigger enforcement on academic_lifecycle_events
+// 9. Server-side global search across ledger records
+$firstActorName = $directorPage['items'][0]['actor_name'] ?? null;
+if ($firstActorName !== null) {
+    $searchPage = $query->page($director, null, null, substr($firstActorName, 0, 4));
+    $assert(is_array($searchPage['items']));
+    $assert(count($searchPage['items']) > 0);
+}
+
+$firstCorrelationId = $directorPage['items'][0]['correlation_id'] ?? null;
+if ($firstCorrelationId !== null) {
+    $corrSearch = $query->page($director, null, null, $firstCorrelationId);
+    $assert(is_array($corrSearch['items']));
+    $assert(count($corrSearch['items']) > 0);
+    foreach ($corrSearch['items'] as $item) {
+        $assert($item['correlation_id'] === $firstCorrelationId);
+    }
+}
+
+// Search by event type
+$eventTypeSearch = $query->page($director, null, null, 'created');
+$assert(is_array($eventTypeSearch['items']));
+
+// Overlength search (>100 chars) must fail with invalid_input
+try {
+    $query->page($director, null, null, str_repeat('a', 101));
+    throw new RuntimeException('Expected overlength search failure');
+} catch (App\Application\Academic\AcademicCommandFailure $e) {
+    $assert($e->category === 'invalid_input');
+}
+
+// 10. Append-only trigger enforcement on academic_lifecycle_events
 $firstEventId = $db->table('academic_lifecycle_events')->value('id');
 if ($firstEventId) {
     try {
@@ -117,5 +147,6 @@ echo json_encode([
     'roleGuard' => true,
     'filtering' => true,
     'pagination' => true,
+    'globalSearch' => true,
     'appendOnlyLedger' => true
 ]) . PHP_EOL;

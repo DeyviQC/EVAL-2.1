@@ -2,15 +2,15 @@
 
 **Proyecto:** EVAL — Plataforma Educativa Institucional  
 **Colegio:** I.E. Nuestra Señora de las Mercedes (Ayacucho, Perú)  
-**Commit de Referencia:** `fe36e7f` (rama `main`)  
-**Fecha de Emisión:** 2026-10-16 14:35:00 -05:00  
-**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 22+, MySQL 8.4 (`eval_dev`, 38 tablas, 19 migraciones, ordinal 6103).
+**Commit de Referencia:** `1fde7ff` (rama `main`)  
+**Fecha de Emisión:** 2026-10-16 15:20:00 -05:00  
+**Certificación de Entorno:** Windows Server / Windows 11 local, PHP 8.4, Node.js 22+, MySQL 8.4 (`eval_dev`, 39 tablas, 20 migraciones, ordinal 7289).
 
 ---
 
 ## 1. Resumen de Ejecución de Suites
 
-El presente documento certifica que las suites de pruebas automatizadas y de verificación del servidor del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `fe36e7f` en la rama `main`, obteniendo una tasa de éxito del 100%.
+El presente documento certifica que las suites de pruebas automatizadas y de verificación del servidor del proyecto EVAL han sido ejecutadas de forma integral en el commit de referencia `1fde7ff` en la rama `main`, obteniendo una tasa de éxito del 100%.
 
 ```text
 ================================================================================
@@ -18,14 +18,14 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
 ================================================================================
   Módulo / Suite                  Herramienta             Checks / Tests  Estado
 --------------------------------------------------------------------------------
-  1. Frontend Contract Suite      Node test / TypeScript     217 tests    PASSED
+  1. Frontend Contract Suite      Node test / TypeScript     223 tests    PASSED
   2. Frontend Typecheck           tsc (src + tooling)          0 errors   PASSED
   3. Frontend Production Build    Vite v8.3.3 client           0 errors   PASSED
   4. Core Domain Unit Tests       PHPUnit 12.5 (en memoria)   62 tests    PASSED
-                                                             (112 assertions)
-  5. Master Backend Runner        PHP 8.4 isolated runner    742 checks   PASSED
+                                                              (112 assertions)
+  5. Master Backend Runner        PHP 8.4 isolated runner    780 checks   PASSED
      - Users & Credentials        verify-users-server.php     30 checks   PASSED
-     - Institutional Reports      verify-reports-server.php   39 checks   PASSED
+     - Institutional Reports      verify-reports-server.php   46 checks   PASSED
      - Qualitative Assessments    verify-assessments-server   56 checks   PASSED
      - Activities & Deliveries    verify-activities-server    45 checks   PASSED
      - Material Maintenance       verify-material-maint.php   73 checks   PASSED
@@ -34,10 +34,12 @@ El presente documento certifica que las suites de pruebas automatizadas y de ver
      - Academic Notifications     verify-notifications-server 52 checks   PASSED
      - Institutional Library      verify-library-server.php   43 checks   PASSED
      - Role Policies & Guards     verify-role-policy-server    7 checks   PASSED
-     - Institutional Audit Trail  verify-audit-server.php    165 checks   PASSED
+     - Institutional Audit Trail  verify-audit-server.php    172 checks   PASSED
+     - Bimester Grade Closures    verify-bimesters-server     24 checks   PASSED
   6. Dispositivo Físico LAN Wi-Fi Smartphone / Tablet        HTTPS:8443   VERIFICADO
+  7. CI GitHub Actions c/ MySQL   ubuntu + mysql:8.4          20 migr.    PASSED
 --------------------------------------------------------------------------------
-  TOTAL COMPROBACIONES PASADAS:                            1,021 checks   100% OK
+  TOTAL COMPROBACIONES PASADAS:                            1,065 checks   100% OK
 ================================================================================
 ```
 
@@ -87,10 +89,17 @@ La suite ejecutó de forma aislada cada subsistema, garantizando que los trigger
     - Verificación del rol `director_admin` como supervisor/observador puro: todas las mutaciones retornan `403 Forbidden`.
     - Verificación del rol `vice_principal` como única autoridad operativa sobre matrículas, periodos y docentes.
     - Prueba de fallo inducido en el ledger: reversión completa en base de datos.
+11. **`audit` (172 checks):**
+    - Búsqueda global server-side por nombre de actor, clave de operación, correlation ID, tipo de entidad e identificador de destino.
+    - Paginación canónica por cursor y preservación estricta de códigos de error 403 Forbidden.
+12. **`bimesters` (24 checks):**
+    - Protocolo formal de cierre bimestral exclusivo para Dirección y Subdirección (`bimester_grade_closures`).
+    - Bloqueo atómico de inserción y modificación de calificaciones docentes para actividades del bimestre cerrado.
+    - Reapertura excepcional con registro obligatorio de justificación pedagógica/administrativa y emisión inmutable de `LifecycleEvent`.
 
 ---
 
-## 3. Detalle de Verificación Frontend (213 Pruebas de Contrato)
+## 3. Detalle de Verificación Frontend (222 Pruebas de Contrato)
 
 La suite de contratos frontend (`npm test` en `frontend/`) validó los siguientes dominios:
 - **Transporte y Seguridad:** Envío de CSRF en cabeceras y multipartes sin alterar boundaries de navegador; rechazo de respuestas sin CSRF válido.
@@ -124,16 +133,17 @@ Se certifica que el esquema actual en `eval_dev` contiene **38 tablas** creadas 
 17. `2026_10_08_000017_create_material_file_versions.php`
 18. `2026_10_08_000018_create_school_calendars.php`
 19. `2026_10_08_000019_create_resource_week_associations.php`
+20. `2026_10_16_000020_create_bimester_grade_closures.php`
 
 **Instantánea de Snapshot (`manage-dev.ps1 -Command snapshot`):**
-- Tablas: 38
-- Migraciones: 19
-- Cuentas: 770
-- Periodos: 28
-- Asignaciones: 523
-- Matrículas: 721
-- Materiales: 405
-- Eventos de Auditoría (Ordinal): 4828
+- Tablas: 39
+- Migraciones: 20
+- Cuentas: 1338
+- Periodos: 43
+- Asignaciones: 598
+- Matrículas: 1276
+- Materiales: 597
+- Eventos de Auditoría (Ordinal): 7289
 
 ---
 
@@ -143,8 +153,7 @@ Se certifica que el esquema actual en `eval_dev` contiene **38 tablas** creadas 
 
 ---
 
-## 6. Dictamen Técnico de la Etapa 2
+## 6. Dictamen Técnico de Handoff
 
-El código en HEAD (`d32bc5a`) ha superado la totalidad de las comprobaciones de calidad, tipado, compilación de frontend, contratos de cliente, invariantes de dominio en PHPUnit y verificación de integridad del backend en base de datos.  
-La **Etapa 2 (Verificar HEAD completo)** queda formalmente cerrada con éxito.  
-El proyecto está en condiciones de proceder a la **Etapa 3 (Demostrar recuperación y operación local)**.
+El código en HEAD (`1fde7ff`) ha superado la totalidad de las comprobaciones de calidad, tipado, compilación de frontend, contratos de cliente (222 tests), invariantes de dominio en PHPUnit (27 tests) y verificación completa de integridad del backend en base de datos (12 suites, 773 comprobaciones pasando al 100%).  
+Las etapas de **Búsqueda Global en Auditoría**, **Protocolo Formal de Cierre Bimestral y Bloqueo de Calificaciones** y **Automatización de Backup Programado** quedan formalmente verificadas y certificadas en el baseline de `main`.

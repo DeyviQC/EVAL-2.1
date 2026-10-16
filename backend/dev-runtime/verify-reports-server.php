@@ -49,5 +49,14 @@ try {
  }
  $history=$read($director,(string)$closed->id,(string)$closed->grade_id,(string)$closed->section_id);$assert($history['totals']['received']===1&&$history['totals']['graded']===1&&$history['totals']['A']===1&&$history['items'][0]['historical']);
  $control=new App\Http\Controllers\Academic\ClassroomReportController($db);foreach([Symfony\Component\HttpFoundation\Request::create('/reports/classroom','GET',['period_id'=>$period,'grade_id'=>$grade,'section_id'=>$section,'teacher_id'=>$teacher->identityId]),Symfony\Component\HttpFoundation\Request::create('/reports/classroom','POST',['period_id'=>$period,'grade_id'=>$grade,'section_id'=>$section]),Symfony\Component\HttpFoundation\Request::create('/reports/classroom','GET',['period_id'=>[$period],'grade_id'=>$grade,'section_id'=>$section])] as $request){$assert($control->handle($request,$director)->getStatusCode()===422);}
- echo json_encode(['checks'=>$checks,'rows'=>52,'pagination'=>true,'logicalCounts'=>true,'currentGrade'=>true,'privatePayloadExcluded'=>true,'retainedAttribution'=>true,'closedPeriod'=>true,'readOnly'=>true]).PHP_EOL;
-}catch(Throwable $error){while($error){fwrite(STDERR,get_class($error).' at '.basename($error->getFile()).':'.$error->getLine().($error instanceof Illuminate\Database\QueryException?' MySQL '.($error->errorInfo[1]??'unknown'):'').PHP_EOL);$error=$error->getPrevious();}exit(2);}
+ $officialReq=Symfony\Component\HttpFoundation\Request::create('/reports/classroom','GET',['period_id'=>$period,'grade_id'=>$grade,'section_id'=>$section,'format'=>'official']);
+ $officialRes=$control->handle($officialReq,$director);
+ $assert($officialRes->getStatusCode()===200);
+ $assert(str_contains($officialRes->headers->get('Content-Type')??'','text/html'));
+ $assert($officialRes->headers->has('X-EVAL-Integrity-SHA256'));
+ $assert(strlen($officialRes->headers->get('X-EVAL-Integrity-SHA256')??'')===64);
+ $assert(str_contains($officialRes->getContent()?:'','SELLO DE INTEGRIDAD CRIPTOGRÁFICA'));
+ $assert(str_contains($officialRes->getContent()?:'','I.E. NUESTRA SEÑORA DE LAS MERCEDES'));
+ $assert($control->handle(Symfony\Component\HttpFoundation\Request::create('/reports/classroom','GET',['period_id'=>$period,'grade_id'=>$grade,'section_id'=>$section,'format'=>'unsupported']),$director)->getStatusCode()===422);
+ echo json_encode(['checks'=>$checks,'rows'=>52,'pagination'=>true,'logicalCounts'=>true,'currentGrade'=>true,'privatePayloadExcluded'=>true,'retainedAttribution'=>true,'closedPeriod'=>true,'officialExport'=>true,'readOnly'=>true]).PHP_EOL;
+}catch(Throwable $error){while($error){fwrite(STDERR,get_class($error).' at '.basename($error->getFile()).':'.$error->getLine().': '.$error->getMessage().($error instanceof Illuminate\Database\QueryException?' MySQL '.($error->errorInfo[1]??'unknown'):'').PHP_EOL);$error=$error->getPrevious();}exit(2);}

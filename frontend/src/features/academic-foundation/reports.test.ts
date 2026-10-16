@@ -38,5 +38,57 @@ export const reportCases:[string,()=>void|Promise<void>][]=[
   assert(xml.includes('Student'));
   assert(xml.includes('</Workbook>'));
  }],
+ ['bimestersResponse decodes 4 bimesters with closure states and audit attribution',()=>{
+  const raw={
+   period_id:'1',
+   period_state:'active',
+   bimesters:[
+    {bimester_number:1,state:'locked',closed_by:'2',closed_by_name:'Subdirectora',closed_at:'2026-05-15 18:00:00',reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null},
+    {bimester_number:2,state:'open',closed_by:null,closed_by_name:null,closed_at:null,reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null},
+    {bimester_number:3,state:'open',closed_by:null,closed_by_name:null,closed_at:null,reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null},
+    {bimester_number:4,state:'open',closed_by:null,closed_by_name:null,closed_at:null,reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null}
+   ]
+  };
+  const decoded=import('./reports.js').then(m=>{
+   const res=m.bimestersResponse(raw);
+   assert(res.period_id==='1');
+   assert(res.bimesters.length===4);
+   assert(res.bimesters[0]!.state==='locked');
+   assert(res.bimesters[0]!.closed_by_name==='Subdirectora');
+   assert(res.bimesters[1]!.state==='open');
+  });
+ }],
+ ['bimesterState rejects invalid bimester number or state',async()=>{
+  const {bimesterState}=await import('./reports.js');
+  rejects(()=>bimesterState({bimester_number:5,state:'open',closed_by:null,closed_by_name:null,closed_at:null,reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null}));
+  rejects(()=>bimesterState({bimester_number:1,state:'invalid',closed_by:null,closed_by_name:null,closed_at:null,reopened_by:null,reopened_by_name:null,reopened_at:null,justification:null}));
+ }],
+ ['closeBimester and reopenBimester enforce CSRF and payloads',async()=>{
+  const {createAcademicClient}=await import('./api.js');
+  let calledUrl='';let calledBody='';let hasCsrf=false;
+  const client=createAcademicClient((async(url,init)=>{
+   calledUrl=String(url);calledBody=String(init?.body);hasCsrf=Boolean(init?.headers && (init.headers as Record<string,string>)['X-CSRF-TOKEN']);
+   return new Response(JSON.stringify({data:{id:'1'}}));
+  }) as typeof fetch,()=>'csrf-test-token');
+
+  await client.closeBimester('1',1);
+  assert(calledUrl==='/academic/bimesters/close');
+  assert(hasCsrf);
+  assert(JSON.parse(calledBody).bimester_number===1);
+
+  await client.reopenBimester('1',1,'Justificación formal requerida');
+  assert(calledUrl==='/academic/bimesters/reopen');
+  assert(hasCsrf);
+  assert(JSON.parse(calledBody).justification==='Justificación formal requerida');
+ }],
+ ['officialClassroomReportUrl builds tamper-proof query and validates decimal ids',async()=>{
+  const {officialClassroomReportUrl,createReportClient}=await import('./reports.js');
+  const url=officialClassroomReportUrl('1','2','3');
+  assert(url==='/reports/classroom?period_id=1&grade_id=2&section_id=3&format=official');
+  const client=createReportClient();
+  assert(client.officialUrl('10','20','30')==='/reports/classroom?period_id=10&grade_id=20&section_id=30&format=official');
+  rejects(()=>officialClassroomReportUrl('invalid','2','3'));
+  rejects(()=>officialClassroomReportUrl('1','../evil','3'));
+ }]
 ];
 

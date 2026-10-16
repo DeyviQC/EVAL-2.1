@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademicApiError, createAcademicClient } from './api.js';
 import { periodPage, catalogPage, type CatalogRow } from './directory.js';
 import { type period } from './contracts.js';
-import { type ClassroomReport, type ReportClient, downloadClassroomCsv, downloadClassroomExcel } from './reports.js';
+import { type ClassroomReport, type ReportClient, type BimesterState, downloadClassroomCsv, downloadClassroomExcel, officialClassroomReportUrl } from './reports.js';
 
 const button = 'rounded-lg border border-eval-teal px-4 py-2 font-medium transition hover:bg-eval-teal/10 disabled:opacity-50';
 const primaryButton = 'rounded-lg bg-eval-teal text-white px-4 py-2 font-medium shadow-sm transition hover:bg-eval-teal/90 disabled:opacity-50';
@@ -22,6 +22,10 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
   const [grade, setGrade] = useState('');
   const [section, setSection] = useState('');
   const [report, setReport] = useState<ClassroomReport | null>(null);
+  const [bimesters, setBimesters] = useState<BimesterState[]>([]);
+  const [closeConfirm, setCloseConfirm] = useState<number | null>(null);
+  const [reopenDialog, setReopenDialog] = useState<{ bimester: number; justification: string } | null>(null);
+  const [reopenError, setReopenError] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [activeTab, setActiveTab] = useState<'consolidado' | 'nomina'>('consolidado');
@@ -111,6 +115,63 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
     }
   }
 
+  async function loadBimesters(periodId: string) {
+    if (!periodId) {
+      setBimesters([]);
+      return;
+    }
+    try {
+      const res = await academic.bimesters(periodId);
+      setBimesters(res.bimesters);
+    } catch {
+      setBimesters([]);
+    }
+  }
+
+  useEffect(() => {
+    if (period) void loadBimesters(period);
+    else setBimesters([]);
+  }, [period, academic]);
+
+  async function handleCloseBimester(bNum: number) {
+    if (!period) return;
+    setBusy(true);
+    setNotice('');
+    try {
+      await academic.closeBimester(period, bNum);
+      await loadBimesters(period);
+      setCloseConfirm(null);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReopenBimester() {
+    if (!period || !reopenDialog) return;
+    const just = reopenDialog.justification.trim();
+    if (just.length < 10) {
+      setReopenError('La justificación debe tener al menos 10 caracteres.');
+      return;
+    }
+    setBusy(true);
+    setReopenError('');
+    try {
+      await academic.reopenBimester(period, reopenDialog.bimester, just);
+      await loadBimesters(period);
+      setReopenDialog(null);
+    } catch (e) {
+      if (e instanceof AcademicApiError && e.category === 'invalid_justification') {
+        setReopenError('Justificación no válida (mínimo 10 caracteres).');
+        return;
+      }
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Filtrado de estudiantes en memoria
   const filteredItems = useMemo(() => {
     if (!report) return [];
@@ -136,6 +197,16 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
           </div>
           {report && (
             <div className="flex items-center gap-2">
+              <a
+                href={client.officialUrl ? client.officialUrl(period, grade, section) : officialClassroomReportUrl(period, grade, section)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-teal-600 bg-teal-50 dark:bg-teal-950/40 dark:border-teal-700 px-3 py-2 text-sm font-semibold text-teal-800 dark:text-teal-200 shadow-sm transition hover:bg-teal-100 dark:hover:bg-teal-900/60"
+                title="Abrir Acta Oficial generada por el Servidor con Sello Digital Criptográfico SHA-256"
+              >
+                <span>🛡️</span>
+                <span>Acta Oficial Servidor</span>
+              </a>
               <button
                 type="button"
                 className={exportButton}
@@ -244,10 +315,98 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                   {report.scope.period_state === 'closed' ? 'Período cerrado · consulta histórica' : report.scope.period_state === 'planned' ? 'Período planificado' : 'Período activo'}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 sm:mt-0">
-                Totales vigentes del aula completa
-              </div>
             </div>
+
+            {/* Control Institucional de Bimestres y Bloqueo de Calificaciones */}
+            {bimesters.length > 0 && (
+              <div className="mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <span>Cierre de Bimestres y Bloqueo de Calificaciones</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      El cierre bloquea la mutabilidad de notas docentes para el bimestre correspondiente. Solo Dirección puede autorizar reaperturas excepcionales con justificación registrada en la bitácora inmutable.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {bimesters.map(bim => {
+                    const isLocked = bim.state === 'locked';
+                    return (
+                      <div
+                        key={bim.bimester_number}
+                        className={`p-3 rounded-lg border transition-all ${
+                          isLocked
+                            ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {bim.bimester_number}.° Bimestre
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              isLocked
+                                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
+                                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                            }`}
+                          >
+                            {isLocked ? '🔒 Bloqueado' : '📝 En Proceso'}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                          {isLocked
+                            ? `Cerrado por: ${bim.closed_by_name ?? 'Dirección'}`
+                            : 'Calificaciones abiertas para registro docente'}
+                        </p>
+                        {isLocked && bim.closed_at && (
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 font-mono">
+                            {bim.closed_at.slice(0, 16)}
+                          </p>
+                        )}
+                        {bim.reopened_by_name && (
+                          <div className="mt-1 pt-1 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-500">
+                            <span>Reabierto por: <strong>{bim.reopened_by_name}</strong></span>
+                            {bim.justification && (
+                              <p className="italic text-slate-600 dark:text-slate-400 mt-0.5 truncate" title={bim.justification}>"{bim.justification}"</p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60 flex justify-end">
+                          {isLocked ? (
+                            <button
+                              type="button"
+                              className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
+                              disabled={busy}
+                              onClick={() => {
+                                setReopenError('');
+                                setReopenDialog({ bimester: bim.bimester_number, justification: '' });
+                              }}
+                            >
+                              🔓 Reapertura Excepcional
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="text-xs text-rose-700 dark:text-rose-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
+                              disabled={busy}
+                              onClick={() => setCloseConfirm(bim.bimester_number)}
+                            >
+                              🔒 Cerrar Bimestre
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Switcher de Vistas */}
             <div className="flex items-center gap-2 mt-4 border-b border-slate-200 dark:border-slate-800">
@@ -615,11 +774,30 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
           <div className="eval-print-meta">
             <div><strong>Período Lectivo:</strong> {report.scope.period_name}</div>
             <div><strong>Grado y Sección:</strong> {report.scope.grade_name} {report.scope.section_name}</div>
-            <div><strong>Estado:</strong> {report.scope.period_state === 'closed' ? 'Cerrado' : report.scope.period_state === 'planned' ? 'Planificado' : 'Activo'}</div>
+            <div><strong>Estado Período:</strong> {report.scope.period_state === 'closed' ? 'Cerrado' : report.scope.period_state === 'planned' ? 'Planificado' : 'Activo'}</div>
             <div><strong>Fecha de Emisión:</strong> {nowLima}</div>
+            <div><strong>Condición de Calificaciones:</strong> {
+              bimesters.length > 0 && bimesters.every(b => b.state === 'locked')
+                ? 'CONSOLIDADO DEFINITIVO (TODOS LOS BIMESTRES CERRADOS)'
+                : bimesters.some(b => b.state === 'locked')
+                  ? `CONSOLIDADO MIXTO (${bimesters.filter(b => b.state === 'locked').map(b => `${b.bimester_number}°B`).join(', ')} CERRADOS)`
+                  : 'VISTA PROVISIONAL EN PROCESO'
+            }</div>
             <div><strong>Autorizado por:</strong> Dirección / Subdirección</div>
             <div><strong>Total Matriculados:</strong> {report.items.length} evaluados</div>
           </div>
+
+          {bimesters.length > 0 && (
+            <div style={{ margin: '8px 0', padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '8pt', backgroundColor: '#f8fafc' }}>
+              <strong>Estado por Bimestres: </strong>
+              {bimesters.map(b => (
+                <span key={b.bimester_number} style={{ marginRight: '14px' }}>
+                  <strong>{b.bimester_number}.° Bimestre:</strong> {b.state === 'locked' ? `🔒 Cerrado (${b.closed_by_name ?? 'Dirección'})` : '📝 En Proceso'}
+                  {b.reopened_by_name ? ` [Reabierto previamente por ${b.reopened_by_name}]` : ''}
+                </span>
+              ))}
+            </div>
+          )}
 
           <h3 style={{ fontSize: '10.5pt', fontWeight: 'bold', margin: '10px 0 6px 0' }}>
             RESUMEN DE CALIFICACIONES Y ENTREGAS DEL AULA
@@ -691,6 +869,114 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
             <div className="eval-print-sig-box">
               <div className="eval-print-sig-line"></div>
               <span>V.° B.° Dirección General</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Cierre de Bimestre */}
+      {closeConfirm !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🔒 Confirmar Cierre de Bimestre</span>
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
+              ¿Está seguro de cerrar formalmente el <strong>{closeConfirm}.° Bimestre</strong>?
+            </p>
+            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+              <p className="font-semibold">⚠️ Efectos del Cierre Institucional:</p>
+              <ul className="list-disc list-inside mt-1 space-y-0.5">
+                <li>Se bloqueará el registro y modificación de calificaciones para los docentes en este bimestre.</li>
+                <li>Las calificaciones pasarán a condición de <strong>CONSOLIDADO DEFINITIVO</strong>.</li>
+                <li>Cualquier modificación posterior requerirá reapertura autorizada por Dirección con justificación grabada en la bitácora inmutable.</li>
+              </ul>
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setCloseConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleCloseBimester(closeConfirm)}
+                className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-lg shadow-sm cursor-pointer"
+              >
+                {busy ? 'Cerrando...' : 'Confirmar y Bloquear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Solicitud de Reapertura Excepcional */}
+      {reopenDialog !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🔓 Solicitud de Reapertura Excepcional</span>
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
+              Reapertura de calificaciones para el <strong>{reopenDialog.bimester}.° Bimestre</strong>.
+            </p>
+            <div className="mt-3 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 rounded-lg text-xs text-rose-800 dark:text-rose-300">
+              <p className="font-semibold">Auditoría Estricta Institucional:</p>
+              <p className="mt-0.5">
+                La reapertura desbloquea temporalmente el registro de notas. Este acto quedará permanentemente registrado en el Audit Trail institucional con su identidad de usuario, fecha y la justificación pedagógica/administrativa que proporcione.
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Motivo o Justificación Obligatoria (mínimo 10 caracteres):
+              </label>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={reopenDialog.justification}
+                onChange={e => {
+                  setReopenDialog({ ...reopenDialog, justification: e.target.value });
+                  if (reopenError) setReopenError('');
+                }}
+                placeholder="Ej: Corrección autorizada por Dirección según Memorando N° 045-2026 por error involuntario en rúbrica..."
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-eval-teal"
+              />
+              <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+                <span>{reopenDialog.justification.trim().length} / 500 caracteres</span>
+                <span>Mínimo 10 caracteres</span>
+              </div>
+              {reopenError && (
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold mt-1">
+                  {reopenError}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setReopenDialog(null);
+                  setReopenError('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={busy || reopenDialog.justification.trim().length < 10}
+                onClick={() => void handleReopenBimester()}
+                className="px-4 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-lg shadow-sm cursor-pointer"
+              >
+                {busy ? 'Autorizando...' : 'Autorizar Reapertura'}
+              </button>
             </div>
           </div>
         </div>

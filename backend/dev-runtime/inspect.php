@@ -9,7 +9,7 @@ try {
     if(!in_array($identity,['eval_dev_runtime@127.0.0.1','eval_dev_runtime@localhost'],true))throw new RuntimeException();
     $stage='tls';$tls=$db->select("SHOW SESSION STATUS LIKE 'Ssl_cipher'");if(empty($tls[0]->Value))throw new RuntimeException();
     $tables=$db->select('SHOW TABLES');$migrations=$db->table('migrations')->count();
-    $stage='schema';if(!(($migrations===12&&count($tables)===23)||($migrations===13&&count($tables)===24)||($migrations===14&&count($tables)===25)||($migrations===15&&count($tables)===27)||($migrations===16&&count($tables)===30)||($migrations===17&&count($tables)===31)||($migrations===18&&count($tables)===34)||($migrations===19&&count($tables)===38)))throw new RuntimeException();
+    $stage='schema';if(!(($migrations===12&&count($tables)===23)||($migrations===13&&count($tables)===24)||($migrations===14&&count($tables)===25)||($migrations===15&&count($tables)===27)||($migrations===16&&count($tables)===30)||($migrations===17&&count($tables)===31)||($migrations===18&&count($tables)===34)||($migrations===19&&count($tables)===38)||($migrations===20&&count($tables)===39)))throw new RuntimeException();
     $stage='privileges';foreach($db->select('SHOW GRANTS FOR CURRENT_USER()') as $grant){
         $text=array_values((array)$grant)[0];
         if(preg_match('/^GRANT .*\b(ALL PRIVILEGES|CREATE|DROP|ALTER|DELETE|GRANT OPTION)\b/',$text))throw new RuntimeException();

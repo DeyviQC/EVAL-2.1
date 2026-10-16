@@ -24,7 +24,7 @@ Un respaldo completo de EVAL empaqueta en un único archivo comprimido `.zip` lo
 
 1. **Volcado Completo de Base de Datos (`eval_database.sql`):**
    - Exportado con `mysqldump` utilizando `--single-transaction`, `--quick`, `--routines`, `--triggers` y `--hex-blob` en codificación `utf8mb4`.
-   - Incluye las **38 tablas**, las **19 migraciones**, las claves foráneas y el estado de la tabla de control atómico `academic_write_guard`.
+   - Incluye las **39 tablas**, las **20 migraciones**, las claves foráneas y el estado de la tabla de control atómico `academic_write_guard`.
 2. **Archivos Físicos Adjuntos (`files/`):**
    - Carpeta `files/deliveries/`: Todas las evidencias de aprendizaje (PDFs, imágenes, tareas enviadas por los alumnos).
    - Carpeta `files/materials/`: Guías didácticas, lecturas y recursos pedagógicos subidos por los docentes.
@@ -32,7 +32,7 @@ Un respaldo completo de EVAL empaqueta en un único archivo comprimido `.zip` lo
    - Fecha y hora exacta en formato UTC (ISO 8601).
    - Identificador único del respaldo.
    - Hash SHA-256 del archivo `eval_database.sql`.
-   - Conteo de tablas (38), migraciones (19) y último número ordinal de transacción (`last_ordinal`).
+   - Conteo de tablas (39), migraciones (20) y último número ordinal de transacción (`last_ordinal`).
    - Lista exhaustiva de todos los archivos físicos adjuntos con su respectivo tamaño y hash individual SHA-256.
 
 ---
@@ -122,8 +122,8 @@ Si el servidor físico falla, el disco duro se corrompe o se traslada la platafo
      powershell -ExecutionPolicy Bypass -File .\backend\scripts\manage-dev.ps1 snapshot
      ```
    - Validar que devuelva exactamente:
-     - 38 tablas
-     - 19 migraciones
+     - 39 tablas
+     - 20 migraciones
      - TLS activo y permisos restringidos.
 5. **Iniciar los servicios del colegio:**
    ```powershell
@@ -136,6 +136,24 @@ Si el servidor físico falla, el disco duro se corrompe o se traslada la platafo
 
 Para que el servidor ejecute la copia de seguridad diaria de forma desatendida a las 23:00 hrs:
 
+### 7.1 Automatización con Script Oficial (Recomendado)
+EVAL incluye el script `backend/scripts/setup-backup-task.ps1` que registra y administra la tarea `EVAL_Daily_Backup` en Windows Task Scheduler:
+
+```powershell
+# Registrar la tarea programada diaria a las 23:00 hrs
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-backup-task.ps1 -Action install
+
+# Verificar el estado de la tarea programada
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-backup-task.ps1 -Action status
+
+# Ejecutar una copia de seguridad inmediata mediante la tarea
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-backup-task.ps1 -Action run-now
+
+# Desinstalar la tarea cuando sea necesario
+powershell -ExecutionPolicy Bypass -File .\backend\scripts\setup-backup-task.ps1 -Action uninstall
+```
+
+### 7.2 Configuración Manual Alternativa
 1. Abrir **Programador de tareas** (`taskschd.msc`).
 2. Crear Tarea Básica:
    - **Nombre:** `EVAL_Daily_Backup`

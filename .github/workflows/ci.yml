@@ -37,15 +37,24 @@ jobs:
       - name: Verify TypeScript & Tooling (Typecheck)
         run: npm run typecheck
 
-      - name: Run 217 Automated Contract Tests
+      - name: Run 223 Automated Contract Tests
         run: npm test
 
       - name: Build Production Bundle (Vite)
         run: npm run build
 
   backend:
-    name: Backend Quality & Unit Tests
+    name: Backend Quality, Migrations & Server Verification
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_password
+          MYSQL_DATABASE: eval_dev
+        ports:
+          - 3307:3306
+        options: --health-cmd="mysqladmin ping -proot_ci_password" --health-interval=10s --health-timeout=5s --health-retries=5
     defaults:
       run:
         working-directory: backend
@@ -69,7 +78,59 @@ jobs:
       - name: Lint PHP Syntax
         run: find app tests dev-runtime -name "*.php" -exec php -l {} \; > /dev/null
 
-      - name: Run Core Domain Unit Tests (PHPUnit)
+      - name: Run 62 Domain Unit Tests (PHPUnit)
         env:
           EVAL_VENDOR_DIR: ${{ github.workspace }}/backend/vendor
-        run: ./vendor/bin/phpunit -c phpunit.xml --filter "TemporalBoundaryTest|WriteGuardPreconditionTest"
+        run: ./vendor/bin/phpunit -c phpunit.xml --filter "TemporalBoundaryTest|WriteGuardPreconditionTest|AcademicLockSetTest|AcademicNameKeyTest|DeliveryTimingTest|SchoolCalendarPlanTest"
+
+      - name: Provision MySQL Migration & Runtime Users
+        run: |
+          mysql -h 127.0.0.1 -P 3307 -u root -proot_ci_password -e "
+            CREATE USER IF NOT EXISTS 'eval_dev_migration'@'%' IDENTIFIED BY 'ci_mig_password';
+            CREATE USER IF NOT EXISTS 'eval_dev_runtime'@'%' IDENTIFIED BY 'ci_run_password';
+            GRANT ALL PRIVILEGES ON eval_dev.* TO 'eval_dev_migration'@'%' WITH GRANT OPTION;
+            GRANT ALL PRIVILEGES ON *.* TO 'eval_dev_migration'@'%' WITH GRANT OPTION;
+            GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE, TRIGGER, CREATE TEMPORARY TABLES, LOCK TABLES ON eval_dev.* TO 'eval_dev_runtime'@'%';
+            FLUSH PRIVILEGES;
+          "
+
+      - name: Create Isolated Delivery & Material Storage Directories
+        run: |
+          mkdir -p ../.local/eval-dev/deliveries ../.local/eval-dev/materials
+
+      - name: Run All 20 Database Migrations & Seed Clean DB
+        env:
+          EVAL_VENDOR_DIR: ${{ github.workspace }}/backend/vendor
+          EVAL_UNIT: Dev
+          EVAL_DB_HOST: 127.0.0.1
+          EVAL_DB_PORT: '3307'
+          EVAL_DB_NAME: eval_dev
+          EVAL_DB_USER: eval_dev_migration
+          EVAL_DB_PASSWORD: ci_mig_password
+          EVAL_DB_ROLE: migration
+          EVAL_DB_SSL_VERIFY: '0'
+          EVAL_SEED_PASSWORD: DefaultDevPassword2026!
+        run: php dev-runtime/ci-prepare.php
+
+      - name: Verify Clean Schema & Migration Count
+        run: |
+          mysql -h 127.0.0.1 -P 3307 -u eval_dev_migration -pci_mig_password eval_dev -e "
+            SELECT count(*) as total_migrations FROM migrations;
+            SHOW TABLES;
+          "
+
+      - name: Run Master Backend Server Verification (12 Suites, 780 Checks)
+        env:
+          EVAL_VENDOR_DIR: ${{ github.workspace }}/backend/vendor
+          EVAL_UNIT: Dev
+          EVAL_DB_HOST: 127.0.0.1
+          EVAL_DB_PORT: '3307'
+          EVAL_DB_NAME: eval_dev
+          EVAL_DB_USER: eval_dev_runtime
+          EVAL_DB_PASSWORD: ci_run_password
+          EVAL_RUNTIME_PASSWORD: ci_run_password
+          EVAL_MIGRATION_USER: eval_dev_migration
+          EVAL_MIGRATION_PASSWORD: ci_mig_password
+          EVAL_DB_ROLE: runtime
+          EVAL_DB_SSL_VERIFY: '0'
+        run: php dev-runtime/verify-all-backend.php

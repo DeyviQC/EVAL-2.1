@@ -93,5 +93,57 @@ export const auditCases: readonly (readonly [string, () => Promise<void>])[] = [
       () => client.auditLedger(auditLedgerPage),
       e => e instanceof AcademicApiError && e.status === 403
     );
+  }],
+
+  ['audit ledger sends global search parameter trimmed and encoded', async () => {
+    let calledUrl = '';
+    const client = createAcademicClient(async (url) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify({
+        data: {
+          items: [{
+            id: '99',
+            entity_type: 'assignment',
+            event_type: 'created',
+            target_id: '12',
+            actor_id: '3',
+            actor_name: 'Prof. Gomez',
+            previous_state: null,
+            new_state: 'active',
+            effective_on: '2026-03-01',
+            operation_key: '99',
+            correlation_id: 'c0a80101000000000000000000000099',
+            recorded_at: '2026-03-01 10:00:00'
+          }],
+          next_after: null
+        }
+      }));
+    }, () => '');
+
+    const page = await client.auditLedger(auditLedgerPage, null, 'assignment', '  Prof. Gomez  ');
+    const parsed = new URL('http://local' + calledUrl);
+    assert.equal(parsed.pathname, '/academic/audit-ledger');
+    assert.equal(parsed.searchParams.get('entity_type'), 'assignment');
+    assert.equal(parsed.searchParams.get('search'), 'Prof. Gomez');
+    assert.equal(parsed.searchParams.get('after'), null);
+    assert.equal(page.items.length, 1);
+    assert.equal(page.items[0]!.actor_name, 'Prof. Gomez');
+  }],
+
+  ['audit ledger handles global search query without entity filter', async () => {
+    let calledUrl = '';
+    const client = createAcademicClient(async (url) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify({
+        data: { items: [], next_after: null }
+      }));
+    }, () => '');
+
+    await client.auditLedger(auditLedgerPage, null, undefined, 'c0a80101');
+    const parsed = new URL('http://local' + calledUrl);
+    assert.equal(parsed.pathname, '/academic/audit-ledger');
+    assert.equal(parsed.searchParams.get('search'), 'c0a80101');
+    assert.equal(parsed.searchParams.get('entity_type'), null);
+    assert.equal(parsed.searchParams.get('after'), null);
   }]
 ];

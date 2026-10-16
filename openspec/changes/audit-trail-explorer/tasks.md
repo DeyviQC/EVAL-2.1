@@ -9,4 +9,5 @@
 - [x] 7. Run full frontend verification: 216 Vitest contract tests, TypeScript typecheck, and Vite production bundle.
 - [x] 8. Verify backend endpoint and role denial for teacher/student via `manage-dev.ps1 -Command verify-audit -ServerOnly` (165 checks passed).
 - [x] 9. Prepare committed handoff and update project documentation.
+- [x] 10. Implement server-side global search (`search` parameter) across actor name, operation key, correlation ID, and event type in `AuditLedgerQuery.php`, update client adapter, contract tests, and UI debounced query.
 

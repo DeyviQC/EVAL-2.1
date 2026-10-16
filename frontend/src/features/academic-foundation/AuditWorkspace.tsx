@@ -26,13 +26,22 @@ const eventBadgeStyles: Record<string, string> = {
 export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; onExpired: () => void }) {
   const [entityFilter, setEntityFilter] = useState<EntityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [rows, setRows] = useState<AuditLedgerEntry[]>([]);
   const [after, setAfter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const generation = useRef(0);
 
-  async function load(cursor: string | null = null, append = false) {
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  async function load(cursor: string | null = null, append = false, currentSearch = debouncedSearch) {
     const current = ++generation.current;
     setBusy(true);
     setError('');
@@ -43,7 +52,8 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
 
     try {
       const filterParam = entityFilter === 'all' ? undefined : entityFilter;
-      const page = await client.auditLedger(auditLedgerPage, cursor, filterParam);
+      const searchParam = currentSearch || undefined;
+      const page = await client.auditLedger(auditLedgerPage, cursor, filterParam, searchParam);
       if (current !== generation.current) return;
 
       setRows(prev => (append ? [...prev, ...page.items] : page.items));
@@ -65,23 +75,9 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
   }
 
   useEffect(() => {
-    void load();
+    void load(null, false, debouncedSearch);
     return () => { generation.current++; };
-  }, [client, entityFilter]);
-
-  // Filtrado de búsqueda en memoria
-  const filteredRows = useMemo(() => {
-    if (!searchQuery.trim()) return rows;
-    const q = searchQuery.toLowerCase().trim();
-    return rows.filter(r =>
-      r.actor_name.toLowerCase().includes(q) ||
-      r.event_type.toLowerCase().includes(q) ||
-      r.entity_type.toLowerCase().includes(q) ||
-      r.correlation_id.toLowerCase().includes(q) ||
-      r.operation_key.includes(q) ||
-      r.target_id.includes(q)
-    );
-  }, [rows, searchQuery]);
+  }, [client, entityFilter, debouncedSearch]);
 
   return (
     <section aria-label="Bitácora de auditoría institucional" aria-busy={busy} className="space-y-6">
@@ -122,31 +118,59 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
           </select>
         </div>
 
-        <div className="flex-1 min-w-[240px]">
+        <div className="flex-1 min-w-[240px] relative">
           <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1" htmlFor="audit-search">
-            Buscar en Bitácora
+            Buscar en Bitácora (Global)
           </label>
-          <input
-            id="audit-search"
-            type="text"
-            placeholder="Buscar por actor, correlación, clave..."
-            className="w-full rounded-xl border border-border bg-surface text-text p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-            value={searchQuery}
-            disabled={busy}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              id="audit-search"
+              type="text"
+              placeholder="Buscar por actor, correlación, clave..."
+              className="w-full rounded-xl border border-border bg-surface text-text p-2.5 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+              value={searchQuery}
+              disabled={busy}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text text-sm font-bold p-0.5"
+                onClick={() => setSearchQuery('')}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         <button
           type="button"
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 hover:bg-surface text-text px-4 py-2.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
           disabled={busy}
-          onClick={() => void load()}
+          onClick={() => void load(null, false, debouncedSearch)}
         >
           <span>🔄</span>
           <span>Actualizar</span>
         </button>
       </div>
+
+      {debouncedSearch && (
+        <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-surface-2/80 border border-border text-xs text-text-muted">
+          <span className="flex items-center gap-1.5">
+            <span>🔍</span>
+            <span>Búsqueda global activa en todo el ledger: <strong className="text-text">"{debouncedSearch}"</strong></span>
+          </span>
+          <button
+            type="button"
+            className="text-xs text-primary hover:underline font-medium"
+            onClick={() => setSearchQuery('')}
+          >
+            Quitar filtro
+          </button>
+        </div>
+      )}
 
       {busy && rows.length === 0 && (
         <div className="p-4 rounded-xl bg-surface border border-border text-xs text-text-muted flex items-center gap-2">
@@ -161,7 +185,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
         </div>
       )}
 
-      {!busy && !error && filteredRows.length === 0 && (
+      {!busy && !error && rows.length === 0 && (
         <div className="p-8 text-center bg-surface border border-border rounded-xl">
           <p className="text-xs text-text-muted">No se encontraron eventos en la bitácora para los criterios seleccionados.</p>
         </div>
@@ -169,7 +193,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
 
       {/* Lista de Eventos de la Bitácora */}
       <div className="space-y-3">
-        {filteredRows.map(event => {
+        {rows.map(event => {
           const badgeClass = eventBadgeStyles[event.event_type] ?? 'bg-surface-2 text-text-muted border-border';
           const entityDisplayName = entityLabels[event.entity_type] ?? event.entity_type;
 

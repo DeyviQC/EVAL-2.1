@@ -51,11 +51,18 @@ final class FoundationController
                 return $this->ok((new \App\Application\Academic\Queries\AcademicHistoryQuery($this->db))->page($actor,$kind,$after));
             }
             if($method==='GET'&&$path==='/academic/audit-ledger'){
-                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['after','entity_type']);
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['after','entity_type','search']);
                 $after=$request->query->all()['after']??null;if($after!==null)$after=$this->locator($after);
                 $entityType=$request->query->all()['entity_type']??null;
                 if($entityType!==null&&!is_string($entityType))throw new AcademicCommandFailure('invalid_input');
-                return $this->ok((new \App\Application\Academic\Queries\AuditLedgerQuery($this->db))->page($actor,$after,$entityType));
+                $search=$request->query->all()['search']??null;
+                if($search!==null&&(!is_string($search)||mb_strlen($search)>100))throw new AcademicCommandFailure('invalid_input');
+                return $this->ok((new \App\Application\Academic\Queries\AuditLedgerQuery($this->db))->page($actor,$after,$entityType,$search));
+            }
+            if($method==='GET'&&$path==='/academic/bimesters'){
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['period_id'],['period_id']);
+                $periodId=$this->locator($request->query->all()['period_id']);
+                return $this->ok((new \App\Application\Academic\Queries\BimesterClosuresQuery($this->db))->getForPeriod($actor,$periodId));
             }
             if($method==='GET'&&$path==='/academic/assignment-workspace'){
                 $query=$request->query->all();
@@ -108,6 +115,17 @@ final class FoundationController
                 if($path==='/academic/periods'){return $this->ok(['id'=>(new AcademicPeriodCommands($this->db))->create($actor,$input)],201);}
                 if($path==='/academic/enrollments'){return $this->ok(['id'=>(new EnrollmentCommands($this->db))->create($actor,$input)],201);}
                 if($path==='/academic/assignments'){return $this->ok(['id'=>(new TeachingAssignmentCommands($this->db))->create($actor,$input)],201);}
+                if($path==='/academic/bimesters/close'){
+                    FoundationCommandChecks::fields($input,['period_id','bimester_number'],['period_id','bimester_number']);
+                    $pId=$this->locator($input['period_id']);$bNum=(int)$input['bimester_number'];
+                    return $this->ok((new \App\Application\Academic\Commands\BimesterGradeLockCommands($this->db))->close($actor,$pId,$bNum));
+                }
+                if($path==='/academic/bimesters/reopen'){
+                    FoundationCommandChecks::fields($input,['period_id','bimester_number','justification'],['period_id','bimester_number','justification']);
+                    $pId=$this->locator($input['period_id']);$bNum=(int)$input['bimester_number'];
+                    if(!is_string($input['justification']))throw new AcademicCommandFailure('invalid_input');
+                    return $this->ok((new \App\Application\Academic\Commands\BimesterGradeLockCommands($this->db))->reopen($actor,$pId,$bNum,$input['justification']));
+                }
                 if(preg_match('#^/academic/periods/([0-9]+)/(activate|close)$#',$path,$match)){
                     FoundationCommandChecks::fields($input,[]);$commands=new AcademicPeriodCommands($this->db);
                     return $this->ok(['id'=>$commands->{$match[2]}($actor,$this->locator($match[1]))]);

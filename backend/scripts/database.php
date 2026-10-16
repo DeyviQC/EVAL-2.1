@@ -30,10 +30,10 @@ $config = [
     'prefix' => '',
     'strict' => true,
     'timezone' => '+00:00',
-    'options' => [
-        PDO::MYSQL_ATTR_SSL_CA => getenv('EVAL_DB_CA'),
+    'options' => array_filter([
+        PDO::MYSQL_ATTR_SSL_CA => getenv('EVAL_DB_CA') ?: null,
         PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => getenv('EVAL_DB_SSL_VERIFY') !== '0',
-    ],
+    ], fn ($v) => $v !== null),
 ];
 $database->addConnection($config);
 if (getenv('EVAL_U1_MIGRATION_PASSWORD')) {
