@@ -23,6 +23,7 @@
 | T3 | S1, S4 | Wire real "Resume activity", teacher notices, weekly agenda, and metric labels (average/trend); ensure truthful labels and fallbacks. | inline | completed | `feat(student-dashboard): wire StudentHome to real /account/student-dashboard data` |
 | T4 | S5, S6 | Accessibility and acceptance hardening: semantic controls, keyboard navigation, focus rings, progress accessibility, live regions, responsive checks; add/update tests. | inline | completed | `feat(student-dashboard): make TaskItem and CourseCard semantic buttons and add UI tests` |
 | T5 | S2 | Verification: run focused tests, full frontend suite, and any affected backend checks; update OpenSpec verification notes if home summaries change status. | inline | completed | `docs(shared-course-experience): update verification for completed student home summaries` |
+| T6 | S1, S2 | Bugfix: delivery refresh after submit fails because backend projection returns extra lock fields; update frontend decoder and seed data to be realistic. | inline | in-progress | |
 
 ## Proposed contract
 
@@ -106,4 +107,6 @@ pm test pass 232/232.
 - **L8** ï¿½ T4 completed: TaskItem and CourseCard now render as semantic <button> elements when clickable, with visible focus rings; added UI tests for semantic rendering. Frontend typecheck and 
 pm test pass 234/234.
 
-- **L9** — T5 completed: ran frontend typecheck, full test suite (234/234), and Vite production build; updated openspec/changes/shared-course-experience/verification.md to mark recent-grade/next-deadline/current-week home summaries as implemented. Backend PHP test needs environment with PHP/MySQL to execute.
+- **L9** ï¿½ T5 completed: ran frontend typecheck, full test suite (234/234), and Vite production build; updated openspec/changes/shared-course-experience/verification.md to mark recent-grade/next-deadline/current-week home summaries as implemented. Backend PHP test needs environment with PHP/MySQL to execute.
+
+- **L10** — User reported delivery refresh error ('Entrega confirmada; no se pudo actualizar la lista') and synthetic demo data. Fixed by updating delivery decoder to accept backend is_locked/unmapped_bimester fields; updated seed-school-sample.php to remove [Ejemplo]/(ficticio) markers; reset dev DB and re-seeded. Frontend tests pass 235/235.
