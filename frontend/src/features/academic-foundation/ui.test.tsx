@@ -3,6 +3,8 @@ import { SessionShell, SessionPanel } from './SessionShell.js';
 import { AcademicReadView } from './AcademicReadView.js';
 import { createSessionClient, createSessionController, sessionSnapshot } from './session.js';
 import { AcademicApiError } from './api.js';
+import { TaskItem } from './ui/TaskItem.js';
+import { CourseCard } from './ui/CourseCard.js';
 type Case=readonly [string,()=>void|Promise<void>];
 function assert(value:unknown):asserts value { if(!value)throw new Error('UI contract assertion failed'); }
 function rejects(fn:()=>unknown) { try{fn();return false;}catch{return true;} }
@@ -79,5 +81,7 @@ export const uiCases:readonly Case[]=[
       originalTeachingAssignment:{id:'4',academicPeriod,grade,section,teacher:label('5','Original teacher'),instructionalEntry:{...label('6','Original area'),kind:'area'},...interval}};
     const html=markup('history',value);assert(html.includes('Original teacher')&&html.includes('Original grade')&&html.includes('contexto original'));
     assert(!html.includes('operationalStartKey')&&!html.includes('grade_id'));
-  }]
+  }],
+  ['TaskItem renders as a semantic button when clickable',()=>{const html=renderToStaticMarkup(<TaskItem id="1" title="Tarea" dueDate="2026-10-20" onClick={()=>{}}/>);assert(html.includes('<button')&&html.includes('type="button"'));const inert=renderToStaticMarkup(<TaskItem id="1" title="Tarea" dueDate="2026-10-20"/>);assert(inert.includes('<div')&&!inert.includes('<button'));}],
+  ['CourseCard renders as a semantic button when clickable',()=>{const html=renderToStaticMarkup(<CourseCard title="Matemática" onOpen={()=>{}}/>);assert(html.includes('<button')&&html.includes('type="button"'));const inert=renderToStaticMarkup(<CourseCard title="Matemática"/>);assert(inert.includes('<div')&&!inert.includes('<button'));}],
 ];

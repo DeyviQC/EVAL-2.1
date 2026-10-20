@@ -21,7 +21,7 @@
 | T1 | S4, S6 | Define student-home data contract and query orchestration: create backend endpoint `GET /account/student-dashboard` that returns overview counts, average, resume activity, upcoming deliveries, courses with progress, latest notices, and weekly agenda; add frontend decoder and client. | inline | completed | `feat(student-dashboard): add /account/student-dashboard projection and decoder` |
 | T2 | S1, S4 | Wire real "My courses" and "Upcoming deliveries" widgets; remove hardcoded course cards and task items; navigate to real sections. | inline | completed | `feat(student-dashboard): wire StudentHome to real /account/student-dashboard data` |
 | T3 | S1, S4 | Wire real "Resume activity", teacher notices, weekly agenda, and metric labels (average/trend); ensure truthful labels and fallbacks. | inline | completed | `feat(student-dashboard): wire StudentHome to real /account/student-dashboard data` |
-| T4 | S5, S6 | Accessibility and acceptance hardening: semantic controls, keyboard navigation, focus rings, progress accessibility, live regions, responsive checks; add/update tests. | inline | open | |
+| T4 | S5, S6 | Accessibility and acceptance hardening: semantic controls, keyboard navigation, focus rings, progress accessibility, live regions, responsive checks; add/update tests. | inline | completed | `feat(student-dashboard): make TaskItem and CourseCard semantic buttons and add UI tests` |
 | T5 | S2 | Verification: run focused tests, full frontend suite, and any affected backend checks; update OpenSpec verification notes if home summaries change status. | inline | open | |
 
 ## Proposed contract
@@ -100,5 +100,8 @@ type StudentDashboard = {
 - **L5** â€” User approved the plan; branch `feat/student-panel-completion` created from `main@5e10917`; starting T1.
 - **L6** â€” T1 completed: backend `StudentDashboardQuery`, route `/account/student-dashboard`, frontend decoder/client, and tests. Frontend suite passes 232/232; backend test authored but needs PHP environment to run.
 
-- **L7** — T2/T3 completed: rewrote StudentHome.tsx to consume client.studentDashboard(), replacing all hardcoded content with real backend data; added loading skeletons, error retry, and empty states; updated ole-dashboards.test.tsx with a mock client. Frontend typecheck and 
+- **L7** ï¿½ T2/T3 completed: rewrote StudentHome.tsx to consume client.studentDashboard(), replacing all hardcoded content with real backend data; added loading skeletons, error retry, and empty states; updated ole-dashboards.test.tsx with a mock client. Frontend typecheck and 
 pm test pass 232/232.
+
+- **L8** — T4 completed: TaskItem and CourseCard now render as semantic <button> elements when clickable, with visible focus rings; added UI tests for semantic rendering. Frontend typecheck and 
+pm test pass 234/234.

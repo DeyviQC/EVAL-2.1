@@ -37,10 +37,15 @@ export function TaskItem({
       ? 'Vence mañana'
       : dueDate;
 
+  const Wrapper = onClick ? 'button' : 'div';
+
   return (
-    <div
+    <Wrapper
+      type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface hover:bg-surface-2 border border-border transition-all cursor-pointer group ${className}`}
+      className={`flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface hover:bg-surface-2 border border-border transition-all text-left w-full ${
+        onClick ? 'cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2' : ''
+      } ${className}`}
     >
       <div className="flex items-start gap-3 min-w-0">
         <div className={`p-2 rounded-xl mt-0.5 shrink-0 ${
@@ -75,6 +80,6 @@ export function TaskItem({
       </div>
 
       <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
-    </div>
+    </Wrapper>
   );
 }

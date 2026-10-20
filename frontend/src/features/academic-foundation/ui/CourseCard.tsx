@@ -1,6 +1,5 @@
-import { BookOpen, User, ArrowRight } from 'lucide-react';
+import { User, ArrowRight } from 'lucide-react';
 import { Card } from './Card.js';
-import { Button } from './Button.js';
 import { ProgressRing } from './Progress.js';
 
 export type CourseCardProps = {
@@ -23,19 +22,17 @@ export function CourseCard({
   onOpen,
   className = '',
 }: CourseCardProps) {
-  return (
-    <Card
-      hoverable={Boolean(onOpen)}
-      onClick={onOpen}
-      className={`relative overflow-hidden flex flex-col justify-between group p-5 border border-border rounded-xl transition-all ${className}`}
-    >
-      {/* Top subject accent bar */}
-      <div
-        className="absolute top-0 left-0 right-0 h-1.5"
-        style={{ backgroundColor: subjectColor }}
-      />
-
-      <div>
+  const clickable = Boolean(onOpen);
+  const accentBar = (
+    <div
+      className="absolute top-0 left-0 right-0 h-1.5"
+      style={{ backgroundColor: subjectColor }}
+    />
+  );
+  const body = (
+    <>
+      {accentBar}
+      <div className="relative">
         <div className="flex items-start justify-between gap-3 mb-3">
           <span
             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
@@ -61,10 +58,32 @@ export function CourseCard({
         )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-semibold text-primary">
-        <span>Acceder al curso</span>
-        <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-      </div>
+      {clickable && (
+        <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-semibold text-primary">
+          <span>Acceder al curso</span>
+          <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+        </div>
+      )}
+    </>
+  );
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className={`relative overflow-hidden flex flex-col justify-between group p-5 border border-border rounded-xl transition-all text-left w-full bg-surface hover:shadow-md hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${className}`}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <Card
+      className={`relative overflow-hidden flex flex-col justify-between group p-5 border border-border rounded-xl transition-all ${className}`}
+    >
+      {body}
     </Card>
   );
 }
