@@ -22,7 +22,7 @@
 | T2 | S1, S4 | Wire real "My courses" and "Upcoming deliveries" widgets; remove hardcoded course cards and task items; navigate to real sections. | inline | completed | `feat(student-dashboard): wire StudentHome to real /account/student-dashboard data` |
 | T3 | S1, S4 | Wire real "Resume activity", teacher notices, weekly agenda, and metric labels (average/trend); ensure truthful labels and fallbacks. | inline | completed | `feat(student-dashboard): wire StudentHome to real /account/student-dashboard data` |
 | T4 | S5, S6 | Accessibility and acceptance hardening: semantic controls, keyboard navigation, focus rings, progress accessibility, live regions, responsive checks; add/update tests. | inline | completed | `feat(student-dashboard): make TaskItem and CourseCard semantic buttons and add UI tests` |
-| T5 | S2 | Verification: run focused tests, full frontend suite, and any affected backend checks; update OpenSpec verification notes if home summaries change status. | inline | open | |
+| T5 | S2 | Verification: run focused tests, full frontend suite, and any affected backend checks; update OpenSpec verification notes if home summaries change status. | inline | completed | `docs(shared-course-experience): update verification for completed student home summaries` |
 
 ## Proposed contract
 
@@ -103,5 +103,7 @@ type StudentDashboard = {
 - **L7** ï¿½ T2/T3 completed: rewrote StudentHome.tsx to consume client.studentDashboard(), replacing all hardcoded content with real backend data; added loading skeletons, error retry, and empty states; updated ole-dashboards.test.tsx with a mock client. Frontend typecheck and 
 pm test pass 232/232.
 
-- **L8** — T4 completed: TaskItem and CourseCard now render as semantic <button> elements when clickable, with visible focus rings; added UI tests for semantic rendering. Frontend typecheck and 
+- **L8** ï¿½ T4 completed: TaskItem and CourseCard now render as semantic <button> elements when clickable, with visible focus rings; added UI tests for semantic rendering. Frontend typecheck and 
 pm test pass 234/234.
+
+- **L9** — T5 completed: ran frontend typecheck, full test suite (234/234), and Vite production build; updated openspec/changes/shared-course-experience/verification.md to mark recent-grade/next-deadline/current-week home summaries as implemented. Backend PHP test needs environment with PHP/MySQL to execute.
