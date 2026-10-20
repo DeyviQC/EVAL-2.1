@@ -32,7 +32,7 @@ final class StudentDashboardQuery
         $overview = $this->overview($actor, $enrollment, $assignmentIds);
         $average = $this->average($actor);
         $undelivered = $this->undeliveredActivities($actor, $assignmentIds);
-        $resume = $this->resume($undelivered);
+        $resume = $this->resume($actor, $undelivered);
         $upcoming = $this->upcoming($undelivered, $resume);
         $courses = $this->courses($actor, $assignments);
         $notices = $this->notices($actor);
@@ -169,13 +169,13 @@ final class StudentDashboardQuery
             ->whereNotIn('r.id', $delivered)
             ->orderBy('c.due_on', 'asc')
             ->orderBy('r.id', 'asc')
-            ->get(['r.id', 'r.teaching_assignment_id', 'c.title', 'c.due_on', 'c.published_at', 'i.name as subject', 'g.name as grade', 's.name as section'])
+            ->get(['r.id', 'r.teaching_assignment_id', 'c.title', 'c.due_on', 'c.published_at', 'i.name as subject', 'g.id as grade_id', 'g.name as grade', 's.id as section_id', 's.name as section'])
             ->all();
 
         return array_map(fn ($row) => (array) $row, $rows);
     }
 
-    private function resume(array $activities): ?array
+    private function resume(AuthenticatedActor $actor, array $activities): ?array
     {
         if ($activities === []) {
             return null;
@@ -186,9 +186,15 @@ final class StudentDashboardQuery
             'id' => (string) $activity['id'],
             'assignment_id' => (string) $activity['teaching_assignment_id'],
             'course' => $activity['subject'] . ' · ' . $activity['grade'] . ' ' . $activity['section'],
+            'classroom' => [
+                'grade_id' => (string) $activity['grade_id'],
+                'grade' => $activity['grade'],
+                'section_id' => (string) $activity['section_id'],
+                'section' => $activity['section'],
+            ],
             'title' => $activity['title'],
             'due_on' => $activity['due_on'],
-            'progress' => $this->estimatedProgress($activity['published_at'], $activity['due_on']),
+            'progress' => $this->courseProgress((string) $activity['teaching_assignment_id'], $actor->identityId),
             'cta' => 'Continuar actividad',
         ];
     }
@@ -261,21 +267,25 @@ final class StudentDashboardQuery
         return (int) round(min(100, max(0, ($elapsed / $total) * 100)));
     }
 
+    private function courseProgress(string $assignmentId, string $studentId): int
+    {
+        $published = $this->db->table('activity_references as r')
+            ->join('activity_contents as c', 'c.activity_id', '=', 'r.id')
+            ->where('r.teaching_assignment_id', $assignmentId)
+            ->count();
+        $delivered = $this->db->table('activity_deliveries as d')
+            ->join('activity_references as r', 'r.id', '=', 'd.activity_id')
+            ->where('r.teaching_assignment_id', $assignmentId)
+            ->where('d.student_id', $studentId)
+            ->count();
+        return $published === 0 ? 0 : (int) round(($delivered / $published) * 100);
+    }
+
     private function courses(AuthenticatedActor $actor, $assignments): array
     {
         $items = [];
         foreach ($assignments as $row) {
             $assignmentId = (string) $row->id;
-            $published = $this->db->table('activity_references as r')
-                ->join('activity_contents as c', 'c.activity_id', '=', 'r.id')
-                ->where('r.teaching_assignment_id', $assignmentId)
-                ->count();
-            $delivered = $this->db->table('activity_deliveries as d')
-                ->join('activity_references as r', 'r.id', '=', 'd.activity_id')
-                ->where('r.teaching_assignment_id', $assignmentId)
-                ->where('d.student_id', $actor->identityId)
-                ->count();
-            $progress = $published === 0 ? 0 : (int) round(($delivered / $published) * 100);
             $teacher = $this->labels->displayName((string) $row->teacher_id);
             $items[] = [
                 'id' => $assignmentId,
@@ -283,7 +293,7 @@ final class StudentDashboardQuery
                 'grade' => $row->grade,
                 'section' => $row->section,
                 'teacher' => $teacher ?? 'Docente',
-                'progress' => $progress,
+                'progress' => $this->courseProgress($assignmentId, $actor->identityId),
                 'subject_color' => $this->subjectColor($row->subject),
             ];
         }

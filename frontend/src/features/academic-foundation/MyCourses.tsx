@@ -20,7 +20,7 @@ function getSubjectAccent(subject: string) {
   return { bar: 'bg-primary', chip: 'bg-primary-soft text-primary border-primary/20' };
 }
 
-export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void}){
+export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange,initialCourseId=null}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void;initialCourseId?:string|null}){
   const [localClassroom,setLocalClassroom]=useState(emptyClassroom);
   const scope=classroom??localClassroom;
   const changeClassroom=onClassroomChange??setLocalClassroom;
@@ -46,10 +46,12 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
       if(teacherMode){const available=await client.courseClassrooms(courseClassrooms);if(current!==generation.current)return;setClassrooms(available);
         if(!selectedClassroom(available,scope)){if(scope.sectionId||scope.gradeId&&!available.some(row=>row.grade_id===scope.gradeId))changeClassroom(emptyClassroom());setPhase('ready');return;}}
       const page=await client.myCourses(coursesPage,null,teacherMode?{grade_id:scope.gradeId,section_id:scope.sectionId}:{});
-      if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);setPhase('ready');
+      if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);
+      if(initialCourseId){const target=await client.course(initialCourseId,course);if(current!==generation.current)return;setSelected(target);}
+      setPhase('ready');
     }catch(error){if(current===generation.current)fail(error);}})();
     return ()=>{generation.current++;};
-  },[client,teacherMode,scope.gradeId,scope.sectionId]);
+  },[client,teacherMode,scope.gradeId,scope.sectionId,initialCourseId]);
 
   const sectionTitle = selected ? selected.subject : libraryOnly ? 'Biblioteca' : materialsOnly ? 'Materiales' : 'Mis cursos';
 

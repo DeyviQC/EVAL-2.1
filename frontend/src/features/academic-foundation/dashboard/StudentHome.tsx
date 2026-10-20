@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { AccountClient } from '../accounts.js';
 import type { StudentDashboard } from '../student-dashboard.js';
+import type { CourseClassroomSelection } from '../course-classrooms.js';
 import {
   Card,
   StatCard,
@@ -32,10 +33,11 @@ import type { TaskItemProps } from '../ui/TaskItem.js';
 type Props = {
   name: string;
   onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
+  onCourseSelect?: (assignmentId: string, selection: CourseClassroomSelection) => void;
   client?: AccountClient | undefined;
 };
 
-export function StudentHome({ name, onSelect, client }: Props) {
+export function StudentHome({ name, onSelect, onCourseSelect, client }: Props) {
   const [data, setData] = useState<StudentDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -251,7 +253,7 @@ export function StudentHome({ name, onSelect, client }: Props) {
               <div className="pt-1 w-full max-w-md">
                 <ProgressBar progress={resume.progress} color="bg-accent" />
                 <div className="flex justify-between text-[11px] text-slate-300 mt-1">
-                  <span>Progreso estimado</span>
+                  <span>Progreso del curso</span>
                   <span className="font-semibold text-white">{resume.progress}% completado</span>
                 </div>
               </div>
@@ -261,7 +263,13 @@ export function StudentHome({ name, onSelect, client }: Props) {
               variant="accent"
               size="md"
               rightIcon={<ArrowRight className="w-4 h-4" />}
-              onClick={() => onSelect('activities', 'pending')}
+              onClick={() => {
+                onCourseSelect?.(resume.assignment_id, {
+                  gradeId: resume.classroom.grade_id,
+                  sectionId: resume.classroom.section_id,
+                });
+                if (!onCourseSelect) onSelect('my_enrollments');
+              }}
               className="shrink-0 self-start md:self-center"
             >
               {resume.cta}

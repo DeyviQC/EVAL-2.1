@@ -5,9 +5,9 @@ const assert=(value:unknown)=>{if(!value)throw Error('Role dashboard assertion f
 const mockStudentDashboard:StudentDashboardData={
  overview:{courses:1,pending:0,deliveries:0,graded:0,unread:0},
  average:{grade:null,label:'En progreso'},
- resume:null,
+ resume:{kind:'activity',id:'1',assignment_id:'10',course:'Matemática · 2.º A',classroom:{grade_id:'5',grade:'2.º',section_id:'6',section:'A'},title:'Ecuaciones lineales',due_on:'2026-10-20',progress:50,cta:'Continuar actividad'},
  upcoming:[],
- courses:[{id:'1',subject:'Matemática',grade:'2.º',section:'A',teacher:'Prof. Prueba',progress:0,subject_color:'#3B82F6'}],
+ courses:[{id:'1',subject:'Matemática',grade:'2.º',section:'A',teacher:'Prof. Prueba',progress:50,subject_color:'#3B82F6'}],
  notices:[],
  agenda:{current_week:null,slots:[]},
 };

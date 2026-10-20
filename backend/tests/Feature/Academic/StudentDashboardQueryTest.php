@@ -135,6 +135,10 @@ final class StudentDashboardQueryTest extends SubmissionReferenceTestCase
 
         $dashboard = $this->query->get($this->studentActor);
         $this->assertSame('Primera', $dashboard['resume']['title']);
+        $this->assertSame(33, $dashboard['resume']['progress']);
+        $this->assertSame($dashboard['courses'][0]['progress'], $dashboard['resume']['progress']);
+        $this->assertSame($this->grade, $dashboard['resume']['classroom']['grade_id']);
+        $this->assertSame($this->section, $dashboard['resume']['classroom']['section_id']);
         $this->assertSame('Tercera', $dashboard['upcoming'][0]['title']);
         $this->assertSame(1, count($dashboard['upcoming']));
     }

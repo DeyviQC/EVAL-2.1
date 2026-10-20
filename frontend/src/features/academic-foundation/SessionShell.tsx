@@ -47,12 +47,13 @@ export function SessionShell() {
   const context=useSyncExternalStore(navigation.subscribe,navigation.snapshot,navigation.snapshot);
   const [selected,setSelected]=useState<string|null>(null);
   const [courseClassroom,setCourseClassroom]=useState(emptyClassroom);
+  const [courseTarget,setCourseTarget]=useState<string|null>(null);
   const view=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
   useEffect(()=>{void controller.refresh();return ()=>controller.invalidate();},[controller]);
-  useEffect(()=>{setUnread(null);setSelected(null);setCourseClassroom(emptyClassroom());navigation.clear();return ()=>navigation.clear();},[view.phase,navigation]);
+  useEffect(()=>{setUnread(null);setSelected(null);setCourseClassroom(emptyClassroom());setCourseTarget(null);navigation.clear();return ()=>navigation.clear();},[view.phase,navigation]);
   useEffect(()=>{let active=true;setOwn(null);setRole(null);setProfileError(false);if(view.phase==='authenticated')void accounts.bootstrap().then(({account,role:profile,sections})=>{if(active){setOwn(account);setRole(profile);navigation.hydrate(sections);try{const stored=sessionStorage.getItem('eval-view:'+account.id+':'+profile);if(stored&&allowedSection(profile,stored))setSelected(stored);}catch{}}}).catch(()=>{if(active)setProfileError(true);});return ()=>{active=false;};},[view.phase,accounts]);  const safeSelected=role&&allowedSection(role,selected)?selected:null;
   const [activityFilter,setActivityFilter]=useState<'all'|'pending'|'submitted'>('all');
-  const choose=(id:string|null,subfilter?:'all'|'pending'|'submitted')=>{if(own?.must_change_password)return;if(id==='activities')setActivityFilter(subfilter??'all');if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
+  const choose=(id:string|null,subfilter?:'all'|'pending'|'submitted',preserveCourseTarget=false)=>{if(own?.must_change_password)return;if(!preserveCourseTarget)setCourseTarget(null);if(id==='activities')setActivityFilter(subfilter??'all');if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
   const menu=role?roleMenus[role]:[];
   const activeLabel=own?.must_change_password?'Cambio obligatorio de contraseña':(menu.find(entry=>entry.id===safeSelected)?.label??'Inicio');
   function content(){
@@ -61,10 +62,10 @@ export function SessionShell() {
     if(context.phase==='loading')return <p role="status">Consultando tus secciones…</p>;
     if(context.phase==='unavailable')return <><p role="alert">No se pudo confirmar la navegación.</p><button onClick={()=>void navigation.refresh()}>Volver a consultar</button></>;
     if(context.phase!=='ready')return null;
-    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} client={accounts}/>;}
+    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} onCourseSelect={(assignmentId,selection)=>{setCourseClassroom(selection);setCourseTarget(assignmentId);choose('my_enrollments',undefined,true);}} client={accounts}/>;}
     const teacherMode=role==='teacher';
     switch(safeSelected){
-      case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate}/>;
+      case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} initialCourseId={courseTarget} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate}/>;
       case 'materials':case 'library':return <MyCourses key={safeSelected} classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} teacherMode={teacherMode} materialsOnly={safeSelected==='materials'} libraryOnly={safeSelected==='library'} onExpired={controller.invalidate}/>;
       case 'activities':return <ActivityWorkspace classroom={courseClassroom} onClassroomChange={setCourseClassroom} teacherMode={teacherMode} client={activities} mode="activities" initialFilter={activityFilter} onExpired={controller.invalidate}/>;
       case 'institution':return <InstitutionReadView client={academic} onExpired={controller.invalidate}/>;

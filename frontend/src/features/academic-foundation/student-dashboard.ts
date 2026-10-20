@@ -13,11 +13,19 @@ export type StudentDashboardAverage = {
   label: string;
 };
 
+export type ResumeClassroom = {
+  grade_id: string;
+  grade: string;
+  section_id: string;
+  section: string;
+};
+
 export type ResumeActivity = {
   kind: 'activity';
   id: string;
   assignment_id: string;
   course: string;
+  classroom: ResumeClassroom;
   title: string;
   due_on: string | null;
   progress: number;
@@ -123,15 +131,26 @@ function average(value: unknown): StudentDashboardAverage {
   return { grade: grade(row.grade), label: text(row.label) };
 }
 
+function resumeClassroom(value: unknown): ResumeClassroom {
+  const row = exact(value, ['grade_id', 'grade', 'section_id', 'section']);
+  return {
+    grade_id: decimalId(row.grade_id),
+    grade: text(row.grade),
+    section_id: decimalId(row.section_id),
+    section: text(row.section),
+  };
+}
+
 function resume(value: unknown): ResumeActivity | null {
   if (value === null) return null;
-  const row = exact(value, ['kind', 'id', 'assignment_id', 'course', 'title', 'due_on', 'progress', 'cta']);
+  const row = exact(value, ['kind', 'id', 'assignment_id', 'course', 'classroom', 'title', 'due_on', 'progress', 'cta']);
   if (row.kind !== 'activity') throw new Error('Invalid resume kind');
   return {
     kind: 'activity',
     id: decimalId(row.id),
     assignment_id: decimalId(row.assignment_id),
     course: text(row.course),
+    classroom: resumeClassroom(row.classroom),
     title: text(row.title),
     due_on: nullableDate(row.due_on),
     progress: percentage(row.progress),

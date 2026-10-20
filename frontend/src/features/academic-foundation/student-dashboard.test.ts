@@ -25,6 +25,7 @@ const base: StudentDashboard = {
     id: '1',
     assignment_id: '10',
     course: 'Matemática · 2.º A',
+    classroom: { grade_id: '5', grade: '2.º', section_id: '6', section: 'A' },
     title: 'Ecuaciones lineales',
     due_on: '2026-10-20',
     progress: 35,
