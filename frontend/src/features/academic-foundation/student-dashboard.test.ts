@@ -50,6 +50,9 @@ const base: StudentDashboard = {
       teacher: 'Prof. López',
       progress: 75,
       subject_color: '#3B82F6',
+      pending_count: 2,
+      next_due: { title: 'Ecuaciones lineales', due_on: '2026-10-20', category: 'overdue' },
+      latest_published_at: '2026-10-18',
     },
   ],
   notices: [
@@ -94,6 +97,23 @@ export const studentDashboardCases: Case[] = [
   }],
   ['student dashboard decoder rejects invalid due categories', () => {
     rejects(() => studentDashboard({ ...base, upcoming: [{ ...base.upcoming[0]!, category: 'soon' }] }));
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, next_due: { ...base.courses[0]!.next_due!, category: 'soon' } }] }));
+  }],
+  ['student dashboard decoder rejects invalid course pending counts', () => {
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, pending_count: -1 }] }));
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, pending_count: 1.5 }] }));
+  }],
+  ['student dashboard decoder rejects malformed next due items', () => {
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, next_due: { title: '', due_on: '2026-10-20', category: 'today' } }] }));
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, next_due: { title: 'Tarea', due_on: 'mañana', category: 'today' } }] }));
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, next_due: { title: 'Tarea', due_on: null, category: 'today', extra: true } }] }));
+  }],
+  ['student dashboard decoder rejects malformed published dates', () => {
+    rejects(() => studentDashboard({ ...base, courses: [{ ...base.courses[0]!, latest_published_at: '2026-10-32' }] }));
+  }],
+  ['student dashboard decoder accepts nullable course actionable fields', () => {
+    const withoutPending = { ...base.courses[0]!, pending_count: 0, next_due: null, latest_published_at: null };
+    equal(studentDashboard({ ...base, courses: [withoutPending] }).courses[0], withoutPending);
   }],
   ['student dashboard decoder rejects malformed decimal ids', () => {
     rejects(() => studentDashboard({ ...base, resume: { ...base.resume!, id: '01' } }));

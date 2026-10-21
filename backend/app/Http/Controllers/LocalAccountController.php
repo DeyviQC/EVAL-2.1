@@ -20,6 +20,7 @@ final class LocalAccountController {
                 elseif($path==='/account/role'&&$request->query->all()===[])$data=$service->dashboardRole($actor);
                 elseif($path==='/account/overview'&&$request->query->all()===[])$data=(new \App\Application\Academic\Queries\DashboardOverview($this->db))->get($actor);
                 elseif($path==='/account/student-dashboard'&&$request->query->all()===[])$data=(new \App\Application\Academic\Queries\StudentDashboardQuery($this->db,new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db)))->get($actor);
+                elseif($path==='/account/student-tasks'&&$request->query->all()===[])$data=(new \App\Application\Academic\Queries\StudentTasksQuery($this->db,new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db)))->get($actor);
                 elseif($path==='/users')$data=$service->directory($actor,$request->query->all());else throw new AcademicCommandFailure('not_found');
             }elseif($request->isMethod('POST')&&$request->query->all()===[]){
                 if($path==='/users')$data=$service->execute($actor,'created',null,$input);

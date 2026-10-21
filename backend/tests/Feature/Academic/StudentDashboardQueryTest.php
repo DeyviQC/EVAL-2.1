@@ -83,7 +83,7 @@ final class StudentDashboardQueryTest extends SubmissionReferenceTestCase
     public function testStudentGetsCorrectCountsAndCourseProgress(): void
     {
         $activityA = $this->publishActivity('Actividad A', '2026-10-20');
-        $this->publishActivity('Actividad B', '2026-10-21');
+        $activityB = $this->publishActivity('Actividad B', '2026-10-21');
 
         $dashboard = $this->query->get($this->studentActor);
 
@@ -93,12 +93,19 @@ final class StudentDashboardQueryTest extends SubmissionReferenceTestCase
         $this->assertSame(0, $dashboard['overview']['graded']);
         $this->assertSame(1, count($dashboard['courses']));
         $this->assertSame(0, $dashboard['courses'][0]['progress']);
+        $this->assertSame(2, $dashboard['courses'][0]['pending_count']);
+        $this->assertSame('Actividad A', $dashboard['courses'][0]['next_due']['title']);
+        $this->assertSame('2026-10-20', $dashboard['courses'][0]['next_due']['due_on']);
+        $this->assertContains($dashboard['courses'][0]['next_due']['category'], ['today', 'tomorrow', 'later', 'overdue']);
+        $this->assertNotNull($dashboard['courses'][0]['latest_published_at']);
 
         $this->submitActivity($activityA);
         $dashboard = $this->query->get($this->studentActor);
         $this->assertSame(1, $dashboard['overview']['deliveries']);
         $this->assertSame(1, $dashboard['overview']['pending']);
         $this->assertSame(50, $dashboard['courses'][0]['progress']);
+        $this->assertSame(1, $dashboard['courses'][0]['pending_count']);
+        $this->assertSame('Actividad B', $dashboard['courses'][0]['next_due']['title']);
     }
 
     public function testAverageCalculationRequiresAtLeastThreeGradedDeliveries(): void
@@ -141,6 +148,69 @@ final class StudentDashboardQueryTest extends SubmissionReferenceTestCase
         $this->assertSame($this->section, $dashboard['resume']['classroom']['section_id']);
         $this->assertSame('Tercera', $dashboard['upcoming'][0]['title']);
         $this->assertSame(1, count($dashboard['upcoming']));
+        $this->assertSame(2, $dashboard['courses'][0]['pending_count']);
+        $this->assertSame('Primera', $dashboard['courses'][0]['next_due']['title']);
+        $this->assertNotNull($dashboard['courses'][0]['latest_published_at']);
+    }
+
+    public function testLatestPublishedAtIncludesDeliveredActivities(): void
+    {
+        $activityA = $this->publishActivity('Primera publicada', '2026-10-20');
+        $activityB = $this->publishActivity('Segunda publicada', '2026-10-21');
+
+        $this->submitActivity($activityB);
+
+        $dashboard = $this->query->get($this->studentActor);
+        $this->assertSame(1, $dashboard['courses'][0]['pending_count']);
+        $this->assertSame('Primera publicada', $dashboard['courses'][0]['next_due']['title']);
+
+        $dates = $this->db->table('activity_contents')
+            ->whereIn('activity_id', [$activityA, $activityB])
+            ->pluck('published_at', 'activity_id')
+            ->all();
+
+        $latestDate = null;
+        foreach ($dates as $publishedAt) {
+            $date = $publishedAt !== null ? substr((string) $publishedAt, 0, 10) : null;
+            if ($date !== null && ($latestDate === null || $date > $latestDate)) {
+                $latestDate = $date;
+            }
+        }
+
+        $this->assertSame($latestDate, $dashboard['courses'][0]['latest_published_at']);
+    }
+
+    public function testPerCourseMetricsRespectAssignmentBoundaries(): void
+    {
+        $scienceEntry = $this->catalog->create($this->actor, 'entry', ['name' => 'Ciencia ' . $this->suffix, 'kind' => 'subject']);
+        $scienceAssignment = $this->assignment(['teacher_id' => $this->teacherActor->identityId, 'instructional_entry_id' => $scienceEntry]);
+        $this->assignments->activate($this->actor, $scienceAssignment);
+
+        $this->publishActivity('Matemática A', '2026-10-20');
+        $this->publishActivity('Matemática B', '2026-10-22');
+        $this->publishOnAssignment('Ciencia A', '2026-10-21', $scienceAssignment);
+
+        $dashboard = $this->query->get($this->studentActor);
+        $this->assertSame(2, count($dashboard['courses']));
+        $this->assertSame(3, $dashboard['overview']['pending']);
+
+        $bySubject = [];
+        foreach ($dashboard['courses'] as $course) {
+            $bySubject[$course['subject']] = $course;
+        }
+
+        $this->assertSame(2, $bySubject['Subject ' . $this->suffix]['pending_count']);
+        $this->assertSame('Matemática A', $bySubject['Subject ' . $this->suffix]['next_due']['title']);
+        $this->assertSame('2026-10-20', $bySubject['Subject ' . $this->suffix]['next_due']['due_on']);
+
+        $this->assertSame(1, $bySubject['Ciencia ' . $this->suffix]['pending_count']);
+        $this->assertSame('Ciencia A', $bySubject['Ciencia ' . $this->suffix]['next_due']['title']);
+        $this->assertSame('2026-10-21', $bySubject['Ciencia ' . $this->suffix]['next_due']['due_on']);
+
+        foreach ($dashboard['courses'] as $course) {
+            $this->assertContains($course['next_due']['category'], ['today', 'tomorrow', 'later', 'overdue']);
+            $this->assertNotNull($course['latest_published_at']);
+        }
     }
 
     public function testNoticesIncludeCourseContext(): void
@@ -221,6 +291,17 @@ final class StudentDashboardQueryTest extends SubmissionReferenceTestCase
             $this->teacherActor,
             'publish',
             $this->assignmentId,
+            ['title' => $title, 'instructions' => 'Instrucciones', 'due_on' => $dueOn]
+        );
+        return $result['id'];
+    }
+
+    private function publishOnAssignment(string $title, string $dueOn, string $assignmentId): string
+    {
+        $result = (new ActivityDelivery($this->migration, $this->storage))->write(
+            $this->teacherActor,
+            'publish',
+            $assignmentId,
             ['title' => $title, 'instructions' => 'Instrucciones', 'due_on' => $dueOn]
         );
         return $result['id'];

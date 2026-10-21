@@ -167,7 +167,7 @@ button:active:not(:disabled) { transform:scale(.98); }
 .eval-skip-link { position:fixed; top:8px; left:8px; z-index:10; padding:12px 18px; background:white; border:2px solid #28599B; transform:translateY(-160%); }
 .eval-layout { display:flex; min-height:100vh; width:100%; background:var(--bg); color:var(--text); }
 .eval-layout[data-collapsed="true"] aside { width:72px; }
-.eval-layout[data-collapsed="true"] aside span { display:none; }
+.eval-layout[data-collapsed="true"] aside nav > button > span { display:none; }
 .eval-school-brand { display:flex; align-items:center; gap:12px; }
 .eval-school-brand img { width:42px; height:60px; object-fit:contain; flex-shrink:0; }
 .eval-school-brand h1 { margin:0; font-size:25px; letter-spacing:-.8px; font-weight:800; color:#142D56; line-height:1.2; }
@@ -216,6 +216,19 @@ input[type="file"]::file-selector-button { min-height:40px; margin-right:10px; p
 .eval-workspace-content input[type="checkbox"],.eval-workspace-content input[type="radio"] { width:24px; height:24px; accent-color:#28599B; vertical-align:middle; }
 .eval-workspace-content [role="alert"] { border:1px solid #fecaca; border-left:3px solid #dc2626; border-radius:10px; padding:14px; color:#991b1b; background:#fef2f2; }
 .eval-workspace-content [role="status"]:not(:empty) { margin-block:12px; padding:12px 14px; border-radius:10px; background:#eff6ff; color:#1e40af; }
+/* Prevent sticky topbar from overlapping the first course card. */
+.eval-layout header.sticky { position:sticky; top:0; z-index:20; }
+/* Student course catalog uses the existing theme tokens instead of legacy workspace defaults. */
+.eval-student-courses { --course-radius:16px; --course-shadow:0 2px 12px #0b17300a; }
+.eval-workspace-content .eval-student-courses article { background:var(--surface); border-radius:var(--course-radius); box-shadow:var(--course-shadow); }
+.eval-workspace-content .eval-student-courses button { background:transparent; border:0; color:inherit; border-radius:12px; }
+.eval-workspace-content .eval-student-courses button.eval-course-filter { border:1px solid var(--border); background:var(--surface); color:var(--text); }
+.eval-workspace-content .eval-student-courses button.eval-course-filter[aria-pressed="true"] { background:var(--primary); border-color:var(--primary); color:white; }
+.eval-workspace-content .eval-student-courses select.eval-course-order { background:var(--surface); border:1px solid var(--border); color:var(--text); }
+.eval-workspace-content .eval-student-courses [role="status"].eval-course-toast { background:var(--navy-950); color:#fff; }
+@keyframes eval-course-arrive { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.eval-student-courses article { animation:eval-course-arrive 180ms cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion:reduce) { .eval-student-courses article, .eval-student-courses button { animation:none!important; transition:none!important; } }
 .eval-workspace-content details { border-radius:12px; border-color:var(--eval-line); }
 .eval-workspace-content summary { min-height:44px; padding:12px; color:#334155; font-weight:600; }
 .eval-material-options { margin-top:18px; border-top:1px solid var(--eval-line); }

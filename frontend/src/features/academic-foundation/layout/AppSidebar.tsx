@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Layers,
   Users,
   Settings,
@@ -28,9 +30,12 @@ type Props = {
   account?: OwnAccount | null | undefined;
   profileLabel?: string | undefined;
   unread?: number | null | undefined;
+  pendingTasks?: number | null | undefined;
   onLogout: () => Promise<void>;
   isDark: boolean;
   onToggleTheme: () => void;
+  collapsed?: boolean | undefined;
+  onToggleCollapsed?: (() => void) | undefined;
 };
 
 const crest = '/assets/nsm.png';
@@ -42,9 +47,12 @@ export function AppSidebar({
   account,
   profileLabel = 'Estudiante',
   unread,
+  pendingTasks = null,
   onLogout,
   isDark,
   onToggleTheme,
+  collapsed = false,
+  onToggleCollapsed = () => {},
 }: Props) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -64,7 +72,7 @@ export function AppSidebar({
   const navItems = role === 'student' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'my_enrollments', label: 'Cursos', icon: BookOpen },
-    { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: unread },
+    { id: 'activities', label: 'Tareas', icon: ClipboardList, badge: pendingTasks },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'history', label: 'Progreso', icon: TrendingUp },
   ] : role === 'teacher' ? [
@@ -105,13 +113,13 @@ export function AppSidebar({
       aria-label="Barra lateral de navegación"
     >
       {/* Brand */}
-      <div className="flex items-center gap-3 px-2 py-3 mb-5 border-b border-white/[0.08]">
+      <div className={`flex items-center py-3 mb-5 border-b border-white/[0.08] ${collapsed ? 'gap-2 px-1.5' : 'gap-3 px-2'}`}>
         <img
           src={crest}
           alt="Escudo de I.E. Nuestra Señora de las Mercedes"
-          className="w-10 h-14 object-contain shrink-0 filter drop-shadow"
+          className={`object-contain shrink-0 filter drop-shadow ${collapsed ? 'w-8 h-11' : 'w-10 h-14'}`}
         />
-        <div className="min-w-0">
+        <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`}>
           <h1 className="font-editorial text-2xl font-bold tracking-tight text-white leading-none">
             EVAL
           </h1>
@@ -122,10 +130,22 @@ export function AppSidebar({
             Ayacucho
           </span>
         </div>
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-controls="eval-sidebar-nav"
+          aria-label={collapsed ? 'Expandir navegación' : 'Contraer navegación'}
+          className={`ml-auto rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${collapsed ? 'p-1' : 'p-1.5'}`}
+          title={collapsed ? 'Expandir navegación' : 'Contraer navegación'}
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
       </div>
 
       {/* Main Navigation with 6 items */}
       <nav
+        id="eval-sidebar-nav"
         className="eval-navigation flex-1 space-y-1.5 overflow-y-auto pr-1"
         aria-label={role ? roleNavLabel : 'Secciones académicas'}
       >
@@ -138,6 +158,8 @@ export function AppSidebar({
               type="button"
               onClick={() => onSelect(item.id)}
               aria-pressed={isActive}
+              aria-label={collapsed?item.label:undefined}
+              aria-current={role === 'student' && isActive ? 'page' : undefined}
               className={`w-full flex items-center gap-3 min-h-[44px] pr-3 text-sm rounded-r-xl transition-all duration-150 ${
                 isActive
                   ? 'bg-white/[0.08] text-white font-semibold border-l-[3px] border-accent pl-3 shadow-inner'
@@ -159,7 +181,7 @@ export function AppSidebar({
       {/* Profile Block with Dropdown */}
       <div className="relative mt-auto pt-3 border-t border-white/[0.08]" ref={menuRef}>
         {profileMenuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-navy-900 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 z-50">
+           <div className={`absolute bottom-full left-0 mb-2 p-1.5 bg-navy-900 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 z-50 ${collapsed?'w-56':'right-0'}`}>
             <button
               type="button"
               onClick={() => {
@@ -228,10 +250,10 @@ export function AppSidebar({
           aria-expanded={profileMenuOpen}
           aria-haspopup="true"
         >
-          <span className="w-9 h-9 rounded-full bg-accent text-navy-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+          <div className="w-9 h-9 rounded-full bg-accent text-navy-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
             {initials}
-          </span>
-          <div className="min-w-0 flex-1">
+          </div>
+          <div className={`min-w-0 flex-1 ${collapsed ? 'hidden' : ''}`}>
             <strong className="block text-xs font-semibold text-white truncate">
               {account?.name ?? 'Cuenta institucional'}
             </strong>

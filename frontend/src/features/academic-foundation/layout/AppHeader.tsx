@@ -29,7 +29,7 @@ export function AppHeader({
     : 'E';
 
   return (
-    <header className="sticky top-4 z-20 mx-auto w-full max-w-6xl px-4 md:px-6 mb-6">
+    <header className="sticky top-0 z-20 mx-auto mb-6 w-full max-w-6xl bg-bg/95 px-4 py-3 backdrop-blur-xl md:px-6">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-full bg-surface/85 backdrop-blur-xl border border-border/80 shadow-sm transition-all">
         {/* Left: Section indicator & Semantic heading */}
         <div className="flex items-center gap-2.5 min-w-0">

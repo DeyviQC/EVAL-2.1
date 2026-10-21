@@ -22,7 +22,7 @@ export function date(value: unknown): string {
   const input=text(value); if(!/^\d{4}-\d{2}-\d{2}$/.test(input)||input<'0001-01-01') throw new ContractError();
   const parsed=new Date(input+'T00:00:00Z'); if(!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==input) throw new ContractError(); return input;
 }
-function nullable<T>(value: unknown,decode: Decoder<T>): T|null { return value===null?null:decode(value); }
+export function nullable<T>(value: unknown,decode: Decoder<T>): T|null { return value===null?null:decode(value); }
 function choice<T extends string>(value: unknown,choices: readonly T[]): T { if(!choices.includes(value as T)) throw new ContractError(); return value as T; }
 export const periodState=(value: unknown)=>choice(value,['planned','active','closed'] as const);
 export const enrollmentState=(value: unknown)=>choice(value,['active','transferred','closed'] as const);

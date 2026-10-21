@@ -49,6 +49,9 @@ export type StudentDashboardCourse = {
   teacher: string;
   progress: number;
   subject_color: string;
+  pending_count?: number;
+  next_due?: { title: string; due_on: string | null; category: 'today' | 'tomorrow' | 'later' | 'overdue' } | null;
+  latest_published_at?: string | null;
 };
 
 export type StudentDashboardNotice = {
@@ -115,6 +118,15 @@ function dueCategory(value: unknown): 'today' | 'tomorrow' | 'later' | 'overdue'
   return value;
 }
 
+function nextDue(value: unknown): NonNullable<StudentDashboardCourse['next_due']> {
+  const row = exact(value, ['title', 'due_on', 'category']);
+  return {
+    title: text(row.title),
+    due_on: nullableDate(row.due_on),
+    category: dueCategory(row.category),
+  };
+}
+
 function overview(value: unknown): StudentDashboardOverview {
   const row = exact(value, ['courses', 'pending', 'deliveries', 'graded', 'unread']);
   return {
@@ -171,7 +183,7 @@ function upcomingItem(value: unknown): UpcomingActivity {
 }
 
 function course(value: unknown): StudentDashboardCourse {
-  const row = exact(value, ['id', 'subject', 'grade', 'section', 'teacher', 'progress', 'subject_color']);
+  const row = exact(value, ['id', 'subject', 'grade', 'section', 'teacher', 'progress', 'subject_color', 'pending_count', 'next_due', 'latest_published_at']);
   return {
     id: decimalId(row.id),
     subject: text(row.subject),
@@ -180,6 +192,9 @@ function course(value: unknown): StudentDashboardCourse {
     teacher: text(row.teacher),
     progress: percentage(row.progress),
     subject_color: text(row.subject_color),
+    pending_count: nonnegativeInteger(row.pending_count),
+    next_due: row.next_due === null ? null : nextDue(row.next_due),
+    latest_published_at: nullableDate(row.latest_published_at),
   };
 }
 

@@ -8,7 +8,7 @@ import {MaterialsPanel} from './MaterialsPanel.js';
 import {LibraryPanel} from './LibraryPanel.js';
 import {Icon} from './InstitutionalUI.js';
 
-export function CourseClassroom({course,materials,weeks,activities,teacherMode,onExpired,onBack,initial='weeks'}:{course:Course;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;teacherMode:boolean;onExpired:()=>void;onBack:()=>void;initial?:'weeks'|'materials'|'library'}){
+export function CourseClassroom({course,materials,weeks,activities,teacherMode,onExpired,onBack,initial='weeks',backLabel,libraryPosition,onLibraryPosition}:{course:Course;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;teacherMode:boolean;onExpired:()=>void;onBack:()=>void;initial?:'weeks'|'materials'|'library';backLabel?:string|undefined;libraryPosition?:{query:string;cursor:string|null}|undefined;onLibraryPosition?:((position:{query:string;cursor:string|null})=>void)|undefined}){
  const [view,setView]=useState(initial);
  return (
   <div className="eval-classroom space-y-5" data-course={course.id}>
@@ -16,7 +16,7 @@ export function CourseClassroom({course,materials,weeks,activities,teacherMode,o
       className="eval-back-button inline-flex items-center gap-2 text-xs font-semibold text-text-muted hover:text-primary transition-colors cursor-pointer"
       onClick={onBack}
     >
-      ← Volver a mis cursos
+       ← {backLabel??'Volver a mis cursos'}
     </button>
 
     <header className="eval-classroom-header relative overflow-hidden rounded-2xl bg-gradient-to-r from-navy-950 to-navy-900 border border-white/10 p-6 sm:p-7 text-white shadow-md border-l-4 border-l-accent flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -78,7 +78,7 @@ export function CourseClassroom({course,materials,weeks,activities,teacherMode,o
     {view==='weeks'&&weeks&&activities?(
       <WeeksPanel key={course.id} teacherMode={teacherMode} course={course} client={weeks} activities={activities} onExpired={onExpired}/>
     ):view==='library'?(
-      <LibraryPanel key={course.id} course={course} client={materials} teacherMode={teacherMode} onExpired={onExpired}/>
+       <LibraryPanel key={course.id} course={course} client={materials} teacherMode={teacherMode} onExpired={onExpired} initialPosition={libraryPosition} onPosition={onLibraryPosition}/>
     ):(
       <MaterialsPanel key={course.id} course={course} client={materials} teacherMode={teacherMode} onExpired={onExpired} onBack={()=>setView(weeks&&activities?'weeks':'library')}/>
     )}

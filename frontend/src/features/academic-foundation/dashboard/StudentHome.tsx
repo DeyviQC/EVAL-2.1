@@ -34,10 +34,11 @@ type Props = {
   name: string;
   onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
   onCourseSelect?: (assignmentId: string, selection: CourseClassroomSelection) => void;
+  onActivitySelect?: (activityId: string) => void;
   client?: AccountClient | undefined;
 };
 
-export function StudentHome({ name, onSelect, onCourseSelect, client }: Props) {
+export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, client }: Props) {
   const [data, setData] = useState<StudentDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -382,7 +383,7 @@ export function StudentHome({ name, onSelect, onCourseSelect, client }: Props) {
                     dueDate={formatDueDate(task.due_on)}
                     dueCategory={dueCategoryForTask(task.category)}
                     statusLabel={dueStatusLabel(task.category, task.due_on)}
-                    onClick={() => onSelect('activities', 'pending')}
+                    onClick={() => onActivitySelect ? onActivitySelect(task.id) : onSelect('activities', 'pending')}
                   />
                 ))}
               </div>

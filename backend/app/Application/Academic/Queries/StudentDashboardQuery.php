@@ -32,9 +32,11 @@ final class StudentDashboardQuery
         $overview = $this->overview($actor, $enrollment, $assignmentIds);
         $average = $this->average($actor);
         $undelivered = $this->undeliveredActivities($actor, $assignmentIds);
+        $courseMetrics = $this->courseMetrics($undelivered);
+        $latestPublished = $this->latestPublishedDates($assignmentIds);
         $resume = $this->resume($actor, $undelivered);
         $upcoming = $this->upcoming($undelivered, $resume);
-        $courses = $this->courses($actor, $assignments);
+        $courses = $this->courses($actor, $assignments, $courseMetrics, $latestPublished);
         $notices = $this->notices($actor);
         $agenda = $this->agenda($enrollment);
 
@@ -281,12 +283,60 @@ final class StudentDashboardQuery
         return $published === 0 ? 0 : (int) round(($delivered / $published) * 100);
     }
 
-    private function courses(AuthenticatedActor $actor, $assignments): array
+    private function courseMetrics(array $activities): array
+    {
+        $metrics = [];
+        foreach ($activities as $activity) {
+            $assignmentId = (string) $activity['teaching_assignment_id'];
+            if (!isset($metrics[$assignmentId])) {
+                $metrics[$assignmentId] = ['pending_count' => 0, 'next_due' => null];
+            }
+
+            $metrics[$assignmentId]['pending_count']++;
+
+            $current = $metrics[$assignmentId]['next_due'];
+            $dueOn = $activity['due_on'];
+            if ($current === null || ($dueOn !== null && ($current['due_on'] === null || $dueOn < $current['due_on']))) {
+                $metrics[$assignmentId]['next_due'] = [
+                    'title' => $activity['title'],
+                    'due_on' => $dueOn,
+                    'category' => $this->dueCategory($dueOn),
+                ];
+            }
+        }
+        return $metrics;
+    }
+
+    private function latestPublishedDates(array $assignmentIds): array
+    {
+        if ($assignmentIds === []) {
+            return [];
+        }
+
+        $rows = $this->db->table('activity_references as r')
+            ->join('activity_contents as c', 'c.activity_id', '=', 'r.id')
+            ->whereIn('r.teaching_assignment_id', $assignmentIds)
+            ->where('c.state', 'open')
+            ->selectRaw('r.teaching_assignment_id, max(c.published_at) as published_at')
+            ->groupBy('r.teaching_assignment_id')
+            ->get()
+            ->all();
+
+        $dates = [];
+        foreach ($rows as $row) {
+            $assignmentId = (string) $row->teaching_assignment_id;
+            $dates[$assignmentId] = $row->published_at !== null ? substr((string) $row->published_at, 0, 10) : null;
+        }
+        return $dates;
+    }
+
+    private function courses(AuthenticatedActor $actor, $assignments, array $metrics, array $latestPublished): array
     {
         $items = [];
         foreach ($assignments as $row) {
             $assignmentId = (string) $row->id;
             $teacher = $this->labels->displayName((string) $row->teacher_id);
+            $courseMetrics = $metrics[$assignmentId] ?? ['pending_count' => 0, 'next_due' => null];
             $items[] = [
                 'id' => $assignmentId,
                 'subject' => $row->subject,
@@ -295,6 +345,9 @@ final class StudentDashboardQuery
                 'teacher' => $teacher ?? 'Docente',
                 'progress' => $this->courseProgress($assignmentId, $actor->identityId),
                 'subject_color' => $this->subjectColor($row->subject),
+                'pending_count' => $courseMetrics['pending_count'],
+                'next_due' => $courseMetrics['next_due'],
+                'latest_published_at' => $latestPublished[$assignmentId] ?? null,
             ];
         }
         return $items;

@@ -49,7 +49,7 @@ export function MobileNavBar({ role = 'student', selected, onSelect, pendingCoun
             key={item.id ?? 'home'}
             type="button"
             onClick={() => onSelect(item.id)}
-            aria-pressed={isActive}
+            {...(role === 'student' ? (isActive ? {'aria-current': 'page' as const} : {}) : {'aria-pressed': isActive})}
             className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[46px] px-2 py-1 rounded-full transition-all ${
               isActive
                 ? 'text-accent font-semibold'
@@ -59,12 +59,13 @@ export function MobileNavBar({ role = 'student', selected, onSelect, pendingCoun
             <div className="relative">
               <IconComponent className="w-5 h-5" />
               {typeof item.badge === 'number' && item.badge > 0 && (
-                <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[9px] font-bold text-navy-950 bg-accent rounded-full">
+                <span aria-hidden="true" className="absolute -top-1 -right-2 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[9px] font-bold text-navy-950 bg-accent rounded-full">
                   {item.badge}
                 </span>
               )}
             </div>
             <span className="text-[10px] mt-0.5 leading-tight">{item.label}</span>
+            {role==='student'&&typeof item.badge==='number'&&item.badge>0&&<span className="sr-only">{item.badge} tareas pendientes</span>}
             {isActive && (
               <span className="absolute bottom-1 w-1 h-1 rounded-full bg-accent" />
             )}
