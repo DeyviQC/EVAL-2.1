@@ -40,8 +40,8 @@ export const studentTasksCases: Case[] = [
     equal(studentTasks(base), base);
   }],
   ['student tasks decoder accepts delivered and graded tasks', () => {
-    const delivered = task({ id: '2', delivery: { has_delivery: true, is_graded: false, delivered_at: '2026-10-20', filename: 'tarea.pdf', grade: null, feedback: null, graded_at: null } });
-    const graded = task({ id: '3', delivery: { has_delivery: true, is_graded: true, delivered_at: '2026-10-20', filename: 'tarea.pdf', grade: 'AD', feedback: 'Excelente trabajo', graded_at: '2026-10-21' }, can_submit: false });
+    const delivered = task({ id: '2', delivery: { has_delivery: true, is_graded: false, delivered_at: '2026-10-20 04:05:39.479537', filename: 'tarea.pdf', grade: null, feedback: null, graded_at: null } });
+    const graded = task({ id: '3', delivery: { has_delivery: true, is_graded: true, delivered_at: '2026-10-20', filename: 'tarea.pdf', grade: 'AD', feedback: 'Excelente trabajo', graded_at: '2026-10-21 14:30:00' }, can_submit: false });
     const input = { items: [delivered, graded], overview: { pending: 0, delivered: 1, graded: 1, overdue: 0 } };
     equal(studentTasks(input), input);
   }],

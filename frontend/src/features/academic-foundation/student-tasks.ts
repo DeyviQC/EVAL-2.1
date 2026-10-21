@@ -1,4 +1,4 @@
-import { exact, text, decimalId, date, nullable } from './contracts.js';
+import { exact, text, decimalId, date, nullable, ContractError } from './contracts.js';
 
 export type TaskDueCategory = 'overdue' | 'today' | 'tomorrow' | 'this_week' | 'later';
 
@@ -68,16 +68,27 @@ const taskCourse = (value: unknown): StudentTaskCourse => {
   };
 };
 
+const timestampOrDate = (value: unknown): string => {
+  const str = text(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return date(str);
+  }
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})?$/.test(str)) {
+    return str;
+  }
+  throw new ContractError();
+};
+
 const taskDelivery = (value: unknown): StudentTaskDelivery => {
   const row = exact(value, ['has_delivery', 'is_graded', 'delivered_at', 'filename', 'grade', 'feedback', 'graded_at']);
   return {
     has_delivery: typeof row.has_delivery === 'boolean' ? row.has_delivery : false,
     is_graded: typeof row.is_graded === 'boolean' ? row.is_graded : false,
-    delivered_at: nullable(row.delivered_at, date),
+    delivered_at: nullable(row.delivered_at, timestampOrDate),
     filename: nullable(row.filename, text),
     grade: grade(row.grade),
     feedback: nullable(row.feedback, text),
-    graded_at: nullable(row.graded_at, date),
+    graded_at: nullable(row.graded_at, timestampOrDate),
   };
 };
 
