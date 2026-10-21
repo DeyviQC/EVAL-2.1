@@ -11,18 +11,64 @@ import {
   Clock,
 } from 'lucide-react';
 import type { AccountClient } from '../accounts.js';
+import type { AcademicClient } from '../api.js';
+import { coursesPage, type Course } from '../courses.js';
 import { dashboardOverview } from '../DashboardSummary.js';
 import { Card, StatCard, CourseCard, TaskItem, ProgressBar, Button, EmptyState } from '../ui/index.js';
+
+/** Misma paleta que MyCourses: el color lo determina la asignatura, no la posición en la lista. */
+const subjectPalette: Array<[RegExp, string]> = [
+  [/matem[aá]tic/i, '#3B82F6'],
+  [/comunicac/i, '#8B5CF6'],
+  [/ciencia y tecn|tecnolog/i, '#10B981'],
+  [/ciencias sociales|social|historia/i, '#F59E0B'],
+  [/personal|c[ií]vica/i, '#F43F5E'],
+  [/arte|cultura/i, '#14B8A6'],
+];
+function subjectColor(subject: string): string {
+  for (const [pattern, color] of subjectPalette) if (pattern.test(subject)) return color;
+  return '#3B82F6';
+}
 
 type Props = {
   name: string;
   onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
   client?: AccountClient | undefined;
+  academic?: Pick<AcademicClient, 'myCourses'> | undefined;
 };
 
-export function StudentHome({ name, onSelect, client }: Props) {
+export function StudentHome({ name, onSelect, client, academic }: Props) {
   const [data, setData] = useState<ReturnType<typeof dashboardOverview> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesState, setCoursesState] = useState<'loading' | 'ready' | 'error'>(academic ? 'loading' : 'ready');
+
+  useEffect(() => {
+    let active = true;
+    if (!academic) {
+      setCourses([]);
+      setCoursesState('ready');
+      return;
+    }
+    setCoursesState('loading');
+    academic
+      .myCourses(coursesPage)
+      .then((page) => {
+        if (active) {
+          setCourses(page.items);
+          setCoursesState('ready');
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCourses([]);
+          setCoursesState('error');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [academic]);
 
   useEffect(() => {
     let active = true;
@@ -220,43 +266,42 @@ export function StudentHome({ name, onSelect, client }: Props) {
                 onClick={() => onSelect('my_enrollments')}
                 className="text-xs font-semibold text-primary hover:text-primary-hover transition-colors"
               >
-                Ver todos (10) →
+                Ver todos ({coursesState === 'ready' ? courses.length : '—'}) →
               </button>
             </div>
 
+            {coursesState === 'loading' && (
+              <p role="status" className="text-xs text-text-muted">
+                Consultando tus cursos…
+              </p>
+            )}
+            {coursesState === 'error' && (
+              <p role="alert" className="text-xs text-text-muted">
+                No se pudieron cargar tus cursos. Revisa tu conexión e inténtalo de nuevo.
+              </p>
+            )}
+            {coursesState === 'ready' && courses.length === 0 && (
+              <EmptyState
+                title="Sin cursos registrados"
+                description="Cuando tus docentes asignen tus cursos, aparecerán aquí."
+              />
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <CourseCard
-                title="Matemática"
-                gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Docente de desarrollo"
-                subjectColor="#3B82F6"
-                progress={75}
-                onOpen={() => onSelect('my_enrollments')}
-              />
-              <CourseCard
-                title="Comunicación"
-                gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Docente de desarrollo"
-                subjectColor="#8B5CF6"
-                progress={80}
-                onOpen={() => onSelect('my_enrollments')}
-              />
-              <CourseCard
-                title="Ciencia y Tecnología"
-                gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Docente de desarrollo"
-                subjectColor="#10B981"
-                progress={60}
-                onOpen={() => onSelect('my_enrollments')}
-              />
-              <CourseCard
-                title="Ciencias Sociales"
-                gradeAndSection="2.º Grado · B"
-                teacherName="Prof. Jorge Salazar"
-                subjectColor="#F59E0B"
-                progress={85}
-                onOpen={() => onSelect('my_enrollments')}
-              />
+              {coursesState === 'ready' &&
+                courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    id={course.id}
+                    title={course.subject}
+                    gradeAndSection={`${course.grade} · ${course.section}`}
+                    teacherName={course.teacher}
+                    subjectColor={subjectColor(course.subject)}
+                    /* No per-course progress metric exists in the system; show no ring instead of a fabricated value. */
+                    progress={null}
+                    onOpen={() => onSelect('my_enrollments')}
+                  />
+                ))}
             </div>
           </div>
         </div>

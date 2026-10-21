@@ -1,48 +1,655 @@
 import { RecordedTime } from './RecordedTime.js';
-import { useEffect,useRef,useState,type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { DeliveryContext } from './DeliveryContext.js';
 import { AssessmentPanel } from './AssessmentPanel.js';
 import { AcademicApiError } from './api.js';
-import { evidenceUrl,type Activity,type ActivityClient,type Delivery,type DeliveryVersion } from './activities.js';
-const button='inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
-const field='mt-1.5 block w-full rounded-xl border border-border bg-surface text-text p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all';
-function errorMessage(error:unknown){if(error instanceof AcademicApiError){if(error.category==='operation_pending')return 'Hay una operaci\u00f3n en curso. Espera a que termine antes de guardar otra.';if(error.outcomeUnknown)return 'No se pudo confirmar la operación. Consulta el resultado antes de continuar.';if(error.status===422)return 'Revisa los campos y el archivo. Hasta 10 MiB; solo PDF, JPG, PNG, TXT o DOCX sin macros.';if(error.category==='stale_delivery_version')return 'La entrega cambió desde que la consultaste. Revisa la versión actual antes de calificar.';if(error.category==='stale_assessment')return 'La calificación cambió. Consulta su última revisión antes de corregirla.';if(error.category==='already_assessed')return 'La entrega ya fue calificada y no admite nuevas versiones.';if(error.status===409)return 'La actividad o tu matrícula cambió. Consulta nuevamente antes de continuar.';if(error.status===403||error.status===404)return 'No tienes acceso a esta actividad o entrega.';}return 'No se pudo consultar o guardar la información. Vuelve a consultar.';}
-function VersionHistory({client,id,onError}:{client:ActivityClient;id:string;onError:(error:unknown)=>void}){
- const [versions,setVersions]=useState<DeliveryVersion[]>([]),[after,setAfter]=useState<string|null>(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false);
- async function load(append=false){setBusy(true);try{const page=await client.versions(id,append?after:null);setVersions(old=>append?[...old,...page.items]:page.items);setAfter(page.next_after);setOpen(true);}catch(error){onError(error);}finally{setBusy(false);}}
- return <div className="mt-4"><button className={button} disabled={busy} onClick={()=>open?setOpen(false):void load()}>{open?'Ocultar versiones':'Ver versiones'}</button>{open&&<div className="mt-3 space-y-3">{versions.map((v,index)=><section key={v.id} className="rounded-xl border border-border bg-surface p-3.5"><h5 className="font-semibold text-text text-sm">Versión {index+1}</h5><p className="text-xs text-text-muted my-1"><RecordedTime value={v.recorded_at}/></p><p className="whitespace-pre-wrap text-xs text-text">{v.answer}</p>{v.filename&&<a className="inline-block mt-2 text-xs font-medium text-primary hover:underline" href={evidenceUrl(v.id)} download>Descargar {v.filename}</a>}</section>)}{after&&<button className={button+' mt-2'} disabled={busy} onClick={()=>void load(true)}>Más versiones</button>}</div>}</div>;
+import { evidenceUrl, type Activity, type ActivityClient, type Delivery, type DeliveryVersion } from './activities.js';
+
+const button =
+  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+const field =
+  'mt-1.5 block w-full rounded-xl border border-border bg-surface text-text p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all';
+
+function errorMessage(error: unknown) {
+  if (error instanceof AcademicApiError) {
+    if (error.category === 'operation_pending')
+      return 'Hay una operación en curso. Espera a que termine antes de guardar otra.';
+    if (error.outcomeUnknown)
+      return 'No se pudo confirmar la operación. Consulta el resultado antes de continuar.';
+    if (error.status === 422)
+      return 'Revisa los campos y el archivo. Hasta 10 MiB; solo PDF, JPG, PNG, TXT o DOCX sin macros.';
+    if (error.category === 'stale_delivery_version')
+      return 'La entrega cambió desde que la consultaste. Revisa la versión actual antes de calificar.';
+    if (error.category === 'stale_assessment')
+      return 'La calificación cambió. Consulta su última revisión antes de corregirla.';
+    if (error.category === 'already_assessed')
+      return 'La entrega ya fue calificada y no admite nuevas versiones.';
+    if (error.status === 409)
+      return 'La actividad o tu matrícula cambió. Consulta nuevamente antes de continuar.';
+    if (error.status === 403 || error.status === 404)
+      return 'No tienes acceso a esta actividad o entrega.';
+  }
+  return 'No se pudo consultar o guardar la información. Vuelve a consultar.';
 }
-export function ActivityCard({activity,client,mode,onExpired,onDenied,teacherMode=false,initialPanel=null}:{activity:Activity;client:ActivityClient;mode:'activities'|'deliveries'|'grades';onExpired:()=>void;onDenied?:()=>void;teacherMode?:boolean;initialPanel?:'detail'|'deliveries'|null}){
- const [panel,setPanel]=useState<'detail'|'deliveries'|null>(initialPanel),[pending,setPending]=useState<{id:string;student_name:string}[]>([]),[pendingAfter,setPendingAfter]=useState<string|null>(null);
- const [current,setCurrent]=useState(activity);const [deliveries,setDeliveries]=useState<Delivery[]>([]),[after,setAfter]=useState<string|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[confirm,setConfirm]=useState(false),[closed,setClosed]=useState(activity.state==='closed'),[blocked,setBlocked]=useState(client.isUncertain()),[ready,setReady]=useState(false);const writing=useRef(false),alive=useRef(true),reading=useRef(0);
- function fail(error:unknown){if(!alive.current)return;if(error instanceof AcademicApiError&&[401,419].includes(error.status??0)){onExpired();return;}if(error instanceof AcademicApiError&&[403,404].includes(error.status??0))onDenied?.();setNotice(errorMessage(error));setBlocked(client.isUncertain());}
- async function load(append=false){const token=++reading.current;setBusy(true);try{const [page,fresh]=await Promise.all([client.deliveries(activity.id,append?after:null),client.detail(activity.id)]);if(!alive.current||token!==reading.current)return;setCurrent(fresh);setClosed(fresh.state==='closed');setDeliveries(old=>append?[...old,...page.items]:page.items);setAfter(page.next_after);setReady(true);if(teacherMode||fresh.can_close||page.items.some(d=>d.can_assess)){const roster=await client.pendingStudents(activity.id);if(alive.current&&token===reading.current){setPending(roster.items);setPendingAfter(roster.next_after);}}setBlocked(client.isUncertain());}catch(error){if(token===reading.current)fail(error);}finally{if(alive.current&&token===reading.current)setBusy(false);}}
-  useEffect(()=>{alive.current=true;return ()=>{alive.current=false;reading.current++;};},[activity.id,client]);
- useEffect(()=>{if(panel!==null&&!ready)void load();},[panel]);
- async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(writing.current||client.isUncertain())return;const form=event.currentTarget,data=new FormData(form),file=data.get('file'),answer=String(data.get('answer')??'');if(file instanceof File&&file.name==='')data.delete('file');const evidence=data.get('file');if(!answer.trim()&&!(evidence instanceof File)){setNotice('Escribe una respuesta o adjunta una evidencia.');return;}if(evidence instanceof File&&(evidence.size>10485760||evidence.size===0||!['pdf','jpg','jpeg','png','txt','docx'].includes(evidence.name.split('.').pop()?.toLowerCase()??''))){setNotice('Revisa el formato y el límite de 10 MiB.');return;}writing.current=true;setBusy(true);setNotice('');try{await client.submit(activity.id,data);if(!alive.current)return;form.reset();try{const page=await client.deliveries(activity.id);if(alive.current){setDeliveries(page.items);setAfter(page.next_after);setNotice('Tu trabajo se ha enviado correctamente.');}}catch{setNotice('Entrega confirmada; no se pudo actualizar la lista. Consulta nuevamente.');}}catch(error){fail(error);}finally{writing.current=false;if(alive.current)setBusy(false);}}
- async function close(){if(writing.current||client.isUncertain())return;writing.current=true;setBusy(true);try{await client.close(activity.id);if(alive.current){setClosed(true);setConfirm(false);setNotice('Actividad cerrada correctamente.');}}catch(error){fail(error);}finally{writing.current=false;if(alive.current)setBusy(false);}}
- return <article aria-label={activity.title} className="my-5 rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs hover:border-primary/40 transition-all" aria-busy={busy}>
-   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-     <h3 className="text-lg sm:text-xl font-bold text-text tracking-tight">{activity.title}</h3>
-     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${closed ? 'bg-surface-2 text-text-muted border-border' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'}`}>
-       {closed?'Cerrada':'Abierta'} · {activity.due_on?'Fecha de entrega: '+activity.due_on:'Sin fecha límite'}
-     </span>
-   </div>
-   <p className="my-3 hidden">{closed?'Cerrada':'Abierta'} · {activity.due_on?'Fecha de entrega: '+activity.due_on:'Sin fecha límite'}</p>
-   <div className="eval-activity-actions flex flex-wrap gap-2 my-3">
-     <button className={button} aria-pressed={panel==='detail'} onClick={()=>setPanel(panel==='detail'?null:'detail')}>Ver detalles</button>
-     <button className={button} aria-pressed={panel==='deliveries'} onClick={()=>setPanel(panel==='deliveries'?null:'deliveries')}>{teacherMode||current.can_close?'Ver entregas':'Mi entrega y calificación'}</button>
-   </div>
-   {panel==='detail'&&<div className="my-4 p-4 rounded-xl bg-surface-2 border border-border text-xs sm:text-sm text-text leading-relaxed whitespace-pre-wrap">{activity.instructions}</div>}
-   <p className="my-2 text-xs text-text-muted">La fecha indicada no cierra automáticamente la actividad.</p>
-   {notice&&<div className="my-3 p-3 rounded-xl bg-surface-2 border border-border text-xs text-text"><p role="status">{notice}</p></div>}
-   <p className="eval-activity-status text-xs font-medium text-text-muted bg-surface-2 px-3 py-1.5 rounded-lg inline-block border border-border my-2">{!ready?'Abre la actividad para consultar las entregas':teacherMode||current.can_close?'Entregas consultadas: '+deliveries.length+' · Calificadas: '+deliveries.filter(d=>d.assessment).length+(after?' · Hay más entregas':''):deliveries.some(d=>d.assessment)?'Calificada':deliveries.length?'Entregada':'Pendiente de entrega'}{!closed&&activity.due_on&&activity.due_on<new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(new Date())?' · Fecha vencida':''}</p>
-   {panel!==null&&<div className="mt-2"><button className={button} disabled={busy} onClick={()=>void load()}>Actualizar estado</button></div>}
-   {blocked&&<div className="my-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs space-y-2"><p>Revisa las entregas o la actividad antes de realizar otra operación.</p><button className={button} disabled={busy||!client.canReview()} onClick={()=>{client.review();setBlocked(false);setNotice('Resultado revisado.');}}>He revisado el resultado</button></div>}
-   {panel==='detail'&&current.can_close&&!closed&&<div className="my-4 p-4 rounded-xl bg-surface-2 border border-border space-y-3">{confirm?<><p className="text-xs text-text">¿Cerrar la actividad para nuevas entregas y actualizaciones? Las entregas anteriores se conservan.</p><div className="flex gap-2"><button className={button+' bg-danger text-white hover:bg-danger/90 border-transparent'} disabled={busy||blocked} onClick={()=>void close()}>Confirmar cierre</button><button className={button} disabled={busy} onClick={()=>setConfirm(false)}>Cancelar</button></div></>:<button className={button} disabled={busy||blocked} onClick={()=>setConfirm(true)}>Cerrar actividad</button>}</div>}
-   {panel==='deliveries'&&ready&&deliveries.length===0&&<div className="my-4 p-6 text-center bg-surface-2 rounded-xl border border-border"><p className="text-xs text-text-muted">Todavía no hay entregas.</p></div>}
-   {panel==='deliveries'&&<><h4 className="mt-5 font-bold text-text text-sm uppercase tracking-wider">Entregas y calificaciones</h4>{pending.length>0&&<section className="my-4 rounded-xl border border-border bg-surface-2 p-4" aria-label="Estudiantes pendientes"><h5 className="font-semibold text-xs text-text uppercase tracking-wider mb-1">Pendientes de entrega</h5><p className="text-xs text-text-muted mb-2">Incluye matrículas actuales y estudiantes del aula al publicarse la actividad. Una matrícula histórica no habilita nuevos envíos.</p><ul className="space-y-1 text-xs text-text">{pending.map(s=><li key={s.id}>• {s.student_name}</li>)}</ul>{pendingAfter&&<button className={button+' mt-3'} disabled={busy} onClick={async()=>{setBusy(true);try{const page=await client.pendingStudents(activity.id,pendingAfter);if(alive.current){setPending(old=>[...old,...page.items]);setPendingAfter(page.next_after);}}catch(e){fail(e);}finally{if(alive.current)setBusy(false);}}}>Más pendientes</button>}</section>}{deliveries.map(d=><section key={d.id} aria-label={'Entrega de '+d.student_name} className="my-4 rounded-xl bg-surface-2 border border-border p-4"><details><summary className="cursor-pointer font-semibold text-xs sm:text-sm text-text hover:text-primary transition-colors">{d.student_name} · {d.assessment?'Calificada: '+d.assessment.grade:'Pendiente de revisión'} · Revisar trabajo</summary><div className="mt-3 space-y-2 border-t border-border pt-3"><p className="whitespace-pre-wrap text-xs text-text">{d.version.answer}</p><p className="text-[11px] text-text-muted">Enviada: <RecordedTime value={d.accepted_at}/> · Actualizada: <RecordedTime value={d.version.recorded_at}/></p>{d.version.filename&&<a className={button+' inline-block my-2'} href={evidenceUrl(d.version.id)} download>Descargar evidencia</a>}{<AssessmentPanel key={d.id+':'+d.version.id+':'+(d.assessment?.id??'pending')} client={client} delivery={d} blocked={blocked} onSaved={()=>load()} onError={fail}/>}<DeliveryContext client={client} id={d.id} onError={fail}/><VersionHistory key={d.version.id} client={client} id={d.id} onError={fail}/></div></details></section>)}{after&&<button className={button+' mt-3'} disabled={busy} onClick={()=>void load(true)}>Más entregas</button>}</>}
-   {current.can_submit&&!closed&&ready&&<form className="mt-5 rounded-xl border border-border bg-surface-2/40 p-5" onSubmit={event=>void submit(event)} aria-label={deliveries.length?'Actualizar mi entrega':'Enviar mi entrega'}><fieldset disabled={busy||blocked} className="space-y-4"><legend className="text-sm font-bold text-text uppercase tracking-wider">{deliveries.length?'Actualizar mi entrega':'Enviar mi entrega'}</legend><label className="block text-xs font-semibold text-text uppercase tracking-wider">Respuesta<textarea name="answer" className={field} maxLength={10000} rows={4}/></label><label className="block text-xs font-semibold text-text uppercase tracking-wider">Adjuntar evidencia<input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.docx" className={field}/></label><p className="text-xs text-text-muted">Texto, un archivo o ambos. Hasta 10 MiB. Una actualización conserva la versión anterior y reemplaza el contenido actual.</p><button className={button+' bg-accent text-navy-950 hover:bg-accent-hover font-bold border-transparent px-5 py-2.5'}>{deliveries.length?'Actualizar entrega':'Enviar entrega'}</button></fieldset></form>}
- </article>;
+
+function VersionHistory({
+  client,
+  id,
+  onError,
+}: {
+  client: ActivityClient;
+  id: string;
+  onError: (error: unknown) => void;
+}) {
+  const [versions, setVersions] = useState<DeliveryVersion[]>([]);
+  const [after, setAfter] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function load(append = false) {
+    setBusy(true);
+    try {
+      const page = await client.versions(id, append ? after : null);
+      setVersions((old) => (append ? [...old, ...page.items] : page.items));
+      setAfter(page.next_after);
+      setOpen(true);
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        className={button}
+        disabled={busy}
+        onClick={() => (open ? setOpen(false) : void load())}
+      >
+        {open ? 'Ocultar versiones' : 'Ver versiones'}
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3">
+          {versions.map((v, index) => (
+            <section key={v.id} className="rounded-xl border border-border bg-surface p-3.5">
+              <h5 className="font-semibold text-text text-sm">Versión {index + 1}</h5>
+              <p className="text-xs text-text-muted my-1">
+                <RecordedTime value={v.recorded_at} />
+              </p>
+              <p className="whitespace-pre-wrap text-xs text-text">{v.answer}</p>
+              {v.filename && (
+                <a
+                  className="inline-block mt-2 text-xs font-medium text-primary hover:underline"
+                  href={evidenceUrl(v.id)}
+                  download
+                >
+                  Descargar {v.filename}
+                </a>
+              )}
+            </section>
+          ))}
+          {after && (
+            <button
+              type="button"
+              className={button + ' mt-2'}
+              disabled={busy}
+              onClick={() => void load(true)}
+            >
+              Más versiones
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
-export {IntegratedActivityWorkspace as ActivityWorkspace} from './IntegratedActivityWorkspace.js';
+
+export function ActivityCard({
+  activity,
+  client,
+  mode,
+  onExpired,
+  onDenied,
+  teacherMode = false,
+  initialPanel = null,
+}: {
+  activity: Activity;
+  client: ActivityClient;
+  mode: 'activities' | 'deliveries' | 'grades';
+  onExpired: () => void;
+  onDenied?: () => void;
+  teacherMode?: boolean;
+  initialPanel?: 'detail' | 'deliveries' | null;
+}) {
+  const [panel, setPanel] = useState<'detail' | 'deliveries' | null>(initialPanel);
+  const [pending, setPending] = useState<{ id: string; student_name: string }[]>([]);
+  const [pendingAfter, setPendingAfter] = useState<string | null>(null);
+  const [current, setCurrent] = useState(activity);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [after, setAfter] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [closed, setClosed] = useState(activity.state === 'closed');
+  const [blocked, setBlocked] = useState(client.isUncertain());
+  const [ready, setReady] = useState(false);
+  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'unassessed' | 'assessed' | 'missing'>('all');
+
+  const writing = useRef(false);
+  const alive = useRef(true);
+  const reading = useRef(0);
+
+  function fail(error: unknown) {
+    if (!alive.current) return;
+    if (error instanceof AcademicApiError && [401, 419].includes(error.status ?? 0)) {
+      onExpired();
+      return;
+    }
+    if (error instanceof AcademicApiError && [403, 404].includes(error.status ?? 0)) onDenied?.();
+    setNotice(errorMessage(error));
+    setBlocked(client.isUncertain());
+  }
+
+  async function load(append = false) {
+    const token = ++reading.current;
+    setBusy(true);
+    try {
+      const [page, fresh] = await Promise.all([
+        client.deliveries(activity.id, append ? after : null),
+        client.detail(activity.id),
+      ]);
+      if (!alive.current || token !== reading.current) return;
+      setCurrent(fresh);
+      setClosed(fresh.state === 'closed');
+      setDeliveries((old) => (append ? [...old, ...page.items] : page.items));
+      setAfter(page.next_after);
+      setReady(true);
+      if (teacherMode || fresh.can_close || page.items.some((d) => d.can_assess)) {
+        const roster = await client.pendingStudents(activity.id);
+        if (alive.current && token === reading.current) {
+          setPending(roster.items);
+          setPendingAfter(roster.next_after);
+        }
+      }
+      setBlocked(client.isUncertain());
+    } catch (error) {
+      if (token === reading.current) fail(error);
+    } finally {
+      if (alive.current && token === reading.current) setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      reading.current++;
+    };
+  }, [activity.id, client]);
+
+  useEffect(() => {
+    if (panel !== null && !ready) void load();
+  }, [panel]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (writing.current || client.isUncertain()) return;
+    const form = event.currentTarget,
+      data = new FormData(form),
+      file = data.get('file'),
+      answer = String(data.get('answer') ?? '');
+    if (file instanceof File && file.name === '') data.delete('file');
+    const evidence = data.get('file');
+    if (!answer.trim() && !(evidence instanceof File)) {
+      setNotice('Escribe una respuesta o adjunta una evidencia.');
+      return;
+    }
+    if (
+      evidence instanceof File &&
+      (evidence.size > 10485760 ||
+        evidence.size === 0 ||
+        !['pdf', 'jpg', 'jpeg', 'png', 'txt', 'docx'].includes(
+          evidence.name.split('.').pop()?.toLowerCase() ?? ''
+        ))
+    ) {
+      setNotice('Revisa el formato y el límite de 10 MiB.');
+      return;
+    }
+    writing.current = true;
+    setBusy(true);
+    setNotice('');
+    try {
+      await client.submit(activity.id, data);
+      if (!alive.current) return;
+      form.reset();
+      try {
+        const page = await client.deliveries(activity.id);
+        if (alive.current) {
+          setDeliveries(page.items);
+          setAfter(page.next_after);
+          setNotice('Tu trabajo se ha enviado correctamente.');
+        }
+      } catch {
+        setNotice('Entrega confirmada; no se pudo actualizar la lista. Consulta nuevamente.');
+      }
+    } catch (error) {
+      fail(error);
+    } finally {
+      writing.current = false;
+      if (alive.current) setBusy(false);
+    }
+  }
+
+  async function close() {
+    if (writing.current || client.isUncertain()) return;
+    writing.current = true;
+    setBusy(true);
+    try {
+      await client.close(activity.id);
+      if (alive.current) {
+        setClosed(true);
+        setConfirm(false);
+        setNotice('Actividad cerrada correctamente.');
+      }
+    } catch (error) {
+      fail(error);
+    } finally {
+      writing.current = false;
+      if (alive.current) setBusy(false);
+    }
+  }
+
+  const unassessedCount = deliveries.filter((d) => !d.assessment).length;
+  const assessedCount = deliveries.filter((d) => !!d.assessment).length;
+
+  const displayedDeliveries =
+    deliveryFilter === 'unassessed'
+      ? deliveries.filter((d) => !d.assessment)
+      : deliveryFilter === 'assessed'
+      ? deliveries.filter((d) => !!d.assessment)
+      : deliveryFilter === 'missing'
+      ? []
+      : deliveries;
+
+  const showPendingSection =
+    pending.length > 0 && (deliveryFilter === 'all' || deliveryFilter === 'missing');
+
+  return (
+    <article
+      aria-label={activity.title}
+      className="my-5 rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-xs hover:border-primary/40 transition-all"
+      aria-busy={busy}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h3 className="text-lg sm:text-xl font-bold text-text tracking-tight">{activity.title}</h3>
+        <span
+          className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+            closed
+              ? 'bg-surface-2 text-text-muted border-border'
+              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+          }`}
+        >
+          {closed ? 'Cerrada' : 'Abierta'} ·{' '}
+          {activity.due_on ? 'Fecha de entrega: ' + activity.due_on : 'Sin fecha límite'}
+        </span>
+      </div>
+      <p className="my-3 hidden">
+        {closed ? 'Cerrada' : 'Abierta'} ·{' '}
+        {activity.due_on ? 'Fecha de entrega: ' + activity.due_on : 'Sin fecha límite'}
+      </p>
+
+      <div className="eval-activity-actions flex flex-wrap gap-2 my-3">
+        <button
+          type="button"
+          className={button}
+          aria-pressed={panel === 'detail'}
+          onClick={() => setPanel(panel === 'detail' ? null : 'detail')}
+        >
+          Ver detalles
+        </button>
+        <button
+          type="button"
+          className={button}
+          aria-pressed={panel === 'deliveries'}
+          onClick={() => setPanel(panel === 'deliveries' ? null : 'deliveries')}
+        >
+          {teacherMode || current.can_close ? 'Ver entregas' : 'Mi entrega y calificación'}
+        </button>
+      </div>
+
+      {panel === 'detail' && (
+        <div className="my-4 p-4 rounded-xl bg-surface-2 border border-border text-xs sm:text-sm text-text leading-relaxed whitespace-pre-wrap">
+          {activity.instructions}
+        </div>
+      )}
+
+      <p className="my-2 text-xs text-text-muted">
+        La fecha indicada no cierra automáticamente la actividad.
+      </p>
+
+      {notice && (
+        <div className="my-3 p-3 rounded-xl bg-surface-2 border border-border text-xs text-text">
+          <p role="status">{notice}</p>
+        </div>
+      )}
+
+      <p className="eval-activity-status text-xs font-medium text-text-muted bg-surface-2 px-3 py-1.5 rounded-lg inline-block border border-border my-2">
+        {!ready
+          ? 'Abre la actividad para consultar las entregas'
+          : teacherMode || current.can_close
+          ? 'Entregas consultadas: ' +
+            deliveries.length +
+            ' · Calificadas: ' +
+            deliveries.filter((d) => d.assessment).length +
+            (after ? ' · Hay más entregas' : '')
+          : deliveries.some((d) => d.assessment)
+          ? 'Calificada'
+          : deliveries.length
+          ? 'Entregada'
+          : 'Pendiente de entrega'}
+        {!closed &&
+        activity.due_on &&
+        activity.due_on < new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+          ? ' · Fecha vencida'
+          : ''}
+      </p>
+
+      {panel !== null && (
+        <div className="mt-2">
+          <button type="button" className={button} disabled={busy} onClick={() => void load()}>
+            Actualizar estado
+          </button>
+        </div>
+      )}
+
+      {blocked && (
+        <div className="my-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs space-y-2">
+          <p>Revisa las entregas o la actividad antes de realizar otra operación.</p>
+          <button
+            type="button"
+            className={button}
+            disabled={busy || !client.canReview()}
+            onClick={() => {
+              client.review();
+              setBlocked(false);
+              setNotice('Resultado revisado.');
+            }}
+          >
+            He revisado el resultado
+          </button>
+        </div>
+      )}
+
+      {panel === 'detail' && current.can_close && !closed && (
+        <div className="my-4 p-4 rounded-xl bg-surface-2 border border-border space-y-3">
+          {confirm ? (
+            <>
+              <p className="text-xs text-text">
+                ¿Cerrar la actividad para nuevas entregas y actualizaciones? Las entregas anteriores
+                se conservan.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={button + ' bg-danger text-white hover:bg-danger/90 border-transparent'}
+                  disabled={busy || blocked}
+                  onClick={() => void close()}
+                >
+                  Confirmar cierre
+                </button>
+                <button
+                  type="button"
+                  className={button}
+                  disabled={busy}
+                  onClick={() => setConfirm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={button}
+              disabled={busy || blocked}
+              onClick={() => setConfirm(true)}
+            >
+              Cerrar actividad
+            </button>
+          )}
+        </div>
+      )}
+
+      {panel === 'deliveries' && ready && deliveries.length === 0 && (
+        <div className="my-4 p-6 text-center bg-surface-2 rounded-xl border border-border">
+          <p className="text-xs text-text-muted">Todavía no hay entregas.</p>
+        </div>
+      )}
+
+      {panel === 'deliveries' && (
+        <>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+            <h4 className="font-bold text-text text-sm uppercase tracking-wider">
+              Entregas y calificaciones
+            </h4>
+            {teacherMode && deliveries.length > 0 && (
+              <span className="text-xs font-semibold text-primary">
+                {assessedCount} de {deliveries.length} evaluadas ({Math.round((assessedCount / deliveries.length) * 100)}%)
+              </span>
+            )}
+          </div>
+
+          {/* Filtros rápidos por estado para el docente */}
+          {teacherMode && (deliveries.length > 0 || pending.length > 0) && (
+            <div className="my-3 flex flex-wrap gap-1.5 p-2 rounded-xl bg-surface-2 border border-border">
+              <button
+                type="button"
+                onClick={() => setDeliveryFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  deliveryFilter === 'all'
+                    ? 'bg-primary text-white shadow-xs font-semibold'
+                    : 'bg-surface hover:bg-surface-3 text-text border border-border'
+                }`}
+              >
+                Todas ({deliveries.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryFilter('unassessed')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  deliveryFilter === 'unassessed'
+                    ? 'bg-amber-500 text-navy-950 font-bold shadow-xs'
+                    : 'bg-surface hover:bg-surface-3 text-text border border-border'
+                }`}
+              >
+                🔥 Por calificar ({unassessedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryFilter('assessed')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  deliveryFilter === 'assessed'
+                    ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                    : 'bg-surface hover:bg-surface-3 text-text border border-border'
+                }`}
+              >
+                ✓ Calificadas ({assessedCount})
+              </button>
+              {pending.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDeliveryFilter('missing')}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    deliveryFilter === 'missing'
+                      ? 'bg-navy-950 text-white shadow-xs font-semibold'
+                      : 'bg-surface hover:bg-surface-3 text-text border border-border'
+                  }`}
+                >
+                  ⏳ Sin entregar ({pending.length})
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sección de Estudiantes Pendientes */}
+          {showPendingSection && (
+            <section
+              className="my-4 rounded-xl border border-border bg-surface-2 p-4"
+              aria-label="Estudiantes pendientes"
+            >
+              <h5 className="font-semibold text-xs text-text uppercase tracking-wider mb-1">
+                Pendientes de entrega
+              </h5>
+              <p className="text-xs text-text-muted mb-2">
+                Incluye matrículas actuales y estudiantes del aula al publicarse la actividad. Una
+                matrícula histórica no habilita nuevos envíos.
+              </p>
+              <ul className="space-y-1 text-xs text-text">
+                {pending.map((s) => (
+                  <li key={s.id} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span>{s.student_name}</span>
+                  </li>
+                ))}
+              </ul>
+              {pendingAfter && (
+                <button
+                  type="button"
+                  className={button + ' mt-3'}
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const page = await client.pendingStudents(activity.id, pendingAfter);
+                      if (alive.current) {
+                        setPending((old) => [...old, ...page.items]);
+                        setPendingAfter(page.next_after);
+                      }
+                    } catch (e) {
+                      fail(e);
+                    } finally {
+                      if (alive.current) setBusy(false);
+                    }
+                  }}
+                >
+                  Más pendientes
+                </button>
+              )}
+            </section>
+          )}
+
+          {/* Listado de Entregas Recibidas */}
+          {displayedDeliveries.map((d) => (
+            <section
+              key={d.id}
+              aria-label={'Entrega de ' + d.student_name}
+              className="my-4 rounded-xl bg-surface-2 border border-border p-4 shadow-2xs"
+            >
+              <details>
+                <summary className="cursor-pointer font-semibold text-xs sm:text-sm text-text hover:text-primary transition-colors flex items-center justify-between">
+                  <span>
+                    {d.student_name} ·{' '}
+                    {d.assessment ? 'Calificada: ' + d.assessment.grade : 'Pendiente de revisión'} ·{' '}
+                    Revisar trabajo
+                  </span>
+                  {d.assessment && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300">
+                      {d.assessment.grade}
+                    </span>
+                  )}
+                </summary>
+                <div className="mt-3 space-y-2 border-t border-border pt-3">
+                  <p className="whitespace-pre-wrap text-xs text-text">{d.version.answer}</p>
+                  <p className="text-[11px] text-text-muted">
+                    Enviada: <RecordedTime value={d.accepted_at} /> · Actualizada:{' '}
+                    <RecordedTime value={d.version.recorded_at} />
+                  </p>
+                  {d.version.filename && (
+                    <a
+                      className={button + ' inline-block my-2'}
+                      href={evidenceUrl(d.version.id)}
+                      download
+                    >
+                      Descargar evidencia
+                    </a>
+                  )}
+                  {
+                    <AssessmentPanel
+                      key={d.id + ':' + d.version.id + ':' + (d.assessment?.id ?? 'pending')}
+                      client={client}
+                      delivery={d}
+                      blocked={blocked}
+                      onSaved={() => load()}
+                      onError={fail}
+                    />
+                  }
+                  <DeliveryContext client={client} id={d.id} onError={fail} />
+                  <VersionHistory
+                    key={d.version.id}
+                    client={client}
+                    id={d.id}
+                    onError={fail}
+                  />
+                </div>
+              </details>
+            </section>
+          ))}
+          {after && deliveryFilter === 'all' && (
+            <button
+              type="button"
+              className={button + ' mt-3'}
+              disabled={busy}
+              onClick={() => void load(true)}
+            >
+              Más entregas
+            </button>
+          )}
+        </>
+      )}
+
+      {current.can_submit && !closed && ready && (
+        <form
+          className="mt-5 rounded-xl border border-border bg-surface-2/40 p-5"
+          onSubmit={(event) => void submit(event)}
+          aria-label={deliveries.length ? 'Actualizar mi entrega' : 'Enviar mi entrega'}
+        >
+          <fieldset disabled={busy || blocked} className="space-y-4">
+            <legend className="text-sm font-bold text-text uppercase tracking-wider">
+              {deliveries.length ? 'Actualizar mi entrega' : 'Enviar mi entrega'}
+            </legend>
+            <label className="block text-xs font-semibold text-text uppercase tracking-wider">
+              Respuesta
+              <textarea name="answer" className={field} maxLength={10000} rows={4} />
+            </label>
+            <label className="block text-xs font-semibold text-text uppercase tracking-wider">
+              Adjuntar evidencia
+              <input
+                name="file"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.docx"
+                className={field}
+              />
+            </label>
+            <p className="text-xs text-text-muted">
+              Texto, un archivo o ambos. Hasta 10 MiB. Una actualización conserva la versión anterior
+              y reemplaza el contenido actual.
+            </p>
+            <button
+              type="submit"
+              className={
+                button +
+                ' bg-accent text-navy-950 hover:bg-accent-hover font-bold border-transparent px-5 py-2.5'
+              }
+            >
+              {deliveries.length ? 'Actualizar entrega' : 'Enviar entrega'}
+            </button>
+          </fieldset>
+        </form>
+      )}
+    </article>
+  );
+}
+
+export { IntegratedActivityWorkspace as ActivityWorkspace } from './IntegratedActivityWorkspace.js';
