@@ -56,10 +56,10 @@ export function CourseClassroomButtons({rows,value,onChange,disabled=false}:{row
               disabled={disabled}
               aria-pressed={grade.id === value.gradeId}
               onClick={() => onChange({ gradeId: grade.id, sectionId: '' })}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                 grade.id === value.gradeId
                   ? 'bg-primary text-white shadow-xs font-semibold ring-2 ring-primary/30'
-                  : 'bg-surface-2 text-text border border-border hover:bg-surface-3'
+                  : 'bg-surface-2 text-text border border-border hover:bg-surface-3 hover:border-primary/40'
               }`}
             >
               {grade.name}
@@ -78,10 +78,10 @@ export function CourseClassroomButtons({rows,value,onChange,disabled=false}:{row
                 disabled={disabled}
                 aria-pressed={section.section_id === value.sectionId}
                 onClick={() => onChange({ gradeId: value.gradeId, sectionId: section.section_id })}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                   section.section_id === value.sectionId
                     ? 'bg-primary text-white shadow-xs font-semibold ring-2 ring-primary/30'
-                    : 'bg-surface-2 text-text border border-border hover:bg-surface-3'
+                    : 'bg-surface-2 text-text border border-border hover:bg-surface-3 hover:border-primary/40'
                 }`}
               >
                 Sección {section.section}

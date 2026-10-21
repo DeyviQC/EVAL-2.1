@@ -61,7 +61,7 @@ export function SessionShell() {
     if(context.phase==='loading')return <p role="status">Consultando tus secciones…</p>;
     if(context.phase==='unavailable')return <><p role="alert">No se pudo confirmar la navegación.</p><button onClick={()=>void navigation.refresh()}>Volver a consultar</button></>;
     if(context.phase!=='ready')return null;
-    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} client={accounts}/>;}
+    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} client={accounts} academic={academic}/>;}
     const teacherMode=role==='teacher';
     switch(safeSelected){
       case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate}/>;
