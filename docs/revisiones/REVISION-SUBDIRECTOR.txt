@@ -1,0 +1,266 @@
+EVAL - MAPA DE REVISION MANUAL DEL SUBDIRECTOR
+===========================================
+
+Revisor: Kennedy
+Fecha de inicio: ____________________
+Fecha de cierre: ____________________
+Version o rama revisada: ____________________
+Entorno: desarrollo local - https://127.0.0.1:8443/
+Equipo y navegador: ____________________
+
+COMO UTILIZAR ESTA GUIA
+----------------------
+1. Sigue el orden del mapa. Puedes revisar un apartado por sesion.
+2. Para cada prueba cambia [ ] por [OK], [ERROR], [MEJORA] o [PENDIENTE].
+3. Si encuentras algo, registra una observacion al final y relaciona su
+   numero con el codigo de prueba. Ejemplo: US-02 -> OBS-001.
+4. En las operaciones que guardan cambios utiliza registros ficticios.
+   Nombra los nuevos registros como PRUEBA-KENNEDY-01, 02, etc.
+5. Tras guardar, vuelve a consultar y recarga para comprobar el resultado.
+6. No escribas contrasenas ni datos personales reales en las observaciones.
+
+MAPA Y ORDEN DE REVISION
+------------------------
+Inicio y navegacion
+  -> Periodos academicos
+  -> Grados, secciones y areas
+  -> Usuarios y carga masiva
+  -> Matriculas
+  -> Asignaciones docentes
+  -> Calendario institucional
+  -> Supervision de materiales
+  -> Reportes
+  -> Historial
+  -> Bitacora de auditoria
+  -> Notificaciones
+  -> Mi cuenta
+  -> Revision general y cierre
+
+PRIMER RECORRIDO: consulta los apartados y anota problemas visibles.
+SEGUNDO RECORRIDO: prueba creacion y cambios con registros ficticios.
+TERCER RECORRIDO: comprueba que los cambios se reflejan en consultas,
+                 reportes, historial o bitacora segun corresponda.
+
+01. INICIO Y NAVEGACION
+----------------------
+[ ] IN-01 Iniciar sesion como subdirector y comprobar el nombre del perfil.
+[ ] IN-02 Revisar foto institucional, textos, resumen y accesos del inicio.
+[ ] IN-03 Abrir cada acceso y comprobar que lleva al apartado correcto.
+[ ] IN-04 Comparar los contadores con sus consultas correspondientes.
+[ ] IN-05 Recargar y comprobar que la sesion continua correctamente.
+Observaciones relacionadas: ___________________________________________
+
+02. PERIODOS ACADEMICOS
+----------------------
+[ ] PE-01 Consultar periodos, fechas, estados y mas registros.
+[ ] PE-02 Crear un periodo ficticio con nombre y fechas validas.
+[ ] PE-03 Probar campos vacios y fecha final anterior al inicio.
+[ ] PE-04 Abrir la confirmacion de activacion y probar Cancelar.
+[ ] PE-05 Activar un periodo de prueba permitido y volver a consultarlo.
+[ ] PE-06 Revisar confirmacion de cierre y conservacion del registro.
+          Realizar el cierre solo sobre un periodo exclusivo de prueba.
+Observaciones relacionadas: ___________________________________________
+
+03. GRADOS, SECCIONES Y AREAS
+----------------------------
+[ ] CA-01 Cambiar entre materias/areas, grados y secciones.
+[ ] CA-02 Consultar registros y cargar mas resultados.
+[ ] CA-03 Crear un registro ficticio de cada tipo.
+[ ] CA-04 Comprobar que una seccion se asocia al grado seleccionado.
+[ ] CA-05 Editar un nombre de prueba y comprobar que persiste al recargar.
+[ ] CA-06 Desactivar y reactivar un registro ficticio; revisar su estado.
+[ ] CA-07 Probar nombre vacio y nombre duplicado; revisar los mensajes.
+Observaciones relacionadas: ___________________________________________
+
+04. USUARIOS Y CARGA MASIVA
+---------------------------
+[ ] US-01 Consultar alumnos y docentes; comprobar nombres y usuarios.
+[ ] US-02 Buscar por nombre o usuario; combinar tipo y estado.
+[ ] US-03 Probar busqueda sin coincidencias y limpiar los filtros.
+[ ] US-04 Crear un alumno y un docente ficticios.
+[ ] US-05 Probar campos vacios, usuario duplicado y formato no permitido.
+[ ] US-06 Revisar el aviso de acceso generado y la opcion de ocultarlo.
+[ ] US-07 Desactivar y reactivar una cuenta ficticia; verificar su acceso.
+[ ] US-08 Restablecer una cuenta ficticia y revisar el flujo de acceso.
+[ ] US-09 Abrir Carga masiva y seguir el formato solicitado en pantalla.
+[ ] US-10 Revisar la previsualizacion con filas validas, invalidas y repetidas.
+[ ] US-11 Confirmar una carga ficticia y comparar los resultados por fila.
+[ ] US-12 Revisar las opciones de credenciales e impresion disponibles.
+Nota: crear una cuenta no matricula ni asigna cursos automaticamente.
+Observaciones relacionadas: ___________________________________________
+
+05. MATRICULAS
+---------------
+[ ] MA-01 Seleccionar periodo, grado y seccion; consultar alumnos del aula.
+[ ] MA-02 Comprobar que las secciones corresponden al grado elegido.
+[ ] MA-03 Buscar un alumno y cambiar entre matriculas actuales e historial.
+[ ] MA-04 Matricular un alumno ficticio y comprobar el aula resultante.
+[ ] MA-05 Intentar una matricula incompatible o repetida; revisar el mensaje.
+[ ] MA-06 Abrir un traslado, cancelar y comprobar que nada cambio.
+[ ] MA-07 Trasladar un alumno ficticio; verificar aula anterior y destino.
+[ ] MA-08 Cerrar una matricula ficticia y comprobar su registro historico.
+Observaciones relacionadas: ___________________________________________
+
+06. ASIGNACIONES DOCENTES
+-------------------------
+[ ] AS-01 Filtrar y consultar docente, area, aula, periodo y estado.
+[ ] AS-02 Planificar una asignacion con un docente ficticio.
+[ ] AS-03 Probar campos vacios o combinacion incompatible.
+[ ] AS-04 Activar una asignacion de prueba cuando el estado lo permita.
+[ ] AS-05 Abrir un reemplazo y probar Cancelar.
+[ ] AS-06 Reemplazar un docente de prueba y revisar el historial conservado.
+[ ] AS-07 Cerrar una asignacion ficticia y volver a consultarla.
+Observaciones relacionadas: ___________________________________________
+
+07. CALENDARIO INSTITUCIONAL
+----------------------------
+[ ] CI-01 Elegir un periodo y consultar calendario, fuente y fechas.
+[ ] CI-02 Revisar bloques, semanas y separacion visual de las fechas.
+[ ] CI-03 Crear y guardar un borrador en un periodo exclusivo de prueba.
+[ ] CI-04 Probar fechas o bloques invalidos y revisar las indicaciones.
+[ ] CI-05 Comprobar la referencia y confirmacion exigidas para publicar.
+[ ] CI-06 Publicar el borrador de prueba y consultar la revision guardada.
+[ ] CI-07 Comprobar que se distinguen el borrador y el calendario publicado.
+Observaciones relacionadas: ___________________________________________
+
+08. SUPERVISION DE MATERIALES
+-----------------------------
+[ ] SU-01 Consultar cursos y seleccionar el curso que se desea supervisar.
+[ ] SU-02 Consultar materiales; comprobar titulo, autor, archivo y estado.
+[ ] SU-03 Abrir y descargar un archivo ficticio; comprobar su contenido.
+[ ] SU-04 Consultar versiones de un material que tenga historial.
+[ ] SU-05 Enviar una observacion ficticia al docente original.
+[ ] SU-06 Con una cuenta docente de prueba, comprobar su recepcion y respuesta.
+[ ] SU-07 Volver al subdirector y comprobar la respuesta y su estado.
+Observaciones relacionadas: ___________________________________________
+
+09. REPORTES
+-------------
+[ ] RE-01 Seleccionar periodo, grado y seccion y consultar el reporte.
+[ ] RE-02 Comparar alumnos, entregas y calificaciones con los datos de prueba.
+[ ] RE-03 Cambiar de aula; comprobar que no quedan resultados del filtro anterior.
+[ ] RE-04 Consultar un aula sin resultados y revisar el mensaje.
+[ ] RE-05 Revisar las opciones de salida que muestra el apartado y su formato.
+[ ] RE-06 Revisar tablas extensas, textos largos y legibilidad de las notas.
+Observaciones relacionadas: ___________________________________________
+
+10. HISTORIAL
+--------------
+[ ] HI-01 Consultar las opciones de historial de matriculas y asignaciones.
+[ ] HI-02 Localizar un traslado, cierre o reemplazo realizado en esta revision.
+[ ] HI-03 Comparar fechas, nombres, aula y estado con la operacion realizada.
+[ ] HI-04 Cargar mas registros y comprobar que no aparecen duplicados.
+[ ] HI-05 Comprobar que consultar el historial no modifica sus registros.
+Observaciones relacionadas: ___________________________________________
+
+11. BITACORA DE AUDITORIA
+-------------------------
+[ ] AU-01 Consultar eventos y revisar los filtros que ofrece la pantalla.
+[ ] AU-02 Buscar una operacion de prueba y comprobar sus datos visibles.
+[ ] AU-03 Probar busqueda sin coincidencias y limpiar la consulta.
+[ ] AU-04 Revisar fecha/hora, detalles y carga de mas eventos.
+[ ] AU-05 Comprobar que la bitacora se presenta como consulta de eventos.
+Observaciones relacionadas: ___________________________________________
+
+12. NOTIFICACIONES
+-------------------
+[ ] NO-01 Consultar avisos o comprobar el mensaje de lista vacia.
+[ ] NO-02 Revisar texto, fecha y cantidad de avisos no leidos.
+[ ] NO-03 Marcar como leidos y volver a consultar el estado.
+[ ] NO-04 Comprobar la carga de mas avisos cuando exista esa opcion.
+Nota: registrar cero avisos no constituye por si solo un error.
+Observaciones relacionadas: ___________________________________________
+
+13. MI CUENTA
+--------------
+[ ] MC-01 Consultar los datos de la cuenta y comprobar el perfil mostrado.
+[ ] MC-02 Revisar las opciones de seguridad que ofrece la pantalla.
+[ ] MC-03 En una cuenta ficticia con clave provisional, revisar el cambio
+          obligatorio de contrasena y sus validaciones.
+[ ] MC-04 Cerrar sesion; comprobar que el contenido privado deja de mostrarse.
+[ ] MC-05 Volver a ingresar y comprobar que se recupera el acceso correcto.
+Observaciones relacionadas: ___________________________________________
+
+14. REVISION GENERAL EN TODOS LOS APARTADOS
+------------------------------------------
+[ ] GE-01 Se distinguen titulos, formularios, listados y acciones principales.
+[ ] GE-02 El color cambia claramente al pasar el mouse y al hacer clic.
+[ ] GE-03 Los botones deshabilitados se distinguen y no ejecutan acciones.
+[ ] GE-04 Los campos tienen etiquetas, foco azul y errores comprensibles.
+[ ] GE-05 Se distinguen estados activos/inactivos sin depender solo del color.
+[ ] GE-06 Hay suficiente espacio; los textos e iconos no se superponen.
+[ ] GE-07 Revisar tema claro y oscuro, incluidos menus y listas desplegables.
+[ ] GE-08 Revisar escritorio y ventana estrecha: sin contenido inaccesible.
+[ ] GE-09 Recorrer con Tab, activar con Enter y comprobar el foco visible.
+[ ] GE-10 Revisar carga, ausencia de resultados y mensajes de error.
+[ ] GE-11 Guardar una vez, esperar la respuesta y consultar el resultado.
+[ ] GE-12 Cancelar una confirmacion no ejecuta la operacion.
+Observaciones relacionadas: ___________________________________________
+
+REGISTRO DE OBSERVACIONES
+=========================
+Una observacion por problema. Copia el bloque para agregar mas.
+Si el mismo problema se repite, incluye los apartados afectados.
+
+TIPOS: Error funcional / Diseno / Usabilidad / Datos / Funcion faltante
+PRIORIDAD:
+  Alta  = impide completar una tarea o muestra/guarda datos incorrectos.
+  Media = dificulta una tarea, aunque existe una alternativa.
+  Baja  = detalle visual o mejora de comodidad.
+ESTADO: Pendiente / En correccion / Por volver a probar / Resuelta
+
+OBS-001
+Fecha y hora:
+Codigo(s) de prueba:
+Modulo y pantalla:
+Titulo breve:
+Tipo:
+Prioridad:
+Registro ficticio y filtros utilizados:
+Pasos para reproducir:
+  1.
+  2.
+  3.
+Resultado esperado:
+Resultado observado:
+Mensaje exacto mostrado:
+Captura (nombre o ruta, si tienes una):
+Frecuencia: Siempre / Algunas veces / Una vez
+Sugerencia de mejora:
+Estado: Pendiente
+Resultado al volver a probar:
+
+-----------------------------------------------------------------------
+
+OBS-002
+Fecha y hora:
+Codigo(s) de prueba:
+Modulo y pantalla:
+Titulo breve:
+Tipo:
+Prioridad:
+Registro ficticio y filtros utilizados:
+Pasos para reproducir:
+  1.
+  2.
+  3.
+Resultado esperado:
+Resultado observado:
+Mensaje exacto mostrado:
+Captura (nombre o ruta, si tienes una):
+Frecuencia: Siempre / Algunas veces / Una vez
+Sugerencia de mejora:
+Estado: Pendiente
+Resultado al volver a probar:
+
+-----------------------------------------------------------------------
+
+CIERRE DE LA REVISION
+---------------------
+Pruebas OK:
+Pruebas con error:
+Mejoras propuestas:
+Pruebas pendientes y motivo:
+Observaciones de prioridad alta:
+Observaciones que ya se corrigieron y volvieron a probar:
+Fecha de la siguiente revision:

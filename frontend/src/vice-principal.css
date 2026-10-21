@@ -1,0 +1,334 @@
+/* Presentation is restricted to the Vice Principal content area. */
+.eval-layout[data-role="vice_principal"] .eval-workspace {
+  --vp-button: color-mix(in srgb, var(--primary) 11%, var(--surface));
+  --vp-button-hover: color-mix(in srgb, var(--primary) 30%, var(--surface));
+  --vp-button-pressed: color-mix(in srgb, var(--primary) 44%, var(--surface));
+  --vp-field-line: color-mix(in srgb, var(--primary) 48%, var(--border));
+  --vp-panel-shadow: 0 3px 8px color-mix(in srgb, var(--text) 7%, transparent), 0 12px 30px color-mix(in srgb, var(--primary) 9%, transparent);
+  padding-top: 1.25rem;
+  padding-bottom: 2.5rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace-content > section {
+  display: flow-root;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(h2,h3) {
+  line-height: 1.35;
+  margin-bottom: .75rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(p,dd) {
+  line-height: 1.65;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(article,form,header[class*="rounded"],section[class*="rounded"],div[class*="rounded"][class*="border"]) {
+  border-color: transparent;
+  border-width: 0;
+  border-radius: 1rem;
+  box-shadow: var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(.eval-course-tabs,header[class*="rounded"]) {
+  background-color: var(--surface);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace label.bg-primary {
+  color: white;
+  border-radius: .85rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(article,form) {
+  padding: clamp(1.15rem, 2vw, 1.75rem);
+  margin-block: 1.25rem;
+  background-color: var(--surface);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace form {
+  gap: 1.25rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace label:has(:is(input,select,textarea)) {
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+  line-height: 1.5;
+  min-width: 0;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace label:has(input:is([type="checkbox"],[type="radio"])) {
+  flex-direction: row;
+  align-items: center;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .eval-workspace-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),select,textarea) {
+  border: 0;
+  border-bottom: 2px solid var(--vp-field-line);
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  padding: .75rem .25rem;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--text);
+  transition: border-color 150ms, background-color 150ms;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .eval-workspace-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select,textarea):focus {
+  outline: none;
+  border-bottom: 2px solid var(--primary);
+  box-shadow: none;
+  padding-bottom: .75rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(.vp-home-hero,.vp-organization) {
+  box-shadow: var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(.vp-shortcut,.eval-summary-grid button) {
+  box-shadow: var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .eval-classroom-filters {
+  background: var(--surface);
+  border: 0;
+  border-radius: 1rem;
+  padding: clamp(1.15rem, 2vw, 1.75rem);
+  margin-block: 1.5rem;
+  box-shadow: var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .eval-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1.5rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .eval-directory-search {
+  margin-top: 1.5rem;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button {
+  border: 0;
+  border-radius: .85rem;
+  min-height: 44px;
+  padding: .7rem 1rem;
+  cursor: pointer;
+  transition: background-color 150ms, box-shadow 150ms, transform 100ms;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:not(.bg-primary):not(.bg-accent):not(.bg-eval-teal):not([aria-pressed="true"]):not([aria-selected="true"]) {
+  background-color: var(--vp-button);
+  color: var(--text);
+  box-shadow: none;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:not(.bg-primary):not(.bg-accent):not(.bg-eval-teal):not([aria-pressed="true"]):not([aria-selected="true"]):hover:not(:disabled) {
+  background-color: var(--vp-button-hover);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--primary) 9%, transparent);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:not(.bg-primary):not(.bg-accent):not(.bg-eval-teal):not([aria-pressed="true"]):not([aria-selected="true"]):active:not(:disabled) {
+  background-color: var(--vp-button-pressed);
+  transform: translateY(1px);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:is(.bg-primary,.bg-eval-teal,[aria-pressed="true"],[aria-selected="true"]) {
+  background-color: var(--primary);
+  color: white;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:is(.bg-primary,.bg-eval-teal,[aria-pressed="true"],[aria-selected="true"]):hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:is(.bg-primary,.bg-eval-teal,[aria-pressed="true"],[aria-selected="true"]):active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--primary) 80%, black);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(select,option).eval-status-active { color: #166534; background-color: #dcfce7; }
+.eval-layout[data-role="vice_principal"] .eval-workspace :is(select,option).eval-status-inactive { color: #991b1b; background-color: #fee2e2; }
+.dark .eval-layout[data-role="vice_principal"] .eval-workspace :is(select,option).eval-status-active { color: #86efac; background-color: #143327; }
+.dark .eval-layout[data-role="vice_principal"] .eval-workspace :is(select,option).eval-status-inactive { color: #fca5a5; background-color: #401d25; }
+@media (max-width: 640px) {
+  .eval-layout[data-role="vice_principal"] .eval-workspace :is(input,select,textarea) { font-size: 16px; }
+  .eval-layout[data-role="vice_principal"] .eval-workspace :is(form,article) { margin-block: 1rem; }
+  .eval-layout[data-role="vice_principal"] .eval-workspace .eval-course-tabs button { padding-inline: .5rem; gap: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eval-layout[data-role="vice_principal"] .eval-workspace :is(button,input,select,textarea) { transition: none; }
+  .eval-layout[data-role="vice_principal"] .eval-workspace button:active:not(:disabled) { transform: none; }
+}
+
+/* Give the Vice Principal workspace the shared module colors without changing navigation. */
+.eval-layout[data-role="vice_principal"] .eval-workspace-content article {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--module-accent) 8%, var(--surface)), var(--surface) 72%);
+  box-shadow: inset 0 3px color-mix(in srgb, var(--module-accent) 48%, transparent), var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace-content form:not([aria-label*="confirmar" i]) {
+  background: linear-gradient(125deg, color-mix(in srgb, var(--module-accent) 7%, var(--surface)), var(--surface) 62%);
+  box-shadow: inset 3px 0 color-mix(in srgb, var(--module-accent) 55%, transparent), var(--vp-panel-shadow);
+}
+.eval-layout[data-role="vice_principal"] .vp-home-hero {
+  background: linear-gradient(118deg, color-mix(in srgb, var(--primary) 13%, var(--surface)), color-mix(in srgb, #2db4a2 9%, var(--surface)) 55%, color-mix(in srgb, #e8a83c 8%, var(--surface)));
+}
+.eval-layout[data-role="vice_principal"] .vp-section-heading h4::after {
+  content: "";
+  display: block;
+  width: 3.1rem;
+  height: 3px;
+  margin-top: .65rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), #2db4a2, #e8a83c);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .eval-summary-grid button {
+  --summary-accent: var(--primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--summary-accent) 14%, var(--surface)), var(--surface) 78%);
+  box-shadow: inset 0 3px color-mix(in srgb, var(--summary-accent) 62%, transparent), 0 8px 24px color-mix(in srgb, var(--summary-accent) 10%, transparent);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .eval-summary-grid button:nth-child(4n + 2) { --summary-accent: #258a83; }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .eval-summary-grid button:nth-child(4n + 3) { --summary-accent: #7856c5; }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .eval-summary-grid button:nth-child(4n + 4) { --summary-accent: #bd811c; }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .eval-summary-grid strong { color: color-mix(in srgb, var(--summary-accent) 80%, var(--text)); }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home .vp-shortcut {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--vp-icon) 8%, var(--surface)), var(--surface) 70%);
+  box-shadow: inset 0 3px color-mix(in srgb, var(--vp-icon) 58%, transparent), 0 8px 24px color-mix(in srgb, var(--vp-icon) 9%, transparent);
+}
+.eval-layout[data-role="vice_principal"] .vp-shortcut-icon {
+  background: color-mix(in srgb, var(--vp-icon) 18%, var(--surface));
+}
+.eval-layout[data-role="vice_principal"] .vp-tone-blue { --vp-icon: #2563c7; }
+.eval-layout[data-role="vice_principal"] .vp-tone-violet { --vp-icon: #7856c5; }
+.eval-layout[data-role="vice_principal"] .vp-tone-cyan { --vp-icon: #1687a8; }
+.eval-layout[data-role="vice_principal"] .vp-tone-green { --vp-icon: #27815d; }
+.eval-layout[data-role="vice_principal"] .vp-tone-amber { --vp-icon: #bd811c; }
+.eval-layout[data-role="vice_principal"] .vp-tone-rose { --vp-icon: #bd5d77; }
+.dark .eval-layout[data-role="vice_principal"] .eval-workspace-content article,
+.dark .eval-layout[data-role="vice_principal"] .eval-workspace-content form:not([aria-label*="confirmar" i]) {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--module-accent, var(--vp-icon)) 16%, var(--surface)), var(--surface) 74%);
+}
+.dark .eval-layout[data-role="vice_principal"] .vp-home .vp-shortcut {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--vp-icon) 16%, var(--surface)), var(--surface) 74%);
+}
+
+/* Gradients need their own interaction states; background-color alone is hidden underneath. */
+@media (hover: hover) and (pointer: fine) {
+  .eval-layout[data-role="vice_principal"] .eval-workspace button:hover:not(:disabled) {
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--primary) 24%, transparent);
+  }
+  .eval-layout[data-role="vice_principal"] .eval-workspace .vp-home :is(.vp-shortcut,.eval-summary-grid button):hover:not(:disabled) {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--vp-icon, var(--summary-accent)) 30%, var(--surface)), color-mix(in srgb, var(--vp-icon, var(--summary-accent)) 12%, var(--surface)));
+    box-shadow: inset 0 3px var(--vp-icon, var(--summary-accent)), 0 10px 24px color-mix(in srgb, var(--vp-icon, var(--summary-accent)) 24%, transparent);
+    transform: translateY(-3px);
+  }
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-home :is(.vp-shortcut,.eval-summary-grid button):active:not(:disabled) {
+  background: color-mix(in srgb, var(--vp-icon, var(--summary-accent)) 40%, var(--surface));
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--text) 16%, transparent);
+  transform: translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .eval-layout[data-role="vice_principal"] .eval-workspace .vp-home :is(.vp-shortcut,.eval-summary-grid button):is(:hover,:active) { transform: none; }
+}
+
+.eval-layout[data-role="vice_principal"] .vp-module-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  margin: 0 0 1.5rem;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  border-radius: 1.2rem;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 12%, var(--surface)), color-mix(in srgb, #2db4a2 8%, var(--surface)) 65%, color-mix(in srgb, #e8a83c 7%, var(--surface)));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide-kicker {
+  color: var(--primary);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide h2 {
+  margin: .45rem 0 .6rem;
+  color: var(--text);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide-copy > p {
+  max-width: 66ch;
+  margin: .45rem 0;
+  color: var(--text-muted);
+  font-size: .85rem;
+  line-height: 1.65;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide .vp-module-guide-note {
+  margin-top: .85rem;
+  padding: .7rem .85rem;
+  border-radius: .8rem;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--text);
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide-steps {
+  align-self: center;
+  padding: 1rem 1.1rem;
+  border-radius: .95rem;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide h3 {
+  margin: 0 0 .7rem;
+  color: var(--primary);
+  font-size: .8rem;
+  font-weight: 750;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide ol {
+  display: grid;
+  gap: .65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr);
+  gap: .6rem;
+  align-items: start;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide li > span {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: .7rem;
+  font-weight: 750;
+}
+.eval-layout[data-role="vice_principal"] .vp-module-guide li p {
+  margin: .05rem 0 0;
+  color: var(--text);
+  font-size: .78rem;
+  line-height: 1.55;
+}
+.eval-layout[data-role="vice_principal"] .vp-organization-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.eval-layout[data-role="vice_principal"] .vp-organization-links button {
+  width: 100%;
+  justify-content: space-between;
+  padding: .85rem 1rem;
+  text-align: left;
+}
+.eval-layout[data-role="vice_principal"] .vp-organization-links button > span {
+  display: grid;
+  gap: .3rem;
+}
+.eval-layout[data-role="vice_principal"] .vp-organization-links strong {
+  color: var(--text);
+  font-size: .8rem;
+}
+.eval-layout[data-role="vice_principal"] .vp-organization-links small {
+  max-width: 48ch;
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.dark .eval-layout[data-role="vice_principal"] .vp-module-guide {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--primary) 24%, var(--surface)), color-mix(in srgb, #2db4a2 17%, var(--surface)) 65%, color-mix(in srgb, #e8a83c 14%, var(--surface)));
+}
+.dark .eval-layout[data-role="vice_principal"] .vp-module-guide-steps {
+  background: color-mix(in srgb, var(--surface) 92%, white 8%);
+}
+@media (max-width: 760px) {
+  .eval-layout[data-role="vice_principal"] .vp-module-guide { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .eval-layout[data-role="vice_principal"] .vp-organization-links { grid-template-columns: minmax(0, 1fr); }
+}

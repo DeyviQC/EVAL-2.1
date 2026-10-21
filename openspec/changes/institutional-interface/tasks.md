@@ -7,4 +7,5 @@
 - [x] Render actual period summaries and published calendar blocks/weeks.
 - [x] Serve the local crest through the bounded PNG asset allowlist.
 - [x] Verify build/types, existing frontend tests, calendar/week browser workflows, HTTPS runtime, four-role responsive sessions and tablet regressions.
+- [x] Apply the user-requested semantic color accents across academic workspaces while preserving navigation and primary-action contrast; verify frontend contracts and production build.
 - [ ] Obtain physical school tablet/LAN acceptance and institutional deployment evidence.
