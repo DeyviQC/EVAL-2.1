@@ -345,9 +345,9 @@ export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, 
       </div>
 
       {/* 4. Grid 2/3 + 1/3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Izquierda (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           {/* Próximas entregas */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">

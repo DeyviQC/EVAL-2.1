@@ -590,4 +590,138 @@ body { background:var(--bg); }
   }
 }
 
+/* =========================================================
+   TABLET OPTIMIZATION (768px – 1023px)
+   ========================================================= */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Login / welcome page */
+  .eval-login .eval-login-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  .eval-login .eval-login-form {
+    width: min(420px, 45vw);
+    padding: 2rem;
+  }
+  .eval-login h2 {
+    font-size: 2.75rem;
+  }
+  .eval-login p {
+    font-size: 1rem;
+  }
+  .eval-login .eval-login-form input,
+  .eval-login .eval-login-form button[type="submit"] {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  /* Touch targets */
+  .eval-workspace-content button,
+  .eval-workspace-content a[role="button"],
+  .eval-workspace-content [role="button"] {
+    min-height: 44px;
+  }
+  .eval-workspace-content input,
+  .eval-workspace-content select,
+  .eval-workspace-content textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* Sidebar collapsed on tablet is handled by AppSidebar; this tightens workspace */
+  .eval-layout[data-collapsed="true"] .eval-workspace,
+  .eval-layout .eval-workspace {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Dashboard role cards */
+  .eval-role-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .eval-dashboard-teacher .eval-role-cards,
+  .eval-dashboard-vice_principal .eval-role-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .eval-role-cards > button {
+    min-height: 150px !important;
+  }
+
+  /* Tables */
+  .eval-workspace-content table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .eval-workspace-content th,
+  .eval-workspace-content td {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  /* Drawer / modal width */
+  .eval-drawer,
+  .eval-modal,
+  [role="dialog"] > div {
+    max-width: 560px;
+  }
+}
+
+/* Portrait tablets: prefer stacked login and slightly larger nav */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .eval-login .eval-login-body {
+    flex-direction: column;
+  }
+  .eval-login .eval-login-form {
+    width: min(520px, 92vw);
+  }
+}
+
+/* Student course catalog: 3 columns on tablet landscape, 2 on portrait */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .student-course-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .student-course-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Command palette wider on tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .eval-command-palette {
+    max-width: 620px;
+  }
+}
+
+/* Dashboard summary: comfortable columns on tablet */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .eval-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .eval-summary-grid button {
+    padding: 18px 16px;
+    min-height: 96px;
+  }
+  .eval-summary-grid strong {
+    font-size: 1.85rem;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .eval-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .eval-summary-grid button {
+    padding: 18px 16px;
+    min-height: 96px;
+  }
+}
+
 

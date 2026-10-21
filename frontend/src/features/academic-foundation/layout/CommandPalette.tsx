@@ -38,7 +38,7 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-2xl bg-surface border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="eval-command-palette w-full max-w-xl overflow-hidden rounded-2xl bg-surface border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         <Command className="w-full">

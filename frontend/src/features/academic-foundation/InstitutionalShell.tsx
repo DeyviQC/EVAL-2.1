@@ -278,7 +278,7 @@ export function SessionPanel({
       </header>
 
       {/* 2. GRID PRINCIPAL: HERO EDITORIAL + TARJETA DE LOGIN CON VIDRIO */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
+      <div className="eval-login-body relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
         {/* Lado izquierdo: Editorial Hero */}
         <div className="w-full lg:max-w-xl flex flex-col items-start text-left">
           {/* Eyebrow institucional en mayúsculas */}

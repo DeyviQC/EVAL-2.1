@@ -6,7 +6,7 @@ import type {StudentDashboard, StudentDashboardCourse, UpcomingActivity} from '.
 type Filter='all'|'pending'|'favorites';
 type Order='recent'|'az'|'due';
 const surface='rounded-2xl border border-border bg-surface shadow-xs';
-const control='min-h-11 rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+const control='min-h-11 md:min-h-12 rounded-xl px-4 md:px-5 text-sm md:text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function subjectIdentity(subject:string){
   const name=subject.toLocaleLowerCase('es-PE');
@@ -86,7 +86,7 @@ export function StudentCourseCatalog({accountId,name,courses,snapshot,onOpen,onA
         </div></div>
       <div role="group" aria-label="Filtrar cursos" className="flex flex-wrap gap-2">{([['all','Todos'],['pending','Con pendientes'],['favorites','Favoritos']] as const).map(([value,label])=><button key={value} className={`eval-course-filter ${control} border ${filter===value?'border-primary bg-primary text-white':'border-border bg-surface text-text hover:bg-surface-2'}`} aria-pressed={filter===value} onClick={()=>setFilter(value)}>{label}</button>)}</div>
       {visible.length===0?<div className={`${surface} flex flex-col items-center gap-3 p-9 text-center`}><GraduationCap className="text-primary" size={38} aria-hidden="true"/><p className="font-semibold">{snapshot.courses.length?'No hay cursos en este filtro.':'Aún no tienes cursos asignados'}</p><button className={`${control} border border-border bg-surface-2`} onClick={()=>setFilter('all')}>Ver todos los cursos</button></div>:
-      <div className={layout==='grid'?'grid gap-4 md:grid-cols-2 xl:grid-cols-3':'grid gap-3'}>{visible.map((item,index)=><StudentCourseTile key={item.id} item={item} state={courseLookup.get(item.id)?.state} periodState={courseLookup.get(item.id)?.period_state} favorite={favorites.includes(item.id)} onOpen={()=>onOpen(item.id)} onFavorite={()=>toggleFavorite(item.id)} index={index} list={layout==='list'}/>)}</div>}
+      <div className={layout==='grid'?'student-course-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3':'student-course-list grid gap-3'}>{visible.map((item,index)=><StudentCourseTile key={item.id} item={item} state={courseLookup.get(item.id)?.state} periodState={courseLookup.get(item.id)?.period_state} favorite={favorites.includes(item.id)} onOpen={()=>onOpen(item.id)} onFavorite={()=>toggleFavorite(item.id)} index={index} list={layout==='list'}/>)}</div>}
     </section>
     <p role="status" aria-live="polite" className={`eval-course-toast fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-xl bg-navy-950 px-5 py-3 text-center text-sm font-semibold text-white shadow-lg md:bottom-6 ${notice?'':'sr-only'}`}>{notice}</p>
   </div>;

@@ -23,7 +23,7 @@ import type { StudentTask, StudentTasks } from './student-tasks.js';
 import type { Activity } from './activities.js';
 
 const control =
-  'min-h-11 rounded-xl px-3.5 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'min-h-11 md:min-h-12 rounded-xl px-3.5 md:px-4 text-xs md:text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function subjectIdentity(subject: string) {
   const name = subject.toLocaleLowerCase('es-PE');
@@ -157,9 +157,9 @@ export function StudentTaskList({
         </p>
       </header>
 
-      <div className="sticky top-[72px] z-10 -mx-4 bg-bg/95 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:border-border sm:bg-surface/95 sm:px-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar tareas">
+      <div className="sticky top-[72px] z-10 -mx-4 bg-bg/95 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:border-border sm:bg-surface/95 sm:px-4 md:-mx-0">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:flex-wrap" role="group" aria-label="Filtrar tareas">
             {(
               [
                 ['all', 'Todas'],
