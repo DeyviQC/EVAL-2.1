@@ -195,8 +195,10 @@ if ($NoWait) {
 # 7. Bucle de monitoreo interactivo
 try {
     $running = $true
+    $interactive = $true
+    try { [void][Console]::KeyAvailable } catch { $interactive = $false }
     while ($running) {
-        if ([Console]::KeyAvailable) {
+        if ($interactive -and [Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
             switch ($key.Key) {
                 'Q' {
