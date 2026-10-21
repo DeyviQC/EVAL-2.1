@@ -197,7 +197,7 @@ export function SessionPanel({
             onOpenProfile={() => onSelect('account')}
           />
 
-          <main id="eval-main" tabIndex={-1} className="eval-workspace flex-1 px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 max-w-6xl mx-auto w-full outline-none scroll-mt-24">
+          <main id="eval-main" tabIndex={-1} className="eval-workspace flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pt-20 sm:pt-24 max-w-6xl mx-auto w-full outline-none scroll-mt-24">
             <section className="eval-workspace-content">
               {children ?? <p className="text-text-muted">No hay información para mostrar.</p>}
             </section>

@@ -308,7 +308,7 @@ export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, 
       )}
 
       {/* 3. KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Pendientes"
           value={overview.pending}
@@ -415,7 +415,7 @@ export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, 
                 description="Tu matrícula aún no tiene cursos activos."
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {courses.map((course) => (
                   <CourseCard
                     key={course.id}

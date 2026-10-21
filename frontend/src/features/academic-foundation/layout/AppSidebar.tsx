@@ -107,19 +107,22 @@ export function AppSidebar({
 
   const roleNavLabel = role === 'director_admin' ? 'Menú de Director' : role === 'vice_principal' ? 'Menú de Subdirector' : role === 'teacher' ? 'Menú de Docente' : 'Menú de Estudiante';
 
+  const isDesktop = typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
+  const effectiveCollapsed = !isDesktop ? true : collapsed;
+
   return (
     <aside
-      className="hidden md:flex flex-col w-64 h-screen sticky top-0 bg-navy-950 text-white p-4 border-r border-navy-900/50 select-none z-30"
+      className="hidden md:flex flex-col h-screen sticky top-0 bg-navy-950 text-white p-3 lg:p-4 border-r border-navy-900/50 select-none z-30 md:w-[72px] lg:w-64 transition-[width] duration-200"
       aria-label="Barra lateral de navegación"
     >
       {/* Brand */}
-      <div className={`flex items-center py-3 mb-5 border-b border-white/[0.08] ${collapsed ? 'gap-2 px-1.5' : 'gap-3 px-2'}`}>
+      <div className={`flex items-center py-3 mb-5 border-b border-white/[0.08] ${effectiveCollapsed ? 'gap-2 px-1.5' : 'gap-3 px-2'}`}>
         <img
           src={crest}
           alt="Escudo de I.E. Nuestra Señora de las Mercedes"
-          className={`object-contain shrink-0 filter drop-shadow ${collapsed ? 'w-8 h-11' : 'w-10 h-14'}`}
+          className={`object-contain shrink-0 filter drop-shadow ${effectiveCollapsed ? 'w-8 h-11' : 'w-10 h-14'}`}
         />
-        <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`}>
+        <div className={`min-w-0 ${effectiveCollapsed ? 'hidden' : ''}`}>
           <h1 className="font-editorial text-2xl font-bold tracking-tight text-white leading-none">
             EVAL
           </h1>
@@ -133,13 +136,13 @@ export function AppSidebar({
         <button
           type="button"
           onClick={onToggleCollapsed}
-          aria-expanded={!collapsed}
+          aria-expanded={!effectiveCollapsed}
           aria-controls="eval-sidebar-nav"
-          aria-label={collapsed ? 'Expandir navegación' : 'Contraer navegación'}
-          className={`ml-auto rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${collapsed ? 'p-1' : 'p-1.5'}`}
-          title={collapsed ? 'Expandir navegación' : 'Contraer navegación'}
+          aria-label={effectiveCollapsed ? 'Expandir navegación' : 'Contraer navegación'}
+          className={`hidden lg:flex ml-auto rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${effectiveCollapsed ? 'p-1' : 'p-1.5'}`}
+          title={effectiveCollapsed ? 'Expandir navegación' : 'Contraer navegación'}
         >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {effectiveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
@@ -158,18 +161,18 @@ export function AppSidebar({
               type="button"
               onClick={() => onSelect(item.id)}
               aria-pressed={isActive}
-              aria-label={collapsed?item.label:undefined}
+              aria-label={effectiveCollapsed?item.label:undefined}
               aria-current={role === 'student' && isActive ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 min-h-[44px] pr-3 text-sm rounded-r-xl transition-all duration-150 ${
+              className={`w-full flex items-center gap-3 min-h-[48px] lg:min-h-[44px] pr-3 text-sm rounded-r-xl transition-all duration-150 ${
                 isActive
                   ? 'bg-white/[0.08] text-white font-semibold border-l-[3px] border-accent pl-3 shadow-inner'
                   : 'text-slate-300 hover:text-white hover:bg-white/[0.04] border-l-[3px] border-transparent pl-3'
-              }`}
+              } ${effectiveCollapsed ? 'justify-center' : ''}`}
             >
-              <IconComponent className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-slate-400'}`} />
-              <span className="truncate">{item.label}</span>
+              <IconComponent className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 ${isActive ? 'text-accent' : 'text-slate-400'}`} />
+              <span className={`truncate ${effectiveCollapsed ? 'hidden' : ''}`}>{item.label}</span>
               {typeof item.badge === 'number' && item.badge > 0 && (
-                <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-bold text-navy-950 bg-accent rounded-full">
+                <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-bold text-navy-950 bg-accent rounded-full ${effectiveCollapsed ? 'absolute top-1 right-1' : 'ml-auto'}`}>
                   {item.badge}
                 </span>
               )}
@@ -181,7 +184,7 @@ export function AppSidebar({
       {/* Profile Block with Dropdown */}
       <div className="relative mt-auto pt-3 border-t border-white/[0.08]" ref={menuRef}>
         {profileMenuOpen && (
-           <div className={`absolute bottom-full left-0 mb-2 p-1.5 bg-navy-900 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 z-50 ${collapsed?'w-56':'right-0'}`}>
+           <div className={`absolute bottom-full left-0 mb-2 p-1.5 bg-navy-900 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 z-50 ${effectiveCollapsed?'w-56':'right-0'}`}>
             <button
               type="button"
               onClick={() => {
@@ -253,7 +256,7 @@ export function AppSidebar({
           <div className="w-9 h-9 rounded-full bg-accent text-navy-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
             {initials}
           </div>
-          <div className={`min-w-0 flex-1 ${collapsed ? 'hidden' : ''}`}>
+          <div className={`min-w-0 flex-1 ${effectiveCollapsed ? 'hidden' : ''}`}>
             <strong className="block text-xs font-semibold text-white truncate">
               {account?.name ?? 'Cuenta institucional'}
             </strong>
@@ -261,21 +264,18 @@ export function AppSidebar({
               {profileLabel}
             </span>
           </div>
-          {profileMenuOpen ? (
-            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-          ) : (
-            <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
-          )}
+          <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 ${effectiveCollapsed ? 'hidden' : ''}`} />
         </button>
 
         {/* Quick logout button */}
         <button
           type="button"
           onClick={() => void onLogout()}
-          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors border border-transparent hover:border-danger/20 cursor-pointer"
+          className={`mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors border border-transparent hover:border-danger/20 cursor-pointer ${effectiveCollapsed ? 'px-1' : ''}`}
+          aria-label="Cerrar sesión"
         >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Cerrar sesión</span>
+          <LogOut className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
+          <span className={`${effectiveCollapsed ? 'hidden' : ''}`}>Cerrar sesión</span>
         </button>
       </div>
     </aside>

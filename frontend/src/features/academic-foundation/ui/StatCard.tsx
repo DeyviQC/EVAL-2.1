@@ -28,7 +28,7 @@ export function StatCard({
     <Card
       hoverable={Boolean(onClick)}
       onClick={onClick}
-      className={`relative overflow-hidden flex flex-col justify-between min-h-[110px] p-4 sm:p-5 ${className}`}
+      className={`relative overflow-hidden flex flex-col justify-between min-h-[110px] md:min-h-[120px] p-4 sm:p-5 ${className}`}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider truncate">

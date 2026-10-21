@@ -43,7 +43,7 @@ export function TaskItem({
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface hover:bg-surface-2 border border-border transition-all text-left w-full ${
+      className={`flex items-center justify-between gap-3 p-3.5 md:p-4 rounded-xl bg-surface hover:bg-surface-2 border border-border transition-all text-left w-full ${
         onClick ? 'cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2' : ''
       } ${className}`}
     >

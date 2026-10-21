@@ -72,7 +72,7 @@ export function CourseCard({
       <button
         type="button"
         onClick={onOpen}
-        className={`relative overflow-hidden flex flex-col justify-between group p-5 border border-border rounded-xl transition-all text-left w-full bg-surface hover:shadow-md hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${className}`}
+        className={`relative overflow-hidden flex flex-col justify-between group p-5 md:p-6 border border-border rounded-xl transition-all text-left w-full bg-surface hover:shadow-md hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${className}`}
       >
         {body}
       </button>
@@ -81,7 +81,7 @@ export function CourseCard({
 
   return (
     <Card
-      className={`relative overflow-hidden flex flex-col justify-between group p-5 border border-border rounded-xl transition-all ${className}`}
+      className={`relative overflow-hidden flex flex-col justify-between group p-5 md:p-6 border border-border rounded-xl transition-all ${className}`}
     >
       {body}
     </Card>
