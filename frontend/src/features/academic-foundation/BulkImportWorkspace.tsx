@@ -1,4 +1,5 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
+import { Download, FileSpreadsheet, GraduationCap, Printer, Users } from 'lucide-react';
 import type { AccountClient } from './accounts.js';
 import type { AcademicClient } from './api.js';
 import {
@@ -248,7 +249,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                 onClick={() => switchType('student')}
                 disabled={processing}
               >
-                🎓 Estudiantes
+                <GraduationCap size={18} aria-hidden="true" className="inline-block align-middle mr-1.5"/> Estudiantes
               </button>
               <button
                 type="button"
@@ -258,7 +259,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                 onClick={() => switchType('teacher')}
                 disabled={processing}
               >
-                👨‍🏫 Docentes
+                <Users size={18} aria-hidden="true" className="inline-block align-middle mr-1.5"/> Docentes
               </button>
             </div>
           </div>
@@ -283,7 +284,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
               }
             }}
           >
-            📥 Descargar plantilla ({importType === 'student' ? 'Estudiantes' : 'Docentes'})
+            <Download size={18} aria-hidden="true"/> Descargar plantilla ({importType === 'student' ? 'Estudiantes' : 'Docentes'})
           </button>
         </div>
 
@@ -291,7 +292,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
         {!results && (
           <div className="rounded-2xl border-2 border-dashed border-border p-6 sm:p-8 bg-surface text-center space-y-3 hover:border-primary/50 transition-all">
             <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-              📄
+              <FileSpreadsheet size={26} strokeWidth={1.6} aria-hidden="true"/>
             </div>
             <div>
               <label
@@ -453,7 +454,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                   onClick={() => window.print()}
                   className={button + ' bg-primary text-white hover:bg-primary-hover border-transparent py-2 px-3.5'}
                 >
-                  🖨️ Imprimir fichas recortables
+                  <Printer size={18} aria-hidden="true"/> Imprimir fichas recortables
                 </button>
                 <button
                   type="button"
@@ -465,7 +466,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                   }
                   className={button + ' bg-surface hover:bg-surface-2 text-text py-2 px-3.5'}
                 >
-                  📊 Exportar a Excel (CSV)
+                  <FileSpreadsheet size={18} aria-hidden="true"/> Exportar a Excel (CSV)
                 </button>
                 <button
                   type="button"

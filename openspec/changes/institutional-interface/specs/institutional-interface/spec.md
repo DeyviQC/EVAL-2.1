@@ -25,3 +25,11 @@ EVAL MUST derive period summaries and calendar cards from existing confirmed res
 - GIVEN an authorized management account and a selected period
 - WHEN the current calendar is consulted
 - THEN blocks and weeks show stored dates and source while draft/edit/publication validation remains unchanged.
+
+### Requirement: Colorful academic workspaces
+EVAL MUST use restrained, role-consistent semantic color accents across academic workspaces so cards, summaries, forms, and section headings are visually distinguishable. Primary actions MUST retain their established high-contrast treatment, the approved navigation sidebar MUST remain unchanged, and light and dark themes MUST remain readable.
+
+#### Scenario: Browse an academic module
+- GIVEN a user with access to an academic workspace
+- WHEN the user opens a module or its dashboard
+- THEN the content uses soft module accents and clear visual hierarchy without changing navigation, authorization, or academic data.

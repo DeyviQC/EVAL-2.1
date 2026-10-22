@@ -86,6 +86,7 @@ jobs:
       - name: Provision MySQL Migration & Runtime Users (Least Privilege)
         run: |
           mysql -h 127.0.0.1 -P 3307 -u root -proot_ci_password -e "
+            SET GLOBAL log_bin_trust_function_creators = 1;
             CREATE USER IF NOT EXISTS 'eval_dev_migration'@'%' IDENTIFIED BY 'ci_mig_password';
             CREATE USER IF NOT EXISTS 'eval_dev_runtime'@'%' IDENTIFIED BY 'ci_run_password';
             GRANT ALL PRIVILEGES ON eval_dev.* TO 'eval_dev_migration'@'%';

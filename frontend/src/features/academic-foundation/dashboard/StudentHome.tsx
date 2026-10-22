@@ -16,6 +16,7 @@ import {
 import type { AccountClient } from '../accounts.js';
 import type { StudentDashboard } from '../student-dashboard.js';
 import type { CourseClassroomSelection } from '../course-classrooms.js';
+import type { AcademicClient } from '../api.js';
 import {
   Card,
   StatCard,
@@ -30,17 +31,42 @@ import {
 } from '../ui/index.js';
 import type { TaskItemProps } from '../ui/TaskItem.js';
 
+/** Misma paleta que MyCourses: el color lo determina la asignatura, no la posición en la lista. */
+const subjectPalette: Array<[RegExp, string]> = [
+  [/matem[aá]tic/i, '#3B82F6'],
+  [/comunicac/i, '#8B5CF6'],
+  [/ciencia y tecn|tecnolog/i, '#10B981'],
+  [/ciencias sociales|social|historia/i, '#F59E0B'],
+  [/personal|c[ií]vica/i, '#F43F5E'],
+  [/arte|cultura/i, '#14B8A6'],
+];
+function subjectColor(subject: string): string {
+  for (const [pattern, color] of subjectPalette) if (pattern.test(subject)) return color;
+  return '#3B82F6';
+}
+
 type Props = {
   name: string;
   onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
   onCourseSelect?: (assignmentId: string, selection: CourseClassroomSelection) => void;
   onActivitySelect?: (activityId: string) => void;
   client?: AccountClient | undefined;
+  academic?: Pick<AcademicClient, 'myCourses'> | undefined;
 };
 
-export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, client }: Props) {
-  const [data, setData] = useState<StudentDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
+const emptyStudentDashboard: StudentDashboard = {
+  overview: { courses: 0, pending: 0, deliveries: 0, graded: 0, unread: 0 },
+  average: { grade: null, label: 'En progreso' },
+  resume: null,
+  upcoming: [],
+  courses: [],
+  notices: [],
+  agenda: { current_week: null, slots: [] },
+};
+
+export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, client, academic }: Props) {
+  const [data, setData] = useState<StudentDashboard | null>(() => (client ? null : emptyStudentDashboard));
+  const [loading, setLoading] = useState(Boolean(client));
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -411,8 +437,8 @@ export function StudentHome({ name, onSelect, onCourseSelect, onActivitySelect, 
             {courses.length === 0 ? (
               <EmptyState
                 icon={<BookOpen className="w-6 h-6" />}
-                title="No tenés cursos asignados"
-                description="Tu matrícula aún no tiene cursos activos."
+                title="Sin cursos registrados"
+                description="Cuando tus docentes asignen tus cursos, aparecerán aquí."
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

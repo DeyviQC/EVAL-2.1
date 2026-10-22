@@ -8,7 +8,8 @@ export type CourseCardProps = {
   gradeAndSection?: string | undefined;
   teacherName?: string | undefined;
   subjectColor?: string | undefined; // hex or CSS class
-  progress?: number | undefined;
+  /** `null` means no progress measurement exists for this course; the ring is then omitted rather than claiming 0. */
+  progress?: number | null | undefined;
   onOpen?: (() => void) | undefined;
   className?: string | undefined;
 };
@@ -43,7 +44,9 @@ export function CourseCard({
           >
             {gradeAndSection ?? 'Curso activo'}
           </span>
-          <ProgressRing progress={progress} size={40} strokeWidth={3.5} />
+          {typeof progress === 'number' && (
+            <ProgressRing progress={progress} size={40} strokeWidth={3.5} />
+          )}
         </div>
 
         <h4 className="font-semibold text-base text-text leading-snug group-hover:text-primary transition-colors line-clamp-2">

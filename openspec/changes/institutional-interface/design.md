@@ -7,3 +7,5 @@ The account DTO does not expose a role. The profile caption is derived from conf
 CalendarWorkspace reuses existing state and clients. Display-only cards render current.blocks and weeks; the period selector remains authoritative. Existing revision and editing controls stay in place. The supplied 140x200 PNG is displayed without upscaling, preserving its proportions. PNG serving extends the development proxy's filename/type allowlist and existing realpath containment, retaining same-origin CSP.
 
 Shared styles cover all existing academic panels, forms, controls, details, tables, state messages and course cards. Layout uses 248px desktop sidebar, 208px medium sidebar, optional 84px collapse and mobile disclosure under 700px. Existing touch/reduced-motion requirements and API behavior are preserved.
+
+The follow-up visual pass adds a restrained semantic accent palette to workspace surfaces, summary cards, forms, tables and module sections. It preserves the approved sidebar and strong primary actions, uses theme-aware color mixing for light and dark modes, and does not change role navigation or business behavior.
