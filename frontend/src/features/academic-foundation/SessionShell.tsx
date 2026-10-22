@@ -17,6 +17,7 @@ import { createWeeksClient } from './weeks.js';
 import {SessionPanel} from './InstitutionalShell.js';
 import {NavButton} from './InstitutionalUI.js';
 import {emptyClassroom} from './course-classrooms.js';
+import {VicePrincipalModuleGuide} from './VicePrincipalModuleGuide.js';
 
 const FoundationWorkspace = lazy(() => import('./FoundationWorkspace.js').then(m => ({ default: m.FoundationWorkspace })));
 const EnrollmentWorkspace = lazy(() => import('./EnrollmentWorkspace.js').then(m => ({ default: m.EnrollmentWorkspace })));
@@ -82,5 +83,5 @@ export function SessionShell() {
     }
     return <p>Esta sección no está disponible para tu perfil.</p>;
   }
-  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}><Suspense fallback={<div className="p-8 text-center text-xs text-text-muted animate-pulse">Cargando sección institucional…</div>}>{content()}</Suspense></SessionPanel>;
+  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}><Suspense fallback={<div className="p-8 text-center text-xs text-text-muted animate-pulse">Cargando sección institucional…</div>}>{role==='vice_principal'&&safeSelected!==null&&!own?.must_change_password&&<VicePrincipalModuleGuide section={safeSelected} />}{content()}</Suspense></SessionPanel>;
 }

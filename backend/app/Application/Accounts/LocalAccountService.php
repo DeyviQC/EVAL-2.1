@@ -35,13 +35,23 @@ final class LocalAccountService {
         return ['role'=>$roles[0]];
     }
     public function directory(AuthenticatedActor $actor,array $query):array {
-        $this->authority($actor,false);if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');Checks::fields($query,['after','username']);$after=$query['after']??null;
+        $this->authority($actor,false);if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');Checks::fields($query,['after','username','search','role','status']);$after=$query['after']??null;
         if($after!==null){try{$after=AcademicLockSet::id($after);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}}
         if(isset($query['username'])&&(!is_string($query['username'])||strlen($query['username'])>64))throw new AcademicCommandFailure('invalid_input');
+        if(array_key_exists('search',$query)&&(!is_string($query['search'])||!mb_check_encoding($query['search'],'UTF-8')||mb_strlen($query['search'])>100))throw new AcademicCommandFailure('invalid_input');
+        if(array_key_exists('role',$query)&&!in_array($query['role'],['student','teacher'],true))throw new AcademicCommandFailure('invalid_input');
+        if(array_key_exists('status',$query)&&!in_array($query['status'],['active','inactive'],true))throw new AcademicCommandFailure('invalid_input');
         $rows=$this->db->table('retained_identities as i')->join('local_credentials as c','c.id','=','i.id')->join('retained_identity_profiles as p','p.identity_id','=','i.id')
             ->join('local_role_grants as r','r.identity_id','=','i.id')->whereIn('r.role',['teacher','student'])
             ->whereNotExists(function($q){$q->selectRaw('1')->from('local_role_grants as extra')->whereColumn('extra.identity_id','i.id')->whereNotIn('extra.role',['teacher','student']);});
         if($after!==null)$rows->where('i.id','>',$after);if(isset($query['username'])&&$query['username']!=='')$rows->where('c.login',strtolower(trim($query['username'])));
+        $search=mb_strtolower(trim($query['search']??''),'UTF-8');
+        if($search!==''){
+            $pattern='%'.str_replace(['!','%','_'],['!!','!%','!_'],$search).'%';
+            $rows->where(fn($q)=>$q->whereRaw("LOWER(p.display_name) LIKE ? ESCAPE '!'",[$pattern])->orWhereRaw("LOWER(c.login) LIKE ? ESCAPE '!'",[$pattern]));
+        }
+        if(isset($query['role']))$rows->where('r.role',$query['role']);
+        if(isset($query['status']))$rows->where('i.credential_status',$query['status']==='active'?'active':'deactivated');
         $rows=$rows->orderBy('i.id')->limit(51)->get(['i.id','p.display_name','c.login','r.role','i.credential_status']);
         $more=$rows->count()>50;$rows=$rows->take(50);
         $items=$rows->map(fn($row)=>['id'=>(string)$row->id,'name'=>$row->display_name,'username'=>$row->login,'role'=>$row->role,'active'=>$row->credential_status==='active'])->values()->all();
