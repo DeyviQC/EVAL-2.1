@@ -51,7 +51,7 @@ try {
   if (await loginInput.isVisible()) {
     console.log('Logging in as estudiante...');
     await loginInput.fill('estudiante');
-    await page.getByLabel('Contraseña', { exact: true }).fill('a2bd69321e87e3716b730252');
+    await page.getByLabel('Contraseña', { exact: true }).fill('73652214');
     
     // Click submit and wait for session update
     const submitBtn = page.getByRole('button', { name: 'Ingresar', exact: true });

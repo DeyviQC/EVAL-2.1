@@ -173,13 +173,28 @@ Write-Host "    Estudiante:   estudiante    $passEstudiante" -ForegroundColor Gr
 Write-Host ''
 Write-Host '  [PASOS PARA CONECTAR LAS TABLETS EN EL COLEGIO]' -ForegroundColor White
 Write-Host '    1. Conectar la laptop y las tablets a la MISMA red Wi-Fi del colegio.' -ForegroundColor Gray
-Write-Host '    2. En la tablet, abrir Google Chrome y escribir la URL:' -ForegroundColor Gray
+Write-Host '    2. En la tablet, abrir Google Chrome y escribir la URL exacta que aparece arriba.' -ForegroundColor Gray
 Write-Host "       https://${lanIp}:8443" -ForegroundColor Yellow
 Write-Host '    3. Al ver el aviso: "La conexion no es privada":' -ForegroundColor Gray
 Write-Host "       Tocar Configuración avanzada y luego Continuar a $lanIp (no seguro)." -ForegroundColor Gray
-Write-Host '    4. Iniciar sesión con cualquier cuenta (ej. docente o estudiante).' -ForegroundColor Gray
-Write-Host '    5. Listo! La Pantalla de Aula, PDFs, imágenes y tareas cargan al instante.' -ForegroundColor Green
+Write-Host '    4. En iOS/Safari: si no aparece "Continuar", instalar el certificado' -ForegroundColor Gray
+Write-Host "       .local\eval-dev\cert.pem como perfil de confianza en Ajustes > General > VPN y gestion de dispositivos." -ForegroundColor Gray
+Write-Host '    5. Iniciar sesión con cualquier cuenta (ej. docente o estudiante).' -ForegroundColor Gray
+Write-Host '    6. Listo! La Pantalla de Aula, PDFs, imágenes y tareas cargan al instante.' -ForegroundColor Green
 Write-Host ''
+
+# Verificar que la propia laptop puede alcanzar la IP publicada (firewall / adaptador)
+$selfCheck = Test-NetConnection -ComputerName $lanIp -Port 8443 -WarningAction SilentlyContinue
+if (!$selfCheck.TcpTestSucceeded) {
+    Write-Host '  [ADVERTENCIA] La laptop no puede contactar su propia IP en el puerto 8443.' -ForegroundColor Red
+    Write-Host '                Revisa Windows Firewall o que el adaptador Wi-Fi no esté en modo Publico bloqueante.' -ForegroundColor Red
+    Write-Host '                Puedes probar ejecutando PowerShell como Administrador:' -ForegroundColor DarkGray
+    Write-Host '                netsh advfirewall firewall add rule name="EVAL_HTTPS" dir=in action=allow protocol=TCP localport=8443' -ForegroundColor DarkGray
+    Write-Host ''
+} else {
+    Write-Host '  [OK] Conectividad local verificada: el puerto 8443 responde en la red.' -ForegroundColor Green
+    Write-Host ''
+}
 Write-Host '--------------------------------------------------------------------------------' -ForegroundColor DarkGray
 Write-Host '  ATAJOS DISPONIBLES EN ESTA CONSOLA:' -ForegroundColor White
 Write-Host '    [O] Abrir navegador en esta laptop      [B] Crear copia de respaldo (Backup)' -ForegroundColor Cyan
@@ -195,8 +210,10 @@ if ($NoWait) {
 # 7. Bucle de monitoreo interactivo
 try {
     $running = $true
+    $interactive = $true
+    try { [void][Console]::KeyAvailable } catch { $interactive = $false }
     while ($running) {
-        if ([Console]::KeyAvailable) {
+        if ($interactive -and [Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
             switch ($key.Key) {
                 'Q' {

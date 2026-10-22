@@ -167,7 +167,7 @@ button:active:not(:disabled) { transform:scale(.98); }
 .eval-skip-link { position:fixed; top:8px; left:8px; z-index:10; padding:12px 18px; background:white; border:2px solid #28599B; transform:translateY(-160%); }
 .eval-layout { display:flex; min-height:100vh; width:100%; background:var(--bg); color:var(--text); }
 .eval-layout[data-collapsed="true"] aside { width:72px; }
-.eval-layout[data-collapsed="true"] aside span { display:none; }
+.eval-layout[data-collapsed="true"] aside nav > button > span { display:none; }
 .eval-school-brand { display:flex; align-items:center; gap:12px; }
 .eval-school-brand img { width:42px; height:60px; object-fit:contain; flex-shrink:0; }
 .eval-school-brand h1 { margin:0; font-size:25px; letter-spacing:-.8px; font-weight:800; color:#142D56; line-height:1.2; }
@@ -216,6 +216,19 @@ input[type="file"]::file-selector-button { min-height:40px; margin-right:10px; p
 .eval-workspace-content input[type="checkbox"],.eval-workspace-content input[type="radio"] { width:24px; height:24px; accent-color:#28599B; vertical-align:middle; }
 .eval-workspace-content [role="alert"] { border:1px solid #fecaca; border-left:3px solid #dc2626; border-radius:10px; padding:14px; color:#991b1b; background:#fef2f2; }
 .eval-workspace-content [role="status"]:not(:empty) { margin-block:12px; padding:12px 14px; border-radius:10px; background:#eff6ff; color:#1e40af; }
+/* Prevent sticky topbar from overlapping the first course card. */
+.eval-layout header.sticky { position:sticky; top:0; z-index:20; }
+/* Student course catalog uses the existing theme tokens instead of legacy workspace defaults. */
+.eval-student-courses { --course-radius:16px; --course-shadow:0 2px 12px #0b17300a; }
+.eval-workspace-content .eval-student-courses article { background:var(--surface); border-radius:var(--course-radius); box-shadow:var(--course-shadow); }
+.eval-workspace-content .eval-student-courses button { background:transparent; border:0; color:inherit; border-radius:12px; }
+.eval-workspace-content .eval-student-courses button.eval-course-filter { border:1px solid var(--border); background:var(--surface); color:var(--text); }
+.eval-workspace-content .eval-student-courses button.eval-course-filter[aria-pressed="true"] { background:var(--primary); border-color:var(--primary); color:white; }
+.eval-workspace-content .eval-student-courses select.eval-course-order { background:var(--surface); border:1px solid var(--border); color:var(--text); }
+.eval-workspace-content .eval-student-courses [role="status"].eval-course-toast { background:var(--navy-950); color:#fff; }
+@keyframes eval-course-arrive { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.eval-student-courses article { animation:eval-course-arrive 180ms cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion:reduce) { .eval-student-courses article, .eval-student-courses button { animation:none!important; transition:none!important; } }
 .eval-workspace-content details { border-radius:12px; border-color:var(--eval-line); }
 .eval-workspace-content summary { min-height:44px; padding:12px; color:#334155; font-weight:600; }
 .eval-material-options { margin-top:18px; border-top:1px solid var(--eval-line); }
@@ -574,6 +587,140 @@ body { background:var(--bg); }
     color: #000000 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+}
+
+/* =========================================================
+   TABLET OPTIMIZATION (768px – 1023px)
+   ========================================================= */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Login / welcome page */
+  .eval-login .eval-login-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  .eval-login .eval-login-form {
+    width: min(420px, 45vw);
+    padding: 2rem;
+  }
+  .eval-login h2 {
+    font-size: 2.75rem;
+  }
+  .eval-login p {
+    font-size: 1rem;
+  }
+  .eval-login .eval-login-form input,
+  .eval-login .eval-login-form button[type="submit"] {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  /* Touch targets */
+  .eval-workspace-content button,
+  .eval-workspace-content a[role="button"],
+  .eval-workspace-content [role="button"] {
+    min-height: 44px;
+  }
+  .eval-workspace-content input,
+  .eval-workspace-content select,
+  .eval-workspace-content textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* Sidebar collapsed on tablet is handled by AppSidebar; this tightens workspace */
+  .eval-layout[data-collapsed="true"] .eval-workspace,
+  .eval-layout .eval-workspace {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Dashboard role cards */
+  .eval-role-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .eval-dashboard-teacher .eval-role-cards,
+  .eval-dashboard-vice_principal .eval-role-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .eval-role-cards > button {
+    min-height: 150px !important;
+  }
+
+  /* Tables */
+  .eval-workspace-content table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .eval-workspace-content th,
+  .eval-workspace-content td {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  /* Drawer / modal width */
+  .eval-drawer,
+  .eval-modal,
+  [role="dialog"] > div {
+    max-width: 560px;
+  }
+}
+
+/* Portrait tablets: prefer stacked login and slightly larger nav */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .eval-login .eval-login-body {
+    flex-direction: column;
+  }
+  .eval-login .eval-login-form {
+    width: min(520px, 92vw);
+  }
+}
+
+/* Student course catalog: 3 columns on tablet landscape, 2 on portrait */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .student-course-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .student-course-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Command palette wider on tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .eval-command-palette {
+    max-width: 620px;
+  }
+}
+
+/* Dashboard summary: comfortable columns on tablet */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .eval-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .eval-summary-grid button {
+    padding: 18px 16px;
+    min-height: 96px;
+  }
+  .eval-summary-grid strong {
+    font-size: 1.85rem;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .eval-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .eval-summary-grid button {
+    padding: 18px 16px;
+    min-height: 96px;
   }
 }
 

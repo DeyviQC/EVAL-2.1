@@ -293,6 +293,69 @@ try {
                 'grade' => 'A',
                 'feedback' => "Great job! Your composition is well-organized and uses the vocabulary and grammatical structures studied in class accurately. Watch out for punctuation marks between compound clauses. Keep up the excellent work!",
             ],
+
+            // Additional Ciencia y Tecnología activities leave the review student
+            // with 5 of 10 activities delivered, so course progress is exactly 50%.
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Registro de laboratorio: Cambios físicos y químicos',
+                'instructions' => "Completa la tabla de observaciones de los experimentos realizados en clase. Para cada caso, indica la evidencia que permite identificar si ocurrió un cambio físico o químico y redacta una conclusión breve.",
+                'due_on' => $in3Days,
+                'student_action' => 'submit_only',
+                'student_answer' => "En la disolución de sal observé un cambio físico porque no apareció una sustancia nueva y fue posible recuperar la sal al evaporar el agua. En la combustión se formaron ceniza y gases, por lo que ocurrió un cambio químico.",
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Ficha de análisis: Ecosistemas de la región Ayacucho',
+                'instructions' => "Selecciona un ecosistema de la región, identifica tres factores bióticos y tres abióticos, y explica dos relaciones que mantienen su equilibrio.",
+                'due_on' => $in4Days,
+                'student_action' => 'submit_only',
+                'student_answer' => "Analicé el ecosistema de puna. Entre los factores bióticos se encuentran el ichu, la vicuña y el zorro andino; entre los abióticos, la temperatura, el suelo y la radiación solar. La disponibilidad de ichu alimenta a los herbívoros y la depredación regula sus poblaciones.",
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Práctica guiada: Medición de masa, volumen y densidad',
+                'instructions' => "Registra las mediciones de tres objetos, calcula su densidad mostrando el procedimiento y compara los resultados con los valores de referencia entregados en clase.",
+                'due_on' => $in7Days,
+                'student_action' => 'submit_only',
+                'student_answer' => "Medí la masa y el volumen de cada objeto y apliqué la relación densidad = masa / volumen. El objeto metálico presentó la mayor densidad y el bloque de madera la menor.",
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Conclusiones sobre el consumo responsable de energía',
+                'instructions' => "A partir del registro semanal de consumo eléctrico, identifica los aparatos de mayor uso y propone cuatro acciones verificables para reducir el consumo en el hogar.",
+                'due_on' => $in10Days,
+                'student_action' => 'submit_only',
+                'student_answer' => "Los aparatos de mayor uso fueron el televisor y la refrigeradora. Propongo aprovechar la luz natural, desconectar cargadores, reducir el tiempo del televisor y revisar periódicamente el cierre de la refrigeradora.",
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Diseño experimental: Germinación de semillas',
+                'instructions' => "Formula una pregunta de indagación sobre la germinación, define las variables independiente, dependiente y controladas, y presenta un plan de observación para siete días.",
+                'due_on' => $in4Days,
+                'student_action' => 'pending',
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Infografía: Prevención de enfermedades respiratorias',
+                'instructions' => "Elabora una infografía que explique tres mecanismos de transmisión, cinco medidas preventivas y la importancia de acudir al establecimiento de salud ante signos de alarma.",
+                'due_on' => $in7Days,
+                'student_action' => 'pending',
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Análisis de datos: Temperatura ambiental durante una semana',
+                'instructions' => "Organiza las mediciones diarias en una tabla, calcula el promedio semanal, construye un gráfico de líneas y explica la tendencia observada.",
+                'due_on' => $in10Days,
+                'student_action' => 'pending',
+            ],
+            [
+                'area' => 'Ciencia y Tecnología',
+                'title' => 'Propuesta tecnológica: Sistema de riego por goteo',
+                'instructions' => "Presenta un boceto rotulado de un sistema de riego por goteo elaborado con materiales reutilizables. Explica su funcionamiento, los materiales y el ahorro de agua esperado.",
+                'due_on' => $in10Days,
+                'student_action' => 'pending',
+            ],
         ];
 
         foreach ($activitiesToCreate as $item) {

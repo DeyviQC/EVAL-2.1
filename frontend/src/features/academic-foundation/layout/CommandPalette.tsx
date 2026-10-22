@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Command } from 'cmdk';
 import { Search, BookOpen, ClipboardList, Calendar, Library, TrendingUp, LogOut, Sun, Moon, Home } from 'lucide-react';
+import type {StudentDashboard} from '../student-dashboard.js';
 
 type Props = {
   open: boolean;
@@ -9,9 +10,12 @@ type Props = {
   onLogout: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  studentSnapshot?: StudentDashboard | null | undefined;
+  onCourse?: ((id:string)=>void)|undefined;
+  onActivity?: ((id:string)=>void)|undefined;
 };
 
-export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, isDark, onToggleTheme }: Props) {
+export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, isDark, onToggleTheme, studentSnapshot, onCourse, onActivity }: Props) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -34,7 +38,7 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-2xl bg-surface border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="eval-command-palette w-full max-w-xl overflow-hidden rounded-2xl bg-surface border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         <Command className="w-full">
@@ -42,7 +46,7 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
             <Search className="w-5 h-5 text-text-muted shrink-0" />
             <Command.Input
               autoFocus
-              placeholder="Escribe un comando o busca una sección..."
+               placeholder={studentSnapshot?'Busca cursos, próximas tareas o secciones...':'Escribe un comando o busca una sección...'}
               className="w-full bg-transparent border-0 text-text placeholder:text-text-muted text-sm outline-none"
             />
             <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-text-muted bg-surface-2 rounded border border-border">
@@ -54,6 +58,13 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
             <Command.Empty className="p-4 text-center text-text-muted text-sm">
               No se encontraron resultados.
             </Command.Empty>
+
+            {studentSnapshot&&onCourse&&<Command.Group heading="Cursos" className="px-2 py-1 text-xs font-semibold text-text-muted">
+              {studentSnapshot.courses.map(course=><Command.Item key={course.id} value={`curso ${course.subject} ${course.teacher}`} onSelect={()=>{onCourse(course.id);onOpenChange(false);}} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-text aria-selected:bg-primary-soft aria-selected:text-primary"><BookOpen size={17} aria-hidden="true"/>{course.subject}</Command.Item>)}
+            </Command.Group>}
+            {studentSnapshot&&onActivity&&<Command.Group heading="Próximas tareas" className="px-2 py-1 text-xs font-semibold text-text-muted">
+              {[...(studentSnapshot.resume?[studentSnapshot.resume]:[]),...studentSnapshot.upcoming].map(task=><Command.Item key={task.id} value={`tarea ${task.title} ${task.course}`} onSelect={()=>{onActivity(task.id);onOpenChange(false);}} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm text-text aria-selected:bg-primary-soft aria-selected:text-primary"><ClipboardList size={17} aria-hidden="true"/><span className="truncate">{task.title} · {task.course}</span></Command.Item>)}
+            </Command.Group>}
 
             <Command.Group heading="Navegación principal" className="px-2 py-1 text-xs font-semibold text-text-muted">
               <Command.Item

@@ -1,0 +1,28 @@
+# Feature: Student tasks redesign
+Objective: Make the student tasks list the primary workspace: all tasks across courses, sorted by urgency, with real delivery status and contextual actions.
+Branch: feat/student-panel-completion | Strategy: single-pr (continuing student branch) | Runner: frontend npm test/typecheck/build; backend isolated PHP tests.
+
+## Specs
+- S1 — "El selector de cursos domina la pantalla y esconde las tareas": remove the 10-button course grid; default view is all student tasks across authorized courses, course becomes a secondary filter.
+- S2 — "Vista por defecto TODAS las tareas de TODOS los cursos, ordenadas por urgencia; curso pasa a ser filtro": backend must provide a single authorized endpoint returning all tasks with course/subject/teacher/due/delivery status.
+- S3 — "Fecha de entrega ISO y sin urgencia visual": show relative date with color+icon semantics and never raw ISO; dates are America/Lima.
+- S4 — "Tarjeta compacta con acción primaria contextual": subject icon, title, course+teacher, status, relative date, CTA by state; remove duplicate 'Ver detalles' button; whole card clickable.
+- S5 — "Textos técnicos o pensados para docentes": hide 'La fecha indicada no cierra automáticamente' and 'Abre la actividad...'; put deadline policy in a tooltip; use 'Tareas' consistently across sidebar, breadcrumb, title, tabs.
+- S6 — "Estado de entrega y nota": show delivered/draft/graded; grade + feedback when available; hide when absent.
+- S7 — "Agrupación temporal colapsable con contadores reales": Vencidas · Hoy · Esta semana · Más adelante · Sin fecha; counters must match sidebar badge source.
+- S8 — "Barra de filtros pegada al contenido, filtros Pendientes/Entregadas/Calificadas/Vencidas + curso dropdown + orden + lista/calendario": implement within existing shell; calendar view deferred unless trivial.
+- S9 — "Drawer/bottom sheet para entregar sin salir de la lista": open task detail in a drawer (desktop) / bottom sheet (mobile) from the list.
+- S10 — Reuse design tokens from Mis cursos redesign; full light/dark, topbar not overlapping, sidebar/mobile nav consistent.
+- S11 — Accessibility and performance: WCAG AA, focus-visible, keyboard navigation, aria-labels, touch ≥44px, motion reduced.
+- S12 — No fabricated production data; hide elements when real data is absent.
+
+## Tasks
+- T1 | S1-S3,S7 | Add backend `GET /account/student-tasks` authorized query that returns all tasks across student's courses with subject, teacher, due_on, category, activity state, delivery status, latest version, assessment. Add strict frontend decoder and tests. | inline | done | backend: StudentTasksQuery.php + LocalAccountController route; frontend: student-tasks.ts decoder + student-tasks.test.ts (10 cases). PHP lint clean.
+- T2 | S4-S6,S9 | Implement StudentTaskList compact cards, grouping, drawer/bottom sheet, CTA states, empty/loading/error. | inline | done | StudentTaskList.tsx with subject icons, status chips, relative dates, grouped sections, empty/error/skeleton states, StudentTaskDrawer bottom-sheet/desktop drawer.
+- T3 | S7-S8,S10-S11 | Integrate filters, course dropdown, sort, sticky filter bar, shell consistency, counters synced with sidebar. | inline | done | StudentTasksWorkspace.tsx fetches /account/student-tasks; SessionShell.tsx routes student 'activities' to new workspace; role-dashboards.tsx renames student activities to 'Tareas'; filters/sort/course dropdown in StudentTaskList.
+
+## Log
+- L1 (2026-10-21) User requested full redesign of student Tareas/Actividades: compact actionable list, all courses default, temporal grouping, real delivery/grade status, drawer submission, consistent naming and counts, accessible responsive performance, and no fabricated data.
+- L2 (2026-10-21) Data mapping: existing schema supports activity_contents (title, instructions, due_on, state, published_at), activity_references (teaching_assignment_id, publication_key), activity_deliveries (current_version_id, current_assessment_id), delivery_versions (answer, filename, recorded_at), delivery_assessments (grade, feedback, recorded_at). There is no explicit draft state: a saved-but-not-submitted version is not represented; every current_version_id implies an accepted delivery. 'Borrador guardado' cannot be shown without schema change. Recommended contract exposes: task id, assignment_id, title, instructions, due_on, category, course {id, subject, teacher, color}, state, has_delivery, is_graded, grade, feedback, version_summary, can_submit. Counts should derive from the same source used by /account/student-dashboard (overview.pending) and the new endpoint.
+- L3 (2026-10-21) Assumptions: (a) tasks are read-only in this view; submission uses existing POST /education/activities/{id}/deliveries. (b) 'grade with bar visual' uses textual AD/A/B/C and a 4-point scale; no numeric score exists. (c) Calendar weekly view is out of scope unless backend exposes week associations for every task; initial implementation provides list view only with toggle placeholder disabled.
+- L4 (2026-10-21) Implementation completed: backend endpoint /account/student-tasks, frontend decoder+workspace+list+drawer, shell integration for student activities, menu renamed to 'Tareas'. Verification: frontend typecheck clean, 273/273 tests pass, production build passes. Backend PHP lint clean; backend PHPUnit blocked by missing eval_u11_test DB / local.ps1 database-state.json credentials (pre-existing).

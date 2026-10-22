@@ -16,8 +16,8 @@ function getFileBadge(filename: string) {
   return { ext, color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
 }
 
-export function LibraryPanel({client,course,onExpired,teacherMode=false}:{client:ReturnType<typeof createMaterialClient>;course:Course;onExpired:()=>void;teacherMode?:boolean}){
-  const [term,setTerm]=useState(''),[searched,setSearched]=useState(''),[rows,setRows]=useState<Material[]>([]),[after,setAfter]=useState<string|null>(null),[busy,setBusy]=useState(true),[confirmed,setConfirmed]=useState(false),[error,setError]=useState(''),[publication,setPublication]=useState(false);
+export function LibraryPanel({client,course,onExpired,teacherMode=false,initialPosition,onPosition}:{client:ReturnType<typeof createMaterialClient>;course:Course;onExpired:()=>void;teacherMode?:boolean;initialPosition?:{query:string;cursor:string|null}|undefined;onPosition?:((position:{query:string;cursor:string|null})=>void)|undefined}){
+  const [term,setTerm]=useState(initialPosition?.query??''),[searched,setSearched]=useState(''),[rows,setRows]=useState<Material[]>([]),[after,setAfter]=useState<string|null>(null),[busy,setBusy]=useState(true),[confirmed,setConfirmed]=useState(false),[error,setError]=useState(''),[publication,setPublication]=useState(false);
   const generation=useRef(0);
 
   async function load(query:string,cursor:string|null=null){
@@ -25,7 +25,7 @@ export function LibraryPanel({client,course,onExpired,teacherMode=false}:{client
     try{
       const page=await client.search(course.id,query,cursor);
       if(current!==generation.current)return;
-      setRows(page.items);setAfter(page.next_after);setSearched(query.trim());setConfirmed(true);
+       setRows(page.items);setAfter(page.next_after);setSearched(query.trim());setConfirmed(true);onPosition?.({query:query.trim(),cursor});
     }catch(e){
       if(current!==generation.current)return;
       if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}
@@ -35,7 +35,7 @@ export function LibraryPanel({client,course,onExpired,teacherMode=false}:{client
     }
   }
 
-  useEffect(()=>{void load('');return ()=>{generation.current++;};},[course.id,client]);
+  useEffect(()=>{void load(initialPosition?.query??'',initialPosition?.cursor??null);return ()=>{generation.current++;};},[course.id,client]);
 
   function search(event:FormEvent){event.preventDefault();void load(term);}
 

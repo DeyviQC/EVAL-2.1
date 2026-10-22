@@ -65,10 +65,10 @@ function Owned-Process($Record){
         if($Record.marker -notin $nodeMarkers -or $process.Path -ne (Get-Command node.exe).Source){throw 'Incomplete process record cannot be recovered.'}
         $Record.executable=$process.Path
     }
-    if($process.Path -ne $Record.executable -or $process.StartTime.ToUniversalTime().Ticks.ToString() -ne [string]$Record.started){return $null}
+    if($process.Path -ine $Record.executable -or $process.StartTime.ToUniversalTime().Ticks.ToString() -ne [string]$Record.started){return $null}
     $info=Get-CimInstance Win32_Process -Filter ('ProcessId='+$process.Id)
     $owner=Invoke-CimMethod -InputObject $info -MethodName GetOwnerSid
-    if($owner.ReturnValue -ne 0 -or $owner.Sid -ne $sid.Value -or !$info.CommandLine.Replace('"','').Contains($Record.marker)){return $null}
+    if($owner.ReturnValue -ne 0 -or $owner.Sid -ne $sid.Value -or $info.CommandLine.Replace('"','').IndexOf($Record.marker,[System.StringComparison]::OrdinalIgnoreCase) -lt 0){return $null}
     return $process
 }
 function Record-Process($Process,[string]$Marker){return @{pid=$Process.Id;started=$Process.StartTime.ToUniversalTime().Ticks.ToString();executable=[IO.Path]::GetFullPath($Process.StartInfo.FileName);marker=$Marker}}

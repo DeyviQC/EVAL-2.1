@@ -7,11 +7,13 @@ import { createAcademicClient } from './api.js';
 import { MyCourses } from './MyCourses.js';
 import { createMaterialClient } from './materials.js';
 import { createAccountClient,type OwnAccount } from './accounts.js';
+import type {StudentDashboard as StudentDashboardData} from './student-dashboard.js';
 import { createActivityClient } from './activities.js';
 import { NotificationWorkspace } from './NotificationWorkspace.js';
 import { createNotificationClient } from './notifications.js';
 import { createReportClient } from './reports.js';
 import { ActivityWorkspace } from './ActivityWorkspace.js';
+import { StudentTasksWorkspace } from './StudentTasksWorkspace.js';
 import { createCalendarClient } from './calendars.js';
 import { createWeeksClient } from './weeks.js';
 import {SessionPanel} from './InstitutionalShell.js';
@@ -41,6 +43,7 @@ export function SessionShell() {
   const accounts=useMemo(()=>createAccountClient(()=>session.csrfToken()??''),[session]);
   const notices=useMemo(()=>createNotificationClient(()=>session.csrfToken()??''),[session]);
   const [unread,setUnread]=useState<number|null>(null);
+  const [studentSnapshot,setStudentSnapshot]=useState<StudentDashboardData|null>(null),[studentError,setStudentError]=useState(false),[studentRevision,setStudentRevision]=useState(0);
   const reports=useMemo(()=>createReportClient(),[]);
   const activities=useMemo(()=>createActivityClient(()=>session.csrfToken()??''),[session]);
   const [own,setOwn]=useState<OwnAccount|null>(null);const [role,setRole]=useState<DashboardRole|null>(null),[profileError,setProfileError]=useState(false);
@@ -48,12 +51,15 @@ export function SessionShell() {
   const context=useSyncExternalStore(navigation.subscribe,navigation.snapshot,navigation.snapshot);
   const [selected,setSelected]=useState<string|null>(null);
   const [courseClassroom,setCourseClassroom]=useState(emptyClassroom);
+  const [courseTarget,setCourseTarget]=useState<string|null>(null);
+  const [activityTarget,setActivityTarget]=useState<string|null>(null);
   const view=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
   useEffect(()=>{void controller.refresh();return ()=>controller.invalidate();},[controller]);
-  useEffect(()=>{setUnread(null);setSelected(null);setCourseClassroom(emptyClassroom());navigation.clear();return ()=>navigation.clear();},[view.phase,navigation]);
+  useEffect(()=>{setUnread(null);setStudentSnapshot(null);setStudentError(false);setSelected(null);setCourseClassroom(emptyClassroom());setCourseTarget(null);setActivityTarget(null);navigation.clear();return ()=>navigation.clear();},[view.phase,navigation]);
   useEffect(()=>{let active=true;setOwn(null);setRole(null);setProfileError(false);if(view.phase==='authenticated')void accounts.bootstrap().then(({account,role:profile,sections})=>{if(active){setOwn(account);setRole(profile);navigation.hydrate(sections);try{const stored=sessionStorage.getItem('eval-view:'+account.id+':'+profile);if(stored&&allowedSection(profile,stored))setSelected(stored);}catch{}}}).catch(()=>{if(active)setProfileError(true);});return ()=>{active=false;};},[view.phase,accounts]);  const safeSelected=role&&allowedSection(role,selected)?selected:null;
+  useEffect(()=>{let active=true;if(role==='student'&&own&&!own.must_change_password){setStudentSnapshot(null);setStudentError(false);void accounts.studentDashboard().then(data=>{if(active)setStudentSnapshot(data);}).catch(()=>{if(active){setStudentSnapshot(null);setStudentError(true);}});}return()=>{active=false;};},[role,own?.id,selected,studentRevision,accounts]);
   const [activityFilter,setActivityFilter]=useState<'all'|'pending'|'submitted'>('all');
-  const choose=(id:string|null,subfilter?:'all'|'pending'|'submitted')=>{if(own?.must_change_password)return;if(id==='activities')setActivityFilter(subfilter??'all');if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
+  const choose=(id:string|null,subfilter?:'all'|'pending'|'submitted',preserveCourseTarget=false)=>{if(own?.must_change_password)return;setActivityTarget(null);if(!preserveCourseTarget)setCourseTarget(null);if(id==='activities')setActivityFilter(subfilter??'all');if(role&&own&&allowedSection(role,id)){setSelected(id);try{const key='eval-view:'+own.id+':'+role;if(id)sessionStorage.setItem(key,id);else sessionStorage.removeItem(key);}catch{}}};
   const menu=role?roleMenus[role]:[];
   const activeLabel=own?.must_change_password?'Cambio obligatorio de contraseña':(menu.find(entry=>entry.id===safeSelected)?.label??'Inicio');
   function content(){
@@ -62,12 +68,12 @@ export function SessionShell() {
     if(context.phase==='loading')return <p role="status">Consultando tus secciones…</p>;
     if(context.phase==='unavailable')return <><p role="alert">No se pudo confirmar la navegación.</p><button onClick={()=>void navigation.refresh()}>Volver a consultar</button></>;
     if(context.phase!=='ready')return null;
-    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} client={accounts} academic={academic}/>;}
+    if(safeSelected===null){const Dashboard={student:StudentDashboard,teacher:TeacherDashboard,director_admin:DirectorDashboard,vice_principal:VicePrincipalDashboard}[role];return <Dashboard name={own.name} onSelect={choose} onActivitySelect={id=>{choose('activities','all');setActivityTarget(id);}} onCourseSelect={(assignmentId,selection)=>{setCourseClassroom(selection);setCourseTarget(assignmentId);choose('my_enrollments',undefined,true);}} client={accounts} academic={academic}/>;}
     const teacherMode=role==='teacher';
     switch(safeSelected){
-      case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate}/>;
+      case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} initialCourseId={courseTarget} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate} studentSnapshot={role==='student'?studentSnapshot:null} studentName={role==='student'?own.name:''} studentId={role==='student'?own.id:''} studentError={studentError} onStudentRetry={()=>setStudentRevision(value=>value+1)} onActivity={id=>{choose('activities','all');setActivityTarget(id);}}/>;
       case 'materials':case 'library':return <MyCourses key={safeSelected} classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} teacherMode={teacherMode} materialsOnly={safeSelected==='materials'} libraryOnly={safeSelected==='library'} onExpired={controller.invalidate}/>;
-      case 'activities':return <ActivityWorkspace classroom={courseClassroom} onClassroomChange={setCourseClassroom} teacherMode={teacherMode} client={activities} mode="activities" initialFilter={activityFilter} onExpired={controller.invalidate}/>;
+      case 'activities':return role==='student'?<StudentTasksWorkspace accounts={accounts} activities={activities} onExpired={controller.invalidate}/>:<ActivityWorkspace classroom={courseClassroom} onClassroomChange={setCourseClassroom} teacherMode={teacherMode} client={activities} mode="activities" initialFilter={activityFilter} initialActivityId={activityTarget} onExpired={controller.invalidate}/>;
       case 'institution':return <InstitutionReadView client={academic} onExpired={controller.invalidate}/>;
       case 'reports':return <ReportWorkspace client={reports} academic={academic} onExpired={controller.invalidate}/>;
       case 'history':return <HistoryWorkspace client={academic} kinds={role==='director_admin'||role==='vice_principal'?['enrollments','assignments']:role==='student'?['enrollments']:['assignments']} onExpired={controller.invalidate}/>;
@@ -83,5 +89,5 @@ export function SessionShell() {
     }
     return <p>Esta sección no está disponible para tu perfil.</p>;
   }
-  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}><Suspense fallback={<div className="p-8 text-center text-xs text-text-muted animate-pulse">Cargando sección institucional…</div>}>{role==='vice_principal'&&safeSelected!==null&&!own?.must_change_password&&<VicePrincipalModuleGuide section={safeSelected} />}{content()}</Suspense></SessionPanel>;
+  return <SessionPanel role={role??undefined} account={own} profileLabel={role?roleLabels[role]+(role==='director_admin'?' · Solo lectura':''):undefined} onNotifications={role&&role!=='director_admin'&&!own?.must_change_password?()=>choose('notifications'):undefined} unread={unread} pendingTasks={role==='student'?studentSnapshot?.overview.pending??null:null} studentSnapshot={role==='student'?studentSnapshot:null} onCourseSearch={id=>{setCourseTarget(id);choose('my_enrollments',undefined,true);}} onActivitySearch={id=>{choose('activities','all');setActivityTarget(id);}} activeLabel={activeLabel} view={view} onLogin={controller.login} onLogout={controller.logout} onRefresh={controller.refresh} selected={own?.must_change_password?null:safeSelected} onSelect={choose} navigation={role&&context.phase==='ready'&&!own?.must_change_password?<nav className="eval-navigation" aria-label="Secciones académicas"><NavButton aria-pressed={safeSelected===null} onClick={()=>choose(null)}>Inicio</NavButton>{menu.map(entry=><NavButton key={entry.id} icon={entry.icon} aria-pressed={safeSelected===entry.id} onClick={()=>choose(entry.id)}>{entry.label}</NavButton>)}</nav>:undefined}><Suspense fallback={<div className="p-8 text-center text-xs text-text-muted animate-pulse">Cargando sección institucional…</div>}>{role==='vice_principal'&&safeSelected!==null&&!own?.must_change_password&&<VicePrincipalModuleGuide section={safeSelected} />}{content()}</Suspense></SessionPanel>;
 }

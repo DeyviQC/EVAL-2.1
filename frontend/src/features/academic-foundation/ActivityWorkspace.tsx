@@ -6,7 +6,7 @@ import { AcademicApiError } from './api.js';
 import { evidenceUrl, type Activity, type ActivityClient, type Delivery, type DeliveryVersion } from './activities.js';
 
 const button =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed';
 const field =
   'mt-1.5 block w-full rounded-xl border border-border bg-surface text-text p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all';
 

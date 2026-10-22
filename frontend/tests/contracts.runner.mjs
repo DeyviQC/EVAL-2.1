@@ -31,6 +31,7 @@ import {directoryFilterCases} from '../.test-build/features/academic-foundation/
 for(const [name,run] of directoryFilterCases)test(name,run);
 import { cases } from '../.test-build/features/academic-foundation/contracts.test.js';
 import { uiCases } from '../.test-build/features/academic-foundation/ui.test.js';
+import { studentShellCases } from '../.test-build/features/academic-foundation/layout/student-shell.test.js';
 import { navigationCases } from '../.test-build/features/academic-foundation/navigation.test.js';
 import { directoryCases } from '../.test-build/features/academic-foundation/directory.test.js';
 import { courseCases } from '../.test-build/features/academic-foundation/courses.test.js';
@@ -38,6 +39,8 @@ import { materialCases } from '../.test-build/features/academic-foundation/mater
 import { enrollmentCases } from '../.test-build/features/academic-foundation/enrollments.test.js';
 import { assignmentCases } from '../.test-build/features/academic-foundation/assignments.test.js';
 import { accountCases } from '../.test-build/features/academic-foundation/accounts.test.js';
+import { studentDashboardCases } from '../.test-build/features/academic-foundation/student-dashboard.test.js';
+import { studentTasksCases } from '../.test-build/features/academic-foundation/student-tasks.test.js';
 import { activityCases } from '../.test-build/features/academic-foundation/activities.test.js';
 import { assessmentCases } from '../.test-build/features/academic-foundation/assessments.test.js';
 import { reportCases } from '../.test-build/features/academic-foundation/reports.test.js';
@@ -48,5 +51,5 @@ import { materialMaintenanceCases } from '../.test-build/features/academic-found
 import { observationCases } from '../.test-build/features/academic-foundation/material-observations.test.js';
 import { bulkImportCases } from '../.test-build/features/academic-foundation/bulk-import.test.js';
 import { auditCases } from '../.test-build/features/academic-foundation/audit.test.js';
-for (const [name, run] of [...cases,...uiCases,...navigationCases,...directoryCases,...courseCases,...materialCases,...enrollmentCases,...assignmentCases,...accountCases,...bulkImportCases,...activityCases,...assessmentCases,...reportCases,...notificationCases,...historyCases,...recordedTimeCases,...materialMaintenanceCases,...observationCases,...materialFileCases,...calendarCases,...weekCases,...auditCases]) test(name, run);
+for (const [name, run] of [...cases,...uiCases,...studentShellCases,...navigationCases,...directoryCases,...courseCases,...materialCases,...enrollmentCases,...assignmentCases,...accountCases,...studentDashboardCases,...studentTasksCases,...bulkImportCases,...activityCases,...assessmentCases,...reportCases,...notificationCases,...historyCases,...recordedTimeCases,...materialMaintenanceCases,...observationCases,...materialFileCases,...calendarCases,...weekCases,...auditCases]) test(name, run);
 

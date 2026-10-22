@@ -1,6 +1,8 @@
 import {dashboardOverview} from './DashboardSummary.js';
 import {dashboardRole as decodeDashboardRole} from './role-dashboards.js';
 import {navigationSections} from './navigation.js';
+import {studentDashboard} from './student-dashboard.js';
+import {studentTasks} from './student-tasks.js';
 import { exact,text,decimalId } from './contracts.js';
 export type Account={id:string;name:string;username:string;role:'teacher'|'student';active:boolean};
 export type AccountDirectoryFilters={search?:string;role?:Account['role']|'';status?:'active'|'inactive'|''};
@@ -30,6 +32,6 @@ export function createAccountClient(csrf:()=>string,transport:typeof fetch=fetch
   if(filters.status)params.set('status',filters.status);
   return accountDirectory(await request('/users?'+params));
  }
- return {bootstrap,overview:async()=>dashboardOverview(exact(await request('/account/overview'),['data']).data),dashboardRole:async()=>decodeDashboardRole(await request('/account/role')),own:async()=>ownAccount(await request('/account')),directory,create:(name:string,username:string,role:Account['role'])=>mutation('/users',{name,username,role},true),action:(id:string,action:'reset-password'|'deactivate'|'reactivate')=>mutation('/users/'+decimalId(id)+'/'+action,{},action==='reset-password'),changePassword:(current_password:string,password:string)=>mutation('/account/password',{current_password,password}),acknowledgeReview:()=>{uncertain=false;}};
+ return {bootstrap,overview:async()=>dashboardOverview(exact(await request('/account/overview'),['data']).data),studentDashboard:async()=>studentDashboard(exact(await request('/account/student-dashboard'),['data']).data),studentTasks:async()=>studentTasks(exact(await request('/account/student-tasks'),['data']).data),dashboardRole:async()=>decodeDashboardRole(await request('/account/role')),own:async()=>ownAccount(await request('/account')),directory,create:(name:string,username:string,role:Account['role'])=>mutation('/users',{name,username,role},true),action:(id:string,action:'reset-password'|'deactivate'|'reactivate')=>mutation('/users/'+decimalId(id)+'/'+action,{},action==='reset-password'),changePassword:(current_password:string,password:string)=>mutation('/account/password',{current_password,password}),acknowledgeReview:()=>{uncertain=false;}};
 }
 export type AccountClient=ReturnType<typeof createAccountClient>;

@@ -1,5 +1,5 @@
 import type { DashboardRole } from './role-dashboards.js';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { SessionView } from './session.js';
 import type { OwnAccount } from './accounts.js';
 import { Icon, SchoolBrand, Spinner } from './InstitutionalUI.js';
@@ -7,6 +7,7 @@ import { AppSidebar } from './layout/AppSidebar.js';
 import { AppHeader } from './layout/AppHeader.js';
 import { MobileNavBar } from './layout/MobileNavBar.js';
 import { CommandPalette } from './layout/CommandPalette.js';
+import type {StudentDashboard} from './student-dashboard.js';
 import { BookOpen, Calendar, CheckSquare, Lock, RefreshCw, User } from 'lucide-react';
 
 type Props = {
@@ -22,9 +23,27 @@ type Props = {
   profileLabel?: string | undefined;
   onNotifications?: (() => void) | undefined;
   unread?: number | null;
+  pendingTasks?: number | null;
   selected?: string | null;
   onSelect?: (id: string | null) => void;
+  studentSnapshot?: StudentDashboard | null;
+  onCourseSearch?: (id:string)=>void;
+  onActivitySearch?: (id:string)=>void;
 };
+
+export function resolveInitialDarkMode(
+  storage: Pick<Storage, 'getItem'>,
+  media: { matches: boolean } | null,
+): boolean {
+  const stored = storage.getItem('eval-theme');
+  if (stored === 'dark') return true;
+  if (stored === 'light') return false;
+  return media?.matches ?? false;
+}
+
+export function persistThemeChoice(dark: boolean, storage: Pick<Storage, 'setItem'>): void {
+  storage.setItem('eval-theme', dark ? 'dark' : 'light');
+}
 
 export function SessionPanel({
   role,
@@ -38,8 +57,12 @@ export function SessionPanel({
   profileLabel,
   onNotifications,
   unread,
+  pendingTasks = null,
   selected = null,
   onSelect = () => {},
+  studentSnapshot,
+  onCourseSearch,
+  onActivitySearch,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -48,20 +71,22 @@ export function SessionPanel({
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
-      return (
-        document.documentElement.classList.contains('dark') ||
-        localStorage.getItem('eval-theme') === 'dark'
-      );
+      return resolveInitialDarkMode(window.localStorage, window.matchMedia('(prefers-color-scheme: dark)'));
     }
     return false;
   });
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', isDark);
+    }
+  }, [isDark]);
+
   const toggleTheme = () => {
     setIsDark((prev) => {
       const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.documentElement.classList.toggle('dark', next);
-        localStorage.setItem('eval-theme', next ? 'dark' : 'light');
+      if (typeof window !== 'undefined') {
+        persistThemeChoice(next, window.localStorage);
       }
       return next;
     });
@@ -136,20 +161,11 @@ export function SessionPanel({
         className="eval-layout min-h-screen bg-bg text-text transition-colors duration-200"
         data-role={role}
         data-collapsed={collapsed}
+        data-theme={isDark ? 'dark' : 'light'}
       >
         <a className="eval-skip-link" href="#eval-main">
           Ir al contenido
         </a>
-
-        {/* Hidden button for collapse test compatibility */}
-        <button
-          className="eval-collapse-toggle sr-only"
-          aria-expanded={!collapsed}
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? 'Expandir navegación' : 'Contraer navegación'}
-        >
-          {collapsed ? 'Expandir navegación' : 'Contraer navegación'}
-        </button>
 
         {/* Modern compact sidebar */}
         <AppSidebar
@@ -159,9 +175,12 @@ export function SessionPanel({
           account={account}
           profileLabel={profileLabel}
           unread={unread}
+          pendingTasks={pendingTasks}
           onLogout={onLogout}
           isDark={isDark}
           onToggleTheme={toggleTheme}
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((v) => !v)}
         />
 
         {/* Content area with floating header */}
@@ -178,7 +197,7 @@ export function SessionPanel({
             onOpenProfile={() => onSelect('account')}
           />
 
-          <main id="eval-main" tabIndex={-1} className="eval-workspace flex-1 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full outline-none">
+          <main id="eval-main" tabIndex={-1} className="eval-workspace flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pt-20 sm:pt-24 max-w-6xl mx-auto w-full outline-none scroll-mt-24">
             <section className="eval-workspace-content">
               {children ?? <p className="text-text-muted">No hay información para mostrar.</p>}
             </section>
@@ -189,7 +208,7 @@ export function SessionPanel({
             role={role}
             selected={selected}
             onSelect={onSelect}
-            pendingCount={unread}
+            pendingCount={role === 'student' ? pendingTasks ?? null : unread}
           />
         </div>
 
@@ -204,6 +223,9 @@ export function SessionPanel({
           onLogout={() => void onLogout()}
           isDark={isDark}
           onToggleTheme={toggleTheme}
+          studentSnapshot={role==='student'?studentSnapshot:null}
+          onCourse={role==='student'?onCourseSearch:undefined}
+          onActivity={role==='student'?onActivitySearch:undefined}
         />
       </div>
     );
@@ -256,7 +278,7 @@ export function SessionPanel({
       </header>
 
       {/* 2. GRID PRINCIPAL: HERO EDITORIAL + TARJETA DE LOGIN CON VIDRIO */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
+      <div className="eval-login-body relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
         {/* Lado izquierdo: Editorial Hero */}
         <div className="w-full lg:max-w-xl flex flex-col items-start text-left">
           {/* Eyebrow institucional en mayúsculas */}

@@ -43,7 +43,7 @@ try {
   const loginInput = page.getByLabel('Usuario', { exact: true });
   if (await loginInput.isVisible()) {
     await loginInput.fill('estudiante');
-    await page.getByLabel('Contraseña', { exact: true }).fill('a2bd69321e87e3716b730252');
+    await page.getByLabel('Contraseña', { exact: true }).fill('73652214');
     await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
     await page.waitForTimeout(2000);
   }

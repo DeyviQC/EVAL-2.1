@@ -5,6 +5,9 @@ import { course, coursesPage, type Course } from './courses.js';
 
 import type { createMaterialClient } from './materials.js';
 import { CourseClassroom } from './CourseClassroom.js';
+import { LibraryCourseList } from './LibraryCourseList.js';
+import {StudentCourseCatalog} from './StudentCourseCatalog.js';
+import type {StudentDashboard} from './student-dashboard.js';
 import type { WeeksClient } from './weeks.js';
 import type { ActivityClient } from './activities.js';
 import {CourseClassroomButtons} from './CourseClassroomButtons.js';
@@ -20,7 +23,8 @@ function getSubjectAccent(subject: string) {
   return { bar: 'bg-primary', chip: 'bg-primary-soft text-primary border-primary/20' };
 }
 
-export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void}){
+export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange,initialCourseId=null,studentSnapshot=null,studentName='',studentId='',onActivity,onStudentRetry,studentError=false}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void;initialCourseId?:string|null;studentSnapshot?:StudentDashboard|null;studentName?:string;studentId?:string;onActivity?:(id:string)=>void;onStudentRetry?:()=>void;studentError?:boolean}){
+  const studentCatalog=!teacherMode&&!materialsOnly&&!libraryOnly&&!!studentId;
   const [localClassroom,setLocalClassroom]=useState(emptyClassroom);
   const scope=classroom??localClassroom;
   const changeClassroom=onClassroomChange??setLocalClassroom;
@@ -28,6 +32,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
   const activeClassroom=selectedClassroom(classrooms,scope);
 
   const [rows,setRows]=useState<Course[]>([]),[selected,setSelected]=useState<Course|null>(null),[cursor,setCursor]=useState<string|null>(null);
+  const [libraryPosition,setLibraryPosition]=useState<Record<string,{query:string;cursor:string|null}>>({});
   const [phase,setPhase]=useState<'loading'|'ready'|'error'>('loading');const [message,setMessage]=useState('');const generation=useRef(0);
   function fail(error:unknown){setRows([]);setSelected(null);setCursor(null);setPhase('error');
     if(error instanceof AcademicApiError&&(error.status===401||error.status===419)){onExpired();return;}
@@ -46,16 +51,18 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
       if(teacherMode){const available=await client.courseClassrooms(courseClassrooms);if(current!==generation.current)return;setClassrooms(available);
         if(!selectedClassroom(available,scope)){if(scope.sectionId||scope.gradeId&&!available.some(row=>row.grade_id===scope.gradeId))changeClassroom(emptyClassroom());setPhase('ready');return;}}
       const page=await client.myCourses(coursesPage,null,teacherMode?{grade_id:scope.gradeId,section_id:scope.sectionId}:{});
-      if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);setPhase('ready');
+      if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);
+      if(initialCourseId){const target=await client.course(initialCourseId,course);if(current!==generation.current)return;setSelected(target);}
+      setPhase('ready');
     }catch(error){if(current===generation.current)fail(error);}})();
     return ()=>{generation.current++;};
-  },[client,teacherMode,scope.gradeId,scope.sectionId]);
+  },[client,teacherMode,scope.gradeId,scope.sectionId,initialCourseId]);
 
   const sectionTitle = selected ? selected.subject : libraryOnly ? 'Biblioteca' : materialsOnly ? 'Materiales' : 'Mis cursos';
 
   return (
     <section aria-label={libraryOnly?'Biblioteca':materialsOnly?'Materiales':'Mis cursos'} aria-busy={phase==='loading'} className="space-y-6">
-      {!selected && (
+      {!selected && !studentCatalog && (
         <header className="border-b border-border/80 pb-5">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-accent bg-accent-soft/60 px-2.5 py-0.5 rounded-full">
@@ -84,7 +91,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
       {(materialsOnly||libraryOnly)&&!selected&&(!teacherMode||activeClassroom)&&(
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-soft/50 border border-primary/20 text-xs text-primary">
           <span>💡</span>
-          <p>Selecciona un curso para consultar sus materiales.</p>
+          <p>{libraryOnly?'Elige un curso para buscar y consultar sus recursos.':'Selecciona un curso para consultar sus materiales.'}</p>
         </div>
       )}
 
@@ -97,7 +104,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
       {phase==='loading'&& (
         <div className="flex items-center gap-2.5 p-4 rounded-xl bg-surface border border-border text-sm text-text-muted">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p role="status">Consultando tus cursos…</p>
+          <p role="status">{libraryOnly?'Consultando bibliotecas…':'Consultando tus cursos…'}</p>
         </div>
       )}
 
@@ -109,11 +116,12 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
 
       <button
         hidden={!!selected}
+        style={studentCatalog?{display:'none'}:undefined}
         className="inline-flex items-center gap-2 rounded-full border border-border bg-surface hover:bg-surface-2 px-4 py-2 text-xs font-medium text-text transition-colors cursor-pointer"
         disabled={phase==='loading'}
         onClick={()=>void load()}
       >
-        <span>{selected?'Volver a mis cursos':'Consultar cursos'}</span>
+        <span>{libraryOnly?'Actualizar bibliotecas':'Consultar cursos'}</span>
       </button>
 
       {phase==='ready'&&selected?(
@@ -125,13 +133,16 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
           {...activities?{activities}:{}}
           teacherMode={teacherMode}
           onExpired={onExpired}
-          onBack={()=>void load()}
+          onBack={()=>{if(libraryOnly)setSelected(null);else void load();}}
           initial={libraryOnly?'library':materialsOnly?'materials':'weeks'}
+          backLabel={libraryOnly?'Volver a bibliotecas':undefined}
+          libraryPosition={libraryOnly?libraryPosition[selected.id]:undefined}
+          onLibraryPosition={libraryOnly?(position)=>setLibraryPosition(old=>({...old,[selected.id]:position})):undefined}
         />
       ):(
         phase==='ready'&&(
           <>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {studentCatalog?(studentSnapshot?<StudentCourseCatalog accountId={studentId} name={studentName} courses={rows} snapshot={studentSnapshot} onOpen={id=>void open(id)} onActivity={id=>onActivity?.(id)}/>:studentError?<div role="alert" className="rounded-xl border border-danger/30 bg-surface p-6">No se pudieron consultar tus cursos y entregas. <button className="min-h-11 rounded-lg px-4 font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary" onClick={onStudentRetry}>Reintentar</button></div>:<div role="status" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[1,2,3].map(id=><div key={id} aria-hidden="true" className="h-64 animate-pulse rounded-2xl border border-border bg-surface-2 motion-reduce:animate-none"/>)}</div>):libraryOnly?<LibraryCourseList rows={rows} onOpen={id=>void open(id)}/>:<div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {rows.map(row=>{
                 const accent = getSubjectAccent(row.subject);
                 return (
@@ -168,8 +179,8 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
                   </article>
                 );
               })}
-            </div>
-            {rows.length===0&&(!teacherMode||activeClassroom)&&(
+            </div>}
+            {!studentCatalog&&rows.length===0&&(!teacherMode||activeClassroom)&&(
               <div className="p-8 text-center bg-surface border border-border rounded-xl">
                 <p className="text-sm text-text-muted">No tienes cursos disponibles para esta consulta.</p>
               </div>
@@ -179,12 +190,12 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
                 <p className="text-sm text-text-muted">No tienes aulas asignadas para esta consulta.</p>
               </div>
             )}
-            {cursor&&(
+            {cursor&&!studentCatalog&&(
               <button
                 className="mt-4 px-5 py-2.5 rounded-full border border-border bg-surface hover:bg-surface-2 text-xs font-semibold text-text transition-colors cursor-pointer"
                 onClick={()=>void load(cursor)}
               >
-                Cargar más cursos
+                {libraryOnly?'Cargar más bibliotecas':'Cargar más cursos'}
               </button>
             )}
           </>

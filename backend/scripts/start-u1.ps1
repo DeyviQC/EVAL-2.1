@@ -5,7 +5,7 @@ $evalStatePath = Join-Path $evalRoot 'database-state.json'
 $evalState = Get-Content -LiteralPath $evalStatePath -Raw | ConvertFrom-Json
 $evalExecutable = [IO.Path]::GetFullPath($evalState.executable)
 $evalData = [IO.Path]::GetFullPath((Join-Path $evalRoot 'mysql\data'))
-if (!$evalExecutable.StartsWith($evalRoot+'\') -or !$evalData.StartsWith($evalRoot+'\') -or $evalState.port -ne 3307) {
+if (!$evalExecutable.StartsWith($evalRoot+'\', [StringComparison]::OrdinalIgnoreCase) -or !$evalData.StartsWith($evalRoot+'\', [StringComparison]::OrdinalIgnoreCase) -or $evalState.port -ne 3307) {
     throw 'Only the existing isolated U1 runtime is permitted.'
 }
 $evalProcess = Get-Process -Id $evalState.pid -ErrorAction SilentlyContinue

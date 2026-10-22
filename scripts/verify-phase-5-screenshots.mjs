@@ -76,7 +76,7 @@ try {
   // 3. Test form input and login
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByLabel('Usuario', { exact: true }).fill('estudiante');
-  await page.getByLabel('Contraseña', { exact: true }).fill('a2bd69321e87e3716b730252');
+  await page.getByLabel('Contraseña', { exact: true }).fill('73652214');
   
   const submitButton = page.getByRole('button', { name: 'Ingresar', exact: true });
   const responsePromise = page.waitForResponse(r => r.url().includes('/auth/login'), { timeout: 10000 }).catch(() => null);

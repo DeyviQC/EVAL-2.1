@@ -15,6 +15,7 @@ export function IntegratedActivityWorkspace({
   classroom,
   onClassroomChange,
   initialFilter='all',
+  initialActivityId=null,
 }: {
   client:ActivityClient;
   mode:'activities'|'deliveries'|'grades';
@@ -23,6 +24,7 @@ export function IntegratedActivityWorkspace({
   classroom?:CourseClassroomSelection;
   onClassroomChange?:(value:CourseClassroomSelection)=>void;
   initialFilter?:'all'|'pending'|'submitted';
+  initialActivityId?:string|null;
 }){
   const [local,setLocal]=useState(emptyClassroom()),
     [classrooms,setClassrooms]=useState<CourseClassroom[]>([]),
@@ -37,8 +39,15 @@ export function IntegratedActivityWorkspace({
     [creating,setCreating]=useState(false),
     [blocked,setBlocked]=useState(client.isUncertain()),
     [tabFilter,setTabFilter]=useState<'all'|'pending'|'closed'>(initialFilter==='pending'?'pending':'all');
+  const [target,setTarget]=useState<Activity|null>(null),[targetError,setTargetError]=useState(false),[targetBusy,setTargetBusy]=useState(!!initialActivityId);
 
   const scope=classroom??local,generation=useRef(0),writing=useRef(false);
+  useEffect(()=>{
+    if(!initialActivityId){setTarget(null);setTargetBusy(false);return;}
+    let active=true;setTarget(null);setTargetError(false);setTargetBusy(true);
+    void client.detail(initialActivityId).then(activity=>{if(active){setTarget(activity);setTargetBusy(false);}}).catch(error=>{if(active){if(error instanceof AcademicApiError&&[401,419].includes(error.status??0))onExpired();else setTargetError(true);setTargetBusy(false);}});
+    return()=>{active=false;};
+  },[client,initialActivityId,onExpired]);
 
   function fail(e:unknown){
     if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}
@@ -88,7 +97,7 @@ export function IntegratedActivityWorkspace({
           setCourses(page.items);
           setCourseAfter(page.next_after);
           // Auto-seleccionar primer curso para evitar pantallas vacías
-          if(page.items.length>0){
+          if(page.items.length>0&&!initialActivityId){
             const first=page.items[0];
             if(first){
               setSelected(first.id);
@@ -103,7 +112,7 @@ export function IntegratedActivityWorkspace({
       }
     })();
     return()=>{generation.current++;};
-  },[client,teacherMode,scope.gradeId,scope.sectionId]);
+  },[client,teacherMode,scope.gradeId,scope.sectionId,initialActivityId]);
 
   async function moreCourses(){
     const token=generation.current;
@@ -164,6 +173,13 @@ export function IntegratedActivityWorkspace({
             : 'Consulta tus tareas pendientes, envía tus evidencias y revisa las calificaciones de tus docentes.'}
         </p>
       </header>
+
+      {initialActivityId && <section aria-label="Actividad seleccionada" className="rounded-xl border border-primary/30 bg-primary-soft/20 p-4">
+        <h3 className="font-semibold text-text">Actividad seleccionada</h3>
+        {targetBusy&&<p role="status">Consultando actividad…</p>}
+        {targetError&&<p role="alert">No se pudo abrir esta actividad. Puedes consultarla desde tus cursos.</p>}
+        {target&&<ActivityCard key={target.id} activity={target} client={client} mode="activities" initialPanel="deliveries" onExpired={onExpired}/>}
+      </section>}
 
       {notice && (
         <div className="p-3.5 rounded-xl bg-surface-2 border border-border text-xs text-text">
