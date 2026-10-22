@@ -39,8 +39,9 @@ try {
     $migrationDir = dirname(__DIR__).'/database/migrations';
     $files = glob($migrationDir.'/*.php');
     sort($files);
-
+    
     $stage = 'migrations_run';
+    $db->getPdo()->exec("SET GLOBAL log_bin_trust_function_creators = 1;");
     $migrator->run($files);
 
     $stage = 'seed_accounts';
