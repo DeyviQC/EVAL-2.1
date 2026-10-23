@@ -1,0 +1,63 @@
+.eval-action-dialog { color:var(--text,#142D56); background:var(--surface,#fff); border:1px solid var(--border,#d8e0ed); border-top:4px solid #D4AF37; border-radius:1.2rem; padding:1.7rem; width:min(460px,calc(100vw - 32px)); box-shadow:0 24px 90px #07162955; }
+.eval-action-dialog::backdrop { background:#08182bb3; backdrop-filter:blur(3px); }
+.eval-action-dialog h2 { font-size:1.4rem; font-weight:700; margin:.9rem 0 .7rem; }
+.eval-action-dialog p { color:var(--text-muted,#53647b); line-height:1.65; margin-bottom:1.4rem; }
+.eval-confirm-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:#fff2c7; color:#805c00; }
+.eval-confirm-buttons { display:flex; justify-content:flex-end; gap:.8rem; flex-wrap:wrap; }
+.eval-confirm-buttons button { border:1px solid var(--border,#d8e0ed); border-radius:.7rem; padding:.7rem 1.3rem; min-height:46px; font-size:1rem; color:var(--text,#142D56); background:var(--surface-2,#f3f6fb); cursor:pointer; }
+.eval-confirm-buttons .eval-confirm-accept { background:#28599B; color:#fff; border-color:#28599B; }
+.eval-action-dialog.is-danger { border-top-color:#b73342; }
+.eval-action-dialog.is-danger .eval-confirm-accept { background:#a62636; border-color:#a62636; }
+.eval-action-dialog.is-danger .eval-confirm-icon { background:#ffe4e7; color:#a62636; }
+.eval-action-dialog button:focus-visible { outline:3px solid #D4AF37; outline-offset:3px; }
+.eval-action-notice { position:fixed; z-index:100; right:24px; top:100px; display:flex; align-items:center; gap:.8rem; max-width:min(480px,calc(100vw - 32px)); background:#e9f8ef; color:#155431; border:1px solid #9bd3af; border-left:5px solid #248044; padding:1rem 1.2rem; border-radius:.9rem; box-shadow:0 8px 30px #142d5622; }
+.eval-action-notice button { margin-left:auto; border:0; min-height:44px; min-width:44px; background:transparent; color:inherit; cursor:pointer; }
+.dark .eval-action-notice { background:#123023; color:#b5f0cc; border-color:#397453; }
+@media(max-width:600px){.eval-action-notice { top:85px; right:16px; }.eval-confirm-buttons button { flex:1; }}
+
+.eval-action-dialog { position:fixed; inset:0; margin:auto; max-height:calc(100dvh - 32px); overflow:auto; }
+
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content { color:var(--text); }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content :is(input,select,textarea) { color:var(--text); background-color:var(--surface); border-color:var(--border); }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content :is(button,input,select,textarea):focus-visible { outline:3px solid #D4AF37; outline-offset:3px; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button { min-height:44px; }
+.eval-role-back,.eval-role-breadcrumb button { min-height:44px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); padding:.7rem 1rem; font-weight:600; cursor:pointer; }
+.eval-role-back:hover,.eval-role-breadcrumb button:hover { background:var(--surface-2); border-color:#28599B; }
+.eval-institution header { border-left:4px solid #D4AF37; padding:.4rem 1.2rem; }
+.eval-institution h2 { font-size:clamp(1.5rem,3vw,2rem); font-weight:700; margin:.5rem 0; color:var(--text); }
+.eval-institution header p,.eval-consult-grid button>span:not(.eval-consult-icon) { color:var(--text-muted); line-height:1.6; }
+.eval-role-eyebrow { color:var(--primary); font-weight:700; font-size:.8rem; letter-spacing:.06em; }
+.eval-consult-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:1rem; }
+.eval-consult-grid button { display:flex; flex-direction:column; align-items:flex-start; gap:.9rem; padding:1.5rem; border:1px solid var(--border); border-top:4px solid #28599B; border-radius:18px; background:var(--surface); color:var(--text); text-align:left; cursor:pointer; box-shadow:0 5px 16px #142d5609; }
+.eval-consult-grid button:nth-child(even) { border-top-color:#D4AF37; }
+.eval-consult-grid button:hover { border-color:var(--primary); background:var(--surface-2); }
+.eval-consult-grid strong { font-size:1.2rem; }
+.eval-consult-grid b { margin-top:auto; color:var(--primary); font-size:.9rem; }
+.eval-consult-icon { display:grid; place-items:center; height:52px; width:52px; background:var(--primary-soft); color:var(--primary); border-radius:14px; }
+.eval-role-breadcrumb { display:flex; flex-wrap:wrap; gap:.7rem; align-items:center; }
+.eval-record-state { display:inline-flex; padding:.3rem .7rem; border-radius:30px; font-size:.9rem; background:var(--surface-2); color:var(--text-muted); }
+.eval-record-state.is-active { background:#e4f6ec; color:#166534; }
+.dark .eval-record-state.is-active { background:#173a2a; color:#a8e9c0; }
+.eval-academic-dialog :is(button,input,textarea,select):focus-visible { outline:3px solid #D4AF37; outline-offset:3px; }
+.eval-academic-dialog .eval-role-back { margin-block:.5rem; }
+@media(max-width:600px){.eval-consult-grid button { padding:1.1rem; }.eval-institution .eval-directory-table { overflow-x:auto; }}
+
+.eval-action-notice[popover] { inset:auto; margin:0; top:100px; right:24px; bottom:auto; left:auto; }
+@media(max-width:600px){.eval-action-notice[popover] { top:85px; right:16px; }}
+
+.eval-profile-card { display:grid; grid-template-columns:auto 1fr; gap:1rem; padding:1.4rem; border:1px solid var(--border); border-top:4px solid #28599B; border-radius:16px; background:var(--surface); color:var(--text); }
+.eval-profile-card dt { color:var(--text-muted); }.eval-profile-card dd { font-weight:600; overflow-wrap:anywhere; }
+@media(max-width:480px){.eval-profile-card { grid-template-columns:1fr; gap:.5rem; }.eval-profile-card dd { margin-bottom:.8rem; }}
+
+/* Override legacy fixed white buttons with theme tokens for every other profile. */
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button { background-color:var(--surface); color:var(--text); border-color:var(--border); }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button:hover:not(:disabled) { background-color:var(--surface-2); border-color:var(--primary); }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button:is([aria-pressed="true"],[aria-selected="true"],.bg-primary,.eval-primary-action,[type="submit"]) { background-color:#28599B; color:#fff; border-color:#28599B; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button:is([aria-pressed="true"],[aria-selected="true"],.bg-primary,.eval-primary-action,[type="submit"]):hover:not(:disabled) { background-color:#204b85; border-color:#204b85; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button.bg-accent { background-color:#D4AF37; color:#142D56; border-color:#D4AF37; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button.bg-accent:hover:not(:disabled) { background-color:#e3c15a; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content button:disabled { opacity:.55; cursor:not-allowed; }
+
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content table { width:100%; background:var(--surface); color:var(--text); border-color:var(--border); border-collapse:collapse; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content td { background:var(--surface); color:var(--text); border-color:var(--border); padding:1rem; }
+.eval-layout:is([data-role="teacher"],[data-role="student"],[data-role="director_admin"]) .eval-workspace-content th { background:var(--surface-2); color:var(--text); border-color:var(--border); padding:1rem; text-align:left; }

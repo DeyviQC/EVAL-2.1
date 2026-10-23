@@ -1,3 +1,4 @@
+import {AcademicDialog} from './AcademicDialog.js';
 import { useMemo, useState } from 'react';
 import {
   Calculator,
@@ -17,7 +18,6 @@ import {
   GraduationCap,
   Send,
   Eye,
-  X,
 } from 'lucide-react';
 import type { StudentTask, StudentTasks } from './student-tasks.js';
 import type { Activity } from './activities.js';
@@ -75,6 +75,7 @@ const groups: { key: StudentTask['category'] | 'closed'; label: string; order: n
   { key: 'tomorrow', label: 'Mañana', order: 2 },
   { key: 'this_week', label: 'Esta semana', order: 3 },
   { key: 'later', label: 'Más adelante', order: 4 },
+  { key: 'closed', label: 'Cerradas', order: 5 },
 ];
 
 export function StudentTaskList({
@@ -328,17 +329,23 @@ export function StudentTaskDrawer({
   task,
   activity,
   onClose,
+  onAction,
+  error=false,
+  onRetry,
 }: {
   task: StudentTask | null;
   activity: Activity | null;
   onClose: () => void;
+  onAction?: () => void;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
   if (!task) return null;
   const status = taskStatus(task);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/60 backdrop-blur-sm sm:items-start sm:justify-end" onClick={onClose}>
+    <AcademicDialog label="Detalle de tarea" onClose={onClose}>
       <div
-        className="flex h-[85vh] w-full flex-col rounded-t-2xl border border-border bg-surface p-5 shadow-2xl sm:h-full sm:max-w-md sm:rounded-none sm:rounded-l-2xl"
+        className="flex w-full flex-col gap-2 bg-surface p-5 text-text"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -346,12 +353,9 @@ export function StudentTaskDrawer({
             <p className="text-xs font-bold uppercase tracking-wider text-primary">{task.course.subject}</p>
             <h3 className="mt-1 text-xl font-bold">{task.title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-text-muted hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-primary" aria-label="Cerrar">
-            <X size={20} aria-hidden="true" />
-          </button>
         </div>
         <div className="mt-4 flex-1 space-y-5 overflow-y-auto">
-          <div className="rounded-xl border border-border bg-surface-2/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">{activity?.instructions ?? 'Consulta la consigna completa en el curso.'}</div>
+          <div className="rounded-xl border border-border bg-surface-2/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">{activity?.instructions ?? (error ? 'No se pudo consultar esta tarea.' : 'Consultando tarea…')}</div>
           {status === 'graded' && task.delivery.grade && (
             <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-primary">Calificación</p>
@@ -360,19 +364,21 @@ export function StudentTaskDrawer({
             </div>
           )}
         </div>
+        {error && <button type="button" className="eval-role-back" onClick={onRetry}>Volver a consultar</button>}
         <div className="mt-4 border-t border-border pt-4">
           <button
             type="button"
-            disabled={!task.can_submit}
+            disabled={!activity || !onAction}
+            onClick={onAction}
             className="w-full min-h-11 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-xs transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
           >
-            {status === 'pending' ? 'Entregar ahora' : status === 'delivered' ? 'Actualizar entrega' : 'Ver entrega'}
+            {task.can_submit ? (task.delivery.has_delivery ? 'Actualizar entrega' : 'Entregar ahora') : 'Ver entrega'}
           </button>
           <p className="mt-2 flex items-center gap-1 text-[11px] text-text-muted">
             <AlertCircle size={12} aria-hidden="true" /> La fecha límite no cierra automáticamente la actividad.
           </p>
         </div>
       </div>
-    </div>
+    </AcademicDialog>
   );
 }

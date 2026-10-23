@@ -91,6 +91,7 @@ export function AppHeader({
           <button
             type="button"
             onClick={onOpenProfile}
+            aria-label="Abrir mi cuenta"
             className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-surface-2 border border-transparent hover:border-border transition-colors"
             title={account?.name ? `${account.name} (${profileLabel})` : 'Mi perfil'}
           >

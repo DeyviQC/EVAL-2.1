@@ -1,3 +1,5 @@
+import {todayInLima} from './form-gates.js';
+import {useActionFeedback} from './ActionFeedback.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {ActivityCard} from './ActivityWorkspace.js';
 import {AcademicApiError} from './api.js';
@@ -26,6 +28,7 @@ export function IntegratedActivityWorkspace({
   initialFilter?:'all'|'pending'|'submitted';
   initialActivityId?:string|null;
 }){
+  const actionFeedback = useActionFeedback();
   const [local,setLocal]=useState(emptyClassroom()),
     [classrooms,setClassrooms]=useState<CourseClassroom[]>([]),
     [courses,setCourses]=useState<EducationCourse[]>([]),
@@ -132,13 +135,18 @@ export function IntegratedActivityWorkspace({
 
   async function publish(e:FormEvent<HTMLFormElement>){
     e.preventDefault();
-    if(writing.current||client.isUncertain())return;
+    if(writing.current||busy||!teacherMode||!courses.find(c=>c.id===selected)?.can_publish||client.isUncertain())return;
     const form=e.currentTarget,data=new FormData(form);
+    if(!form.checkValidity()||!String(data.get('title')??'').trim()||!String(data.get('instructions')??'').trim())return;
+    const token=generation.current;
     writing.current=true;
     setBusy(true);
     setNotice('');
     try{
+      if(!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+courses.find(item=>item.id===selected)?.label})||token!==generation.current)return;
       await client.publish(selected,String(data.get('title')),String(data.get('instructions')),String(data.get('due_on'))||null);
+      actionFeedback.success('Actividad publicada correctamente.');
+      if(token!==generation.current)return;
       form.reset();
       setCreating(false);
       setNotice('Actividad publicada correctamente.');
@@ -178,7 +186,7 @@ export function IntegratedActivityWorkspace({
         <h3 className="font-semibold text-text">Actividad seleccionada</h3>
         {targetBusy&&<p role="status">Consultando actividad…</p>}
         {targetError&&<p role="alert">No se pudo abrir esta actividad. Puedes consultarla desde tus cursos.</p>}
-        {target&&<ActivityCard key={target.id} activity={target} client={client} mode="activities" initialPanel="deliveries" onExpired={onExpired}/>}
+        {target&&<ActivityCard key={target.id} activity={target} client={client} mode="activities" initialPanel="deliveries" teacherMode={teacherMode} onExpired={onExpired}/>}
       </section>}
 
       {notice && (
@@ -223,6 +231,7 @@ export function IntegratedActivityWorkspace({
               return (
                 <button
                   key={c.id}
+                  aria-pressed={isCurrent}
                   type="button"
                   disabled={busy}
                   onClick={() => {
@@ -325,6 +334,7 @@ export function IntegratedActivityWorkspace({
           <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl">
             <button
               type="button"
+              aria-pressed={tabFilter==='all'}
               onClick={() => setTabFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 tabFilter === 'all'
@@ -336,6 +346,7 @@ export function IntegratedActivityWorkspace({
             </button>
             <button
               type="button"
+              aria-pressed={tabFilter==='pending'}
               onClick={() => setTabFilter('pending')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 tabFilter === 'pending'
@@ -347,6 +358,7 @@ export function IntegratedActivityWorkspace({
             </button>
             <button
               type="button"
+              aria-pressed={tabFilter==='closed'}
               onClick={() => setTabFilter('closed')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 tabFilter === 'closed'
@@ -410,7 +422,7 @@ export function IntegratedActivityWorkspace({
             </label>
             <label className="block text-xs font-semibold text-text uppercase tracking-wider">
               Fecha límite (opcional)
-              <input name="due_on" className={field} type="date" />
+              <input name="due_on" min={todayInLima()} className={field} type="date" />
             </label>
             <p className="text-xs text-text-muted">La fecha límite no cierra automáticamente las entregas.</p>
             <button className={button + ' bg-primary text-white hover:bg-primary-hover border-transparent'}>

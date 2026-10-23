@@ -1,3 +1,4 @@
+import {useActionFeedback} from './ActionFeedback.js';
 import { ObservationsPanel } from './ObservationsPanel.js';
 import { MaterialOptions } from './MaterialOptions.js';
 import { RecordedTime } from './RecordedTime.js';
@@ -58,6 +59,7 @@ export function MaterialsPanel({
   onBack: () => void;
   teacherMode?: boolean;
 }) {
+  const actionFeedback = useActionFeedback();
   const [view, setView] = useState<View>({ phase: 'loading', items: [], cursor: null });
   const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -122,7 +124,7 @@ export function MaterialsPanel({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (writing.current || blocked) return;
+    if (writing.current || busy || blocked || !course.can_publish) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const file = data.get('file');
@@ -143,10 +145,12 @@ export function MaterialsPanel({
     writing.current = true;
     setBusy(true);
     try {
+      if (!await actionFeedback.confirm({title:'¿Publicar este material?',message:String(data.get('title'))+' · Estará disponible para las estudiantes de este curso.'}) || !alive.current) return;
       const result = await client.publish(course.id, payload);
       if (!alive.current) return;
       form.reset();
       setFormOpen(false);
+      actionFeedback.success('Material publicado correctamente.');
       setNotice('Material publicado correctamente.');
       await load(null, result.id);
     } catch (problem) {
@@ -233,11 +237,12 @@ export function MaterialsPanel({
               </button>
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
+              <label htmlFor={"material-title-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
                 Título del recurso
               </label>
               <input
                 ref={titleRef}
+                id={"material-title-"+course.id}
                 name="title"
                 required
                 maxLength={255}
@@ -246,10 +251,11 @@ export function MaterialsPanel({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
+              <label htmlFor={"material-description-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
                 Descripción o indicaciones (opcional)
               </label>
               <textarea
+                id={"material-description-"+course.id}
                 name="description"
                 maxLength={10000}
                 rows={3}
@@ -258,10 +264,11 @@ export function MaterialsPanel({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
+              <label htmlFor={"material-upload-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
                 Archivo adjunto
               </label>
               <input
+                id={"material-upload-"+course.id}
                 name="file"
                 type="file"
                 required

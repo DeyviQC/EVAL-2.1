@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo','bimester-maintenance','verify-bimesters','verify-all','migrate-all')][string]$Command='status',
+    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','verify-role-workflows','configure-calendar-demo','bimester-maintenance','verify-bimesters','verify-all','migrate-all')][string]$Command='status',
     [switch]$Maintenance,
     [switch]$AccountsOnly,
     [switch]$BrowserOnly,
@@ -225,13 +225,13 @@ try {
         $null=Verify-MySQL
         $stage='bimester_maintenance'
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\bimester-maintenance.php')+'"') (Db-Environment 'migration') '' $null $true).Trim()
-    } elseif($Command -in @('verify-calendar','verify-weeks','verify-week-reads','configure-calendar-demo')){
+    } elseif($Command -in @('verify-calendar','verify-weeks','verify-week-reads','verify-role-workflows','configure-calendar-demo')){
         $stage='calendar_runtime_check';$null=Verify-MySQL
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before calendar verification.'}
         $passwords=@{};foreach($role in @('director_admin','vice_principal','teacher','student')){$passwords[$role]=Decrypt $state.passwords.$role}
         $verifyEnvironment=@{EVAL_DEV_ROOT=$devRoot;PLAYWRIGHT_BROWSERS_PATH=(Join-Path $repo '.local\browsers')}
         $stage='calendar_browser_verification'
-        Write-Output (Start-Child $node ('"'+(Join-Path $repo $(if($Command -eq 'configure-calendar-demo'){'backend\dev-runtime\configure-calendar-demo.mjs'}elseif($Command -eq 'verify-week-reads'){'backend\dev-runtime\verify-week-reads.mjs'}elseif($Command -eq 'verify-weeks'){'backend\dev-runtime\verify-weeks.mjs'}else{'backend\dev-runtime\verify-calendar.mjs'}))+'"') $verifyEnvironment '' ($passwords|ConvertTo-Json -Compress) $true).Trim()
+        Write-Output (Start-Child $node ('"'+(Join-Path $repo $(if($Command -eq 'configure-calendar-demo'){'backend\dev-runtime\configure-calendar-demo.mjs'}elseif($Command -eq 'verify-role-workflows'){'backend\dev-runtime\verify-consistent-role-workflows.mjs'}elseif($Command -eq 'verify-week-reads'){'backend\dev-runtime\verify-week-reads.mjs'}elseif($Command -eq 'verify-weeks'){'backend\dev-runtime\verify-weeks.mjs'}else{'backend\dev-runtime\verify-calendar.mjs'}))+'"') $verifyEnvironment '' ($passwords|ConvertTo-Json -Compress) $true).Trim()
     }
     elseif($Command -eq 'snapshot'){
         $stage='schema_verification';$null=Verify-MySQL
