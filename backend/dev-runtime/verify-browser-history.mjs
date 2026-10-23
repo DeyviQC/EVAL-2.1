@@ -1,0 +1,20 @@
+import {openApplicationPage} from './open-application-page.mjs';
+import {chromium} from '../../frontend/node_modules/playwright-core/index.mjs';
+import {readFileSync} from 'node:fs';import assert from 'node:assert/strict';import {certificateOptions,loopbackCertificate} from './browser-options.mjs';
+const root=process.env.EVAL_DEV_ROOT,chunks=[];for await(const chunk of process.stdin)chunks.push(chunk);const passwords=JSON.parse(Buffer.concat(chunks).toString());
+const browser=await chromium.launch({...certificateOptions(await loopbackCertificate(readFileSync(root+'/cert.pem'))),headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});let checks=0,writes=0;const errors=[];const check=(v)=>{assert(v);checks++;};
+try{for(const [role,login,nav,first,second,firstSection,secondSection] of [
+ ['student','estudiante','Menú de Estudiante','Cursos','Progreso','my_enrollments','history'],
+ ['teacher','docente','Menú de Docente','Cursos y aulas','Historial docente','my_assignments','history'],
+ ['vice_principal','subdirector','Menú de Subdirector','Catálogo','Usuarios','catalog','users'],
+ ['director_admin','director','Menú de Director','Reportes','Información institucional','reports','institution']]){
+ const context=await browser.newContext();const page=await openApplicationPage(context);page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!['GET','HEAD'].includes(r.method())&&!new URL(r.url()).pathname.startsWith('/auth/'))writes++;});
+ check(await page.evaluate(()=>history.length)===1);await page.getByLabel('Usuario',{exact:true}).fill(login);await page.getByLabel('Contraseña',{exact:true}).fill(passwords[role]);passwords[role]='';await page.getByRole('button',{name:'Ingresar',exact:true}).click();const menu=page.getByRole('navigation',{name:nav,exact:true});await menu.waitFor();
+ // Include all menu names in a failure without exposing account data.
+ const buttons=await menu.getByRole('button').allTextContents();
+ const choose=async(label,section)=>{const button=menu.getByRole('button',{name:label,exact:true});assert(await button.count(),role+' menu labels: '+buttons.join(', '));await button.click();try{await page.waitForFunction(s=>new URL(location.href).searchParams.get('view')===s,section);}catch(error){console.log(JSON.stringify({role,expected:section,url:page.url(),errors,history:await page.evaluate(()=>history.state),headings:await page.locator('h2,h3').allTextContents()}));throw error;}};
+ await choose(first,firstSection);await choose(second,secondSection);await page.goBack();await page.waitForFunction(s=>new URL(location.href).searchParams.get('view')===s,firstSection);check(await page.locator('.eval-layout').isVisible());check(await menu.getByRole('button',{name:first,exact:true}).getAttribute('aria-pressed')==='true');
+ await page.goForward();await page.waitForFunction(s=>new URL(location.href).searchParams.get('view')===s,secondSection);check(await menu.getByRole('button',{name:second,exact:true}).getAttribute('aria-pressed')==='true');
+ const length=await page.evaluate(()=>history.length);await page.reload();await menu.waitFor();check(await page.evaluate(()=>history.length)===length);check(new URL(page.url()).searchParams.get('view')===secondSection);
+ await page.goBack();await page.waitForFunction(s=>new URL(location.href).searchParams.get('view')===s,firstSection);check(await page.locator('#root').innerText()!=='');await page.goBack();await page.waitForFunction(()=>!new URL(location.href).searchParams.has('view'));check(await page.locator('.eval-layout').isVisible());await page.goBack();check(new URL(page.url()).origin==='https://127.0.0.1:8443');await page.goBack();check(page.url()!=='about:blank');check(await page.locator('.eval-layout').isVisible());await context.close();
+}check(writes===0);check(errors.length===0);console.log(JSON.stringify({passed:true,checks,roles:4,academicWrites:writes,pageErrors:errors.length}));}finally{await browser.close();}

@@ -45,8 +45,8 @@ try{
  await area.getByRole('button',{name:'Cancelar',exact:true}).click();
  await area.getByRole('button',{name:'← Volver',exact:true}).click();await area.getByRole('button',{name:'← Volver',exact:true}).click();await area.getByRole('button',{name:/Grados/}).click();await area.locator('.vp-catalog-record-card').first().click();await area.getByRole('article').first().waitFor();
  await area.getByRole('button',{name:/^Desactivar /}).first().click();
- await area.getByRole('region',{name:'Confirmar desactivación'}).waitFor();checks++;
- await area.getByRole('button',{name:'Cancelar',exact:true}).click();check(await area.getByRole('region',{name:'Confirmar desactivación'}).count()===0);
+ await page.getByRole('dialog').waitFor();checks++;
+ await page.getByRole('dialog').getByRole('button',{name:'Cancelar',exact:true}).click();check(!(await page.getByRole('dialog').isVisible()));
  await area.getByRole('button',{name:'← Volver',exact:true}).click();await area.getByRole('button',{name:'← Volver',exact:true}).click();
  await area.getByRole('button',{name:/Secciones/}).click();
  const picker=area.getByRole('navigation',{name:'Filtrar secciones por grado'});

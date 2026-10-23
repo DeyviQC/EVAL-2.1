@@ -1,6 +1,6 @@
 import { exact, text, decimalId, date, identityResult, period, enrollment, assignment, activityReference, historicalSubmission, confirmedTransition, relationshipInput, type EnrollmentInput, type AssignmentInput } from './contracts.js';
 import { filterQuery, type DirectoryFilters } from './directory-filters.js';
-import { bimestersResponse } from './reports.js';
+import { bimestersResponse,bimesterWriteResult } from './reports.js';
 export class AcademicApiError extends Error {
   readonly automaticRetry=false;
   constructor(readonly category:string,readonly status:number|null,readonly correlationId:string|null=null,readonly outcomeUnknown=false) { super(category); }
@@ -38,8 +38,8 @@ export function createAcademicClient(transport:typeof fetch,csrf:()=>string) {
       return request('audit-ledger'+(params.size?'?'+params.toString():''),decode);
     },
     bimesters:(periodId:string)=>request('bimesters?period_id='+locator(periodId),bimestersResponse),
-    closeBimester:(periodId:string,bimesterNumber:number)=>request('bimesters/close',identityResult,{period_id:locator(periodId),bimester_number:bimesterNumber}),
-    reopenBimester:(periodId:string,bimesterNumber:number,justification:string)=>request('bimesters/reopen',identityResult,{period_id:locator(periodId),bimester_number:bimesterNumber,justification:text(justification)}),
+    closeBimester:(periodId:string,bimesterNumber:number)=>request('bimesters/close',value=>bimesterWriteResult(value,periodId,bimesterNumber,'locked'),{period_id:locator(periodId),bimester_number:bimesterNumber}),
+    reopenBimester:(periodId:string,bimesterNumber:number,justification:string)=>request('bimesters/reopen',value=>bimesterWriteResult(value,periodId,bimesterNumber,'open'),{period_id:locator(periodId),bimester_number:bimesterNumber,justification:text(justification)}),
     assignmentDirectory:<T>(kind:'assignments'|'teachers'|'periods'|'entries'|'grades'|'sections',decode:(value:unknown)=>T,after:string|null=null,filters:DirectoryFilters={})=>{
       if(!['assignments','teachers','periods','entries','grades','sections'].includes(kind))throw new Error('Invalid assignment directory');
       const query=filterQuery(filters,true);

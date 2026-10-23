@@ -1,3 +1,4 @@
+import {openApplicationPage} from './open-application-page.mjs';
 import { chromium } from '../../frontend/node_modules/playwright-core/index.mjs';
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,8 +14,7 @@ const stopPath=resolve(root,`browser-stop-${account.role}`);
 if(existsSync(stopPath))unlinkSync(stopPath);
 const context=await chromium.launchPersistentContext(resolve(root,`browser-${account.role}`),{...options,...(installedBrowser?{executablePath:installedBrowser}:{}),headless:false,viewport:null});
 const timer=setInterval(()=>{if(existsSync(stopPath))void context.close();},500);
-const page=context.pages()[0]??await context.newPage();
-await page.goto('https://127.0.0.1:8443/');
+const page=await openApplicationPage(context);
 await page.getByRole('heading',{name:/Acceso a EVAL|Tu espacio académico/}).waitFor();
 if(await page.getByLabel('Usuario',{exact:true}).isVisible()){
   await page.getByLabel('Usuario',{exact:true}).fill(account.login);

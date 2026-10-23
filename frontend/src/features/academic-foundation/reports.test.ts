@@ -68,7 +68,7 @@ export const reportCases:[string,()=>void|Promise<void>][]=[
   let calledUrl='';let calledBody='';let hasCsrf=false;
   const client=createAcademicClient((async(url,init)=>{
    calledUrl=String(url);calledBody=String(init?.body);hasCsrf=Boolean(init?.headers && (init.headers as Record<string,string>)['X-CSRF-TOKEN']);
-   return new Response(JSON.stringify({data:{id:'1'}}));
+   const reopen=String(url).endsWith('/reopen');return new Response(JSON.stringify({data:{id:'1',period_id:'1',bimester_number:1,state:reopen?'open':'locked',...(reopen?{reopened_at:'2026-10-23T12:00:00Z',justification:'Justificación formal requerida'}:{closed_at:'2026-10-23T12:00:00Z'})}}));
   }) as typeof fetch,()=>'csrf-test-token');
 
   await client.closeBimester('1',1);

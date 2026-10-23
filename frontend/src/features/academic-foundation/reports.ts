@@ -272,3 +272,9 @@ export function downloadClassroomExcel(report: ClassroomReport, exportedBy: stri
 }
 
 
+
+export function bimesterWriteResult(value:unknown,periodId:string,number:number,state:'open'|'locked'){
+ const row=exact(value,['id','period_id','bimester_number','state',state==='locked'?'closed_at':'reopened_at',...(state==='open'?['justification']:[])]);
+ if(decimalId(row.period_id)!==periodId||row.bimester_number!==number||row.state!==state)throw Error('Wrong bimester acknowledgement');
+ const id=decimalId(row.id);text(row[state==='locked'?'closed_at':'reopened_at']);if(state==='open')text(row.justification);return {id,period_id:periodId,bimester_number:number,state};
+}

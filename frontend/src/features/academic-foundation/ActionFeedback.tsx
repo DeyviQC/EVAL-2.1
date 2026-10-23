@@ -1,0 +1,21 @@
+import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react';
+import {CheckCircle2,TriangleAlert,X} from 'lucide-react';
+type Prompt={title:string;message:string;danger?:boolean};
+type Feedback={confirm:(prompt:Prompt)=>Promise<boolean>;success:(message:string)=>void};
+const fallback:Feedback={confirm:async()=>true,success:()=>{}};
+const Context=createContext<Feedback>(fallback);
+export const useActionFeedback=()=>useContext(Context);
+export function ActionFeedbackProvider({enabled,children}:{enabled:boolean;children:ReactNode}){
+ const [prompt,setPrompt]=useState<Prompt|null>(null),[notice,setNotice]=useState('');const dialog=useRef<HTMLDialogElement>(null),resolver=useRef<((answer:boolean)=>void)|null>(null);
+ function answer(value:boolean){resolver.current?.(value);resolver.current=null;dialog.current?.close();setPrompt(null);}
+ useEffect(()=>{if(prompt&&!dialog.current?.open)dialog.current?.showModal();},[prompt]);
+ useEffect(()=>{if(!enabled){setPrompt(null);dialog.current?.close();}const cancel=()=>answer(false);window.addEventListener('popstate',cancel);return()=>{window.removeEventListener('popstate',cancel);resolver.current?.(false);resolver.current=null;};},[enabled]);
+ useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),8000);return()=>clearTimeout(timer);},[notice]);
+ const feedback:Feedback=enabled?{confirm:input=>new Promise(resolve=>{if(resolver.current){resolve(false);return;}resolver.current=resolve;setNotice('');setPrompt(input);}),success:message=>setNotice(message)}:fallback;
+ return <Context.Provider value={feedback}>{children}{(enabled||!!notice)&&<>
+  <dialog ref={dialog} className={'eval-action-dialog '+(prompt?.danger?'is-danger':'')} aria-labelledby="eval-confirm-title" aria-describedby="eval-confirm-description" onCancel={event=>{event.preventDefault();answer(false);}}>
+   <div className="eval-confirm-icon"><TriangleAlert size={27} aria-hidden="true"/></div><h2 id="eval-confirm-title">{prompt?.title}</h2><p id="eval-confirm-description">{prompt?.message}</p><div className="eval-confirm-buttons"><button type="button" autoFocus onClick={()=>answer(false)}>Cancelar</button><button type="button" className="eval-confirm-accept" onClick={()=>answer(true)}>Confirmar</button></div>
+  </dialog>
+  {notice&&<div className="eval-action-notice" role="status" aria-live="polite"><CheckCircle2 size={24} aria-hidden="true"/><span>{notice}</span><button type="button" aria-label="Cerrar aviso" onClick={()=>setNotice('')}><X size={20}/></button></div>}
+ </>}</Context.Provider>;
+}
