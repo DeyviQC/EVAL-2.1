@@ -1,3 +1,5 @@
+import {useActionFeedback} from './ActionFeedback.js';
+import {useFormGate,validDateOrder,todayInLima} from './form-gates.js';
 import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
@@ -16,6 +18,7 @@ const uncertainClients=new WeakSet<AcademicClient>();
 const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
+  const actionFeedback=useActionFeedback();
   const task=useVicePrincipalTask();
   const [selectedRecord,setSelectedRecord]=useState<string|null>(null);
   useEffect(()=>{setSelectedRecord(null);setAction(null);},[task]);
@@ -31,6 +34,8 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
   const [uncertain,setUncertain]=useState(()=>uncertainClients.has(client));
   const [grade,setGrade]=useState('');
   const [section,setSection]=useState('');
+  const [createPeriod,setCreatePeriod]=useState(''),[startDate,setStartDate]=useState(''),[endDate,setEndDate]=useState('');
+  const gate=useFormGate([grade,section,createPeriod,startDate,endDate,task]);
   const [action,setAction]=useState<{row:Enrollment;kind:'close'|'transfer'}|null>(null);
   const [destinationGrade,setDestinationGrade]=useState('');
   const [destinationSection,setDestinationSection]=useState('');
@@ -74,9 +79,9 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
-    writing.current=true;setBusy(true);setMessage('');
+    writing.current=true;if(!await actionFeedback.confirm({title:action?'¿Confirmar este cambio?':'¿Crear esta matrícula?',message:action?'Se aplicará el cambio al registro de '+action.row.student_name+'. Se conservará su historial.':'Se guardarán los datos de la nueva matrícula.',danger:!!action})){writing.current=false;return;}if(!mounted.current){writing.current=false;return;}setBusy(true);setMessage('');
     try{
-      const result=await operation() as {id?:string;successor_id?:string};if(!mounted.current)return;setAction(null);
+      const result=await operation() as {id?:string;successor_id?:string};if(!mounted.current)return;actionFeedback.success('Operación confirmada correctamente.');setAction(null);
       const page=await load();if(!mounted.current)return;
       if(!page){setMessage('Operación confirmada. No se pudo actualizar el listado; vuelve a consultar los registros.');return;}
       const changedId=result.successor_id??result.id;
@@ -93,11 +98,11 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{writing.current=false;if(mounted.current)setBusy(false);}
   }
   function create(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();const data=new FormData(event.currentTarget);
+    event.preventDefault();if(disabled||!gate.complete||!validDateOrder(startDate,endDate))return;const data=new FormData(event.currentTarget);
     void mutate(()=>client.createEnrollment({student_id:String(data.get('student_id')),academic_period_id:String(data.get('academic_period_id')),grade_id:grade,section_id:section,effective_from:String(data.get('effective_from')),...(data.get('effective_until')?{effective_until:String(data.get('effective_until'))}:{})}));
   }
   function confirm(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();if(!action)return;
+    event.preventDefault();if(!action||disabled)return;if(action.kind==='transfer'&&action.row.grade_id===destinationGrade&&action.row.section_id===destinationSection){setMessage('Selecciona un aula de destino diferente.');return;}
     const selected=action;const data=new FormData(event.currentTarget);
     void mutate(()=>selected.kind==='close'?client.closeEnrollment(selected.row.id,String(data.get('effective_until'))):client.transfer(selected.row.id,{grade_id:destinationGrade,section_id:destinationSection}));
   }
@@ -111,16 +116,16 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
     {phase==='loading'&&<p role="status">Consultando matrículas…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Consulta los registros antes de continuar.</p>}
-    {(task===null||task==='create')&&<form onSubmit={create} aria-label="Crear matrícula" className="my-5 rounded-xl border p-5">
+    {(task===null||task==='create')&&<form ref={gate.form} onInput={gate.inspect} onChange={gate.inspect} onSubmit={create} aria-label="Crear matrícula" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4">
         <legend className="mb-3 font-semibold">Nueva matrícula</legend>
         <label>Estudiante<select aria-label="Estudiante" name="student_id" required className={control}><option value="">Selecciona un estudiante</option>{options.students.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Período<select aria-label="Período" name="academic_period_id" required className={control}><option value="">Selecciona un período activo</option>{options.periods.filter(row=>row.state==='active').map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Grado<select aria-label="Grado" required className={control} value={grade} onChange={event=>{setGrade(event.target.value);setSection('');}}><option value="">Selecciona un grado</option>{options.grades.filter(row=>row.is_active).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Sección<select aria-label="Sección" required className={control} value={section} onChange={event=>setSection(event.target.value)}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.is_active&&row.grade_id===grade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Inicio<input name="effective_from" type="date" required className={control}/></label>
-        <label>Fin (opcional)<input name="effective_until" type="date" className={control}/></label>
-        <button type="submit" className={control}>Crear matrícula</button>
+        <label>Período<select aria-label="Período" name="academic_period_id" required className={control} value={createPeriod} onChange={event=>{setCreatePeriod(event.target.value);setGrade('');setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un período activo</option>{options.periods.filter(row=>row.state==='active').map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <label>Grado<select aria-label="Grado" required disabled={!createPeriod} className={control} value={grade} onChange={event=>{setGrade(event.target.value);setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un grado</option>{options.grades.filter(row=>row.is_active).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <label>Sección<select aria-label="Sección" required disabled={!grade} className={control} value={section} onChange={event=>{setSection(event.target.value);setStartDate('');setEndDate('');}}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.is_active&&row.grade_id===grade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <label>Inicio<input name="effective_from" type="date" required disabled={!section} value={startDate} onChange={event=>setStartDate(event.target.value)} className={control}/></label>
+        <label>Fin (opcional)<input name="effective_until" type="date" disabled={!startDate} min={startDate||undefined} value={endDate} onChange={event=>setEndDate(event.target.value)} className={control}/></label>
+        <button type="submit" disabled={!gate.complete||!validDateOrder(startDate,endDate)} className={control}>Crear matrícula</button>
       </fieldset>
     </form>}
     <div className="my-3 flex flex-wrap gap-3">{(['students','periods','grades','sections'] as const).map(kind=>optionCursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,optionCursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({students:'estudiantes',periods:'períodos',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
@@ -129,11 +134,11 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de matrícula" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{action.kind==='close'?'Cerrar matrícula':'Traslado inmediato'}: {action.row.student_name}</legend>
         <p className="w-full">{action.kind==='close'?'El cierre conserva esta matrícula en el historial.':'El traslado cierra el contexto actual y crea la matrícula de destino; no cambia las entregas anteriores.'}</p>
-        {action.kind==='close'?<label>Fecha de cierre<input name="effective_until" type="date" required className={control}/></label>:<>
+        {action.kind==='close'?<label>Fecha de cierre<input name="effective_until" type="date" required min={action.row.effective_from} max={todayInLima()} className={control}/></label>:<>
           <label>Grado de destino<select aria-label="Grado de destino" required className={control} value={destinationGrade} onChange={event=>{setDestinationGrade(event.target.value);setDestinationSection('');}}><option value="">Selecciona un grado</option>{options.grades.filter(row=>row.is_active).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-          <label>Sección de destino<select aria-label="Sección de destino" required className={control} value={destinationSection} onChange={event=>setDestinationSection(event.target.value)}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.is_active&&row.grade_id===destinationGrade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+          <label>Sección de destino<select aria-label="Sección de destino" disabled={!destinationGrade} required className={control} value={destinationSection} onChange={event=>setDestinationSection(event.target.value)}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.is_active&&row.grade_id===destinationGrade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
         </>}
-        <button type="submit" className={control}>Confirmar {action.kind==='close'?'cierre':'traslado'}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
+        <button type="submit" disabled={action.kind==='transfer'&&(!destinationSection||action.row.grade_id===destinationGrade&&action.row.section_id===destinationSection)} className={control}>Revisar {action.kind==='close'?'cierre':'traslado'}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
       </fieldset>
     </form>}
     {cursor&&<button className={control} disabled={busy} onClick={()=>void load(cursor)}>Cargar más matrículas</button>}

@@ -24,7 +24,7 @@ final class BimesterGradeLockCommands
         }
 
         $roles = $this->db->table('local_role_grants')->where('identity_id', $actor->identityId)->pluck('role')->all();
-        if (!array_intersect($roles, ['director_admin', 'vice_principal'])) {
+        if (!array_intersect($roles, ['vice_principal'])) {
             throw new AcademicCommandFailure('forbidden');
         }
     }

@@ -59,3 +59,7 @@ for (const [name, run] of [...cases,...uiCases,...studentShellCases,...navigatio
 
 import {vicePrincipalFlowCases} from '../.test-build/features/academic-foundation/vice-principal-workspace.test.js';
 for(const [name,run] of vicePrincipalFlowCases)test(name,run);
+import {viewHistoryCases} from '../.test-build/features/academic-foundation/view-history.test.js';
+for(const [name,run] of viewHistoryCases)test(name,run);
+import {workflowGateCases} from '../.test-build/features/academic-foundation/workflow-gates.test.js';
+for(const [name,run] of workflowGateCases)test(name,run);

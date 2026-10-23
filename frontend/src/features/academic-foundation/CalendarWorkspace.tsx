@@ -1,3 +1,4 @@
+import {useActionFeedback} from './ActionFeedback.js';
 import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicApiError,type createAcademicClient} from './api.js';
@@ -8,6 +9,7 @@ type Period=ReturnType<typeof periodPage>['items'][number];
 const button='inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const field='mt-1.5 block w-full rounded-xl border border-border bg-surface text-text p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all';
 export function CalendarWorkspace({academic,client,onExpired}:{academic:ReturnType<typeof createAcademicClient>;client:CalendarClient;onExpired:()=>void}){
+ const feedback=useActionFeedback();
  const task=useVicePrincipalTask();
  const [editorOpen,setEditorOpen]=useState(false);
  useEffect(()=>{if(task==='create'){setSelected(null);setBlocks([]);setSource('');setConfirmed(false);setEditorOpen(true);}else setEditorOpen(false);},[task]);
@@ -19,8 +21,8 @@ export function CalendarWorkspace({academic,client,onExpired}:{academic:ReturnTy
  function choose(draft:CalendarDraft){setEditorOpen(true);setSelected(draft);setBlocks(structuredClone(draft.blocks));setSource('');setConfirmed(false);setMessage(draft.state==='published'?'Este borrador ya fue publicado y se conserva para consulta.':'Borrador seleccionado.');}
  function changeBlock(index:number,update:Partial<CalendarBlock>){setBlocks(old=>old.map((b,i)=>i===index?{...b,...update}:b));setConfirmed(false);}
  function normalized():CalendarBlock[]{let number=1;const result=blocks.map(b=>({...b,weeks:b.weeks.map(w=>({...w,number:number++}))}));const validated=calendarBlocks(result);if(validated.filter(b=>b.kind==='teaching').length!==4)throw new Error('Four bimesters required');if(!period||validated.some(b=>b.start_on<period.start_on||b.end_on>period.end_on))throw new Error('Outside period');return validated;}
- async function save(event:FormEvent){event.preventDefault();if(!ready||closed||uncertain||busy)return;setBusy(true);try{const valid=normalized();const result=selected?await client.edit(selected,valid):await client.create(periodId,valid);setSelected(result);setBlocks(result.blocks);setDrafts(old=>[...old.filter(d=>d.id!==result.id),result].sort((a,b)=>BigInt(a.id)<BigInt(b.id)?-1:1));setConfirmed(false);setMessage('Borrador guardado. Todavía no está publicado.');}catch(error){fail(error);}finally{setBusy(false);}}
- async function publish(){if(!selected||!confirmed||!source.trim()||busy||uncertain)return;setBusy(true);try{await client.publish(selected,source,confirmed);await consult(periodId);setMessage('Calendario publicado. Las revisiones anteriores se conservan.');}catch(error){fail(error);}finally{setBusy(false);}}
+ async function save(event:FormEvent){event.preventDefault();if(!ready||closed||uncertain||busy||selected?.state==='published')return;let valid:CalendarBlock[];try{valid=normalized();}catch(error){fail(error);return;}if(!await feedback.confirm({title:'¿Guardar este borrador?',message:'Se guardarán las fechas; todavía no se publicarán.'}))return;setBusy(true);try{const result=selected?await client.edit(selected,valid):await client.create(periodId,valid);setSelected(result);setBlocks(result.blocks);setDrafts(old=>[...old.filter(d=>d.id!==result.id),result].sort((a,b)=>BigInt(a.id)<BigInt(b.id)?-1:1));setConfirmed(false);feedback.success('Borrador guardado correctamente.');setMessage('Borrador guardado. Todavía no está publicado.');}catch(error){fail(error);}finally{setBusy(false);}}
+ async function publish(){if(!selected||selected.state!=='draft'||!ready||closed||selected.period_id!==periodId||!confirmed||!source.trim()||busy||uncertain||JSON.stringify(blocks)!==JSON.stringify(selected.blocks))return;if(!await feedback.confirm({title:'¿Publicar este calendario?',message:'Las fechas guardadas quedarán publicadas para el colegio.'}))return;setBusy(true);try{await client.publish(selected,source,confirmed);feedback.success('Calendario publicado correctamente.');await consult(periodId);setMessage('Calendario publicado. Las revisiones anteriores se conservan.');}catch(error){fail(error);}finally{setBusy(false);}}
  const locked=busy||closed||uncertain||selected?.state==='published'||!ready;
  return <section aria-label="Calendario institucional" aria-busy={busy} className="space-y-6">
    <header className="eval-section-heading border-b border-border/80 pb-5">

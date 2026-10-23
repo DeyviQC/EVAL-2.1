@@ -1,3 +1,5 @@
+import {useActionFeedback} from './ActionFeedback.js';
+import {useFormGate,validDateOrder,todayInLima} from './form-gates.js';
 import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
@@ -17,6 +19,7 @@ const uncertainClients=new WeakSet<AcademicClient>();
 const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
+  const actionFeedback=useActionFeedback();
   const task=useVicePrincipalTask();
   const [selectedRecord,setSelectedRecord]=useState<string|null>(null);
   useEffect(()=>{setSelectedRecord(null);setAction(null);},[task]);
@@ -32,6 +35,8 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   const [message,setMessage]=useState('');
   const [grade,setGrade]=useState('');
   const [section,setSection]=useState('');
+  const [createPeriod,setCreatePeriod]=useState(''),[startDate,setStartDate]=useState(''),[endDate,setEndDate]=useState('');
+  const gate=useFormGate([grade,section,createPeriod,startDate,endDate,task]);
   const [action,setAction]=useState<{row:Assignment;kind:'activate'|'close'|'replace'}|null>(null);
   const mounted=useRef(true),generation=useRef(0),writing=useRef(false);
   const feedback=useRef<HTMLParagraphElement>(null);
@@ -69,9 +74,9 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
-    writing.current=true;setBusy(true);setMessage('');
+    writing.current=true;if(!await actionFeedback.confirm({title:action?'¿Confirmar este cambio?':'¿Crear esta asignación docente?',message:action?'Se aplicará el cambio al registro de '+action.row.teacher_name+'. Se conservará su historial.':'Se guardarán los datos de la nueva asignación docente.',danger:!!action})){writing.current=false;return;}if(!mounted.current){writing.current=false;return;}setBusy(true);setMessage('');
     try{
-      const result=await operation() as {id?:string;successor_id?:string};if(!mounted.current)return;setAction(null);
+      const result=await operation() as {id?:string;successor_id?:string};if(!mounted.current)return;actionFeedback.success('Operación confirmada correctamente.');setAction(null);
       const page=await load();if(!mounted.current)return;
       if(!page){setMessage('Operación confirmada. No se pudo actualizar el listado; vuelve a consultar.');return;}
       const changedId=result.successor_id??result.id;
@@ -84,11 +89,11 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{writing.current=false;if(mounted.current)setBusy(false);}
   }
   function create(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();const data=new FormData(event.currentTarget);
+    event.preventDefault();if(disabled||!gate.complete||!validDateOrder(startDate,endDate))return;const data=new FormData(event.currentTarget);
     void mutate(()=>client.planAssignment({teacher_id:String(data.get('teacher_id')),academic_period_id:String(data.get('academic_period_id')),instructional_entry_id:String(data.get('instructional_entry_id')),grade_id:grade,section_id:section,effective_from:String(data.get('effective_from')),...(data.get('effective_until')?{effective_until:String(data.get('effective_until'))}:{})}));
   }
   function confirm(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();if(!action)return;const selected=action;const data=new FormData(event.currentTarget);
+    event.preventDefault();if(!action||disabled)return;const selected=action;const data=new FormData(event.currentTarget);
     void mutate(()=>selected.kind==='activate'?client.activateAssignment(selected.row.id):selected.kind==='close'?client.closeAssignment(selected.row.id,String(data.get('effective_until'))):client.replaceTeacher(selected.row.id,String(data.get('teacher_id'))));
   }
   const disabled=busy||uncertain||phase!=='ready';
@@ -101,15 +106,15 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     {phase==='loading'&&<p role="status">Consultando asignaciones…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica los registros antes de continuar.</p>}
-    {(task===null||task==='create')&&<form onSubmit={create} aria-label="Planificar asignación" className="my-5 rounded-xl border p-5">
+    {(task===null||task==='create')&&<form ref={gate.form} onInput={gate.inspect} onChange={gate.inspect} onSubmit={create} aria-label="Planificar asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">Nueva asignación planificada</legend>
         <label>Docente <select aria-label="Docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Período <select aria-label="Período" name="academic_period_id" required className={control}><option value="">Selecciona un período</option>{options.periods.map(row=><option key={row.id} value={row.id}>{row.name} ({row.state==='active'?'activo':'planificado'})</option>)}</select></label>
+        <label>Período <select aria-label="Período" name="academic_period_id" required className={control} value={createPeriod} onChange={event=>{setCreatePeriod(event.target.value);setGrade('');setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un período</option>{options.periods.map(row=><option key={row.id} value={row.id}>{row.name} ({row.state==='active'?'activo':'planificado'})</option>)}</select></label>
         <label>Materia o área <select aria-label="Materia o área" name="instructional_entry_id" required className={control}><option value="">Selecciona una materia o área</option>{options.entries.map(row=><option key={row.id} value={row.id}>{row.name} ({row.kind==='area'?'área':'materia'})</option>)}</select></label>
-        <label>Grado <select aria-label="Grado" required className={control} value={grade} onChange={event=>{setGrade(event.target.value);setSection('');}}><option value="">Selecciona un grado</option>{options.grades.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Sección <select aria-label="Sección" required className={control} value={section} onChange={event=>setSection(event.target.value)}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.grade_id===grade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-        <label>Inicio <input name="effective_from" type="date" required className={control}/></label><label>Fin (opcional) <input name="effective_until" type="date" className={control}/></label>
-        <button type="submit" className={control}>Planificar asignación</button>
+        <label>Grado <select aria-label="Grado" required disabled={!createPeriod} className={control} value={grade} onChange={event=>{setGrade(event.target.value);setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un grado</option>{options.grades.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <label>Sección <select aria-label="Sección" required disabled={!grade} className={control} value={section} onChange={event=>{setSection(event.target.value);setStartDate('');setEndDate('');}}><option value="">Selecciona una sección</option>{options.sections.filter(row=>row.grade_id===grade).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <label>Inicio <input name="effective_from" type="date" required min={options.periods.find(row=>row.id===createPeriod)?.start_on} max={options.periods.find(row=>row.id===createPeriod)?.end_on} disabled={!section} value={startDate} onChange={event=>setStartDate(event.target.value)} className={control}/></label><label>Fin (opcional) <input name="effective_until" type="date" disabled={!startDate} min={startDate||undefined} max={options.periods.find(row=>row.id===createPeriod)?.end_on} value={endDate} onChange={event=>setEndDate(event.target.value)} className={control}/></label>
+        <button type="submit" disabled={!gate.complete||!validDateOrder(startDate,endDate)} className={control}>Planificar asignación</button>
       </fieldset>
     </form>}
     <div className="my-3 flex flex-wrap gap-3">{kinds.map(kind=>cursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,cursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({teachers:'docentes',periods:'períodos',entries:'materias y áreas',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
@@ -121,9 +126,9 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{({activate:'Activar asignación',close:'Cerrar asignación',replace:'Reemplazar docente'})[action.kind]}: {action.row.teacher_name}</legend>
         <p className="w-full">{action.kind==='replace'?'El reemplazo se aplica al confirmar el servidor y conserva la autoría anterior.':action.kind==='close'?'El cierre conserva la asignación y sus recursos históricos.':'El servidor comprobará el período, fechas y conflictos antes de activar.'}</p>
-        {action.kind==='close'&&<label>Fecha de cierre <input name="effective_until" type="date" required className={control}/></label>}
+        {action.kind==='close'&&<label>Fecha de cierre <input name="effective_until" type="date" required min={action.row.effective_from} max={todayInLima()} className={control}/></label>}
         {action.kind==='replace'&&<label>Nuevo docente <select aria-label="Nuevo docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.filter(row=>row.id!==action.row.teacher_id).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
-        <button type="submit" className={control}>Confirmar {({activate:'activación',close:'cierre',replace:'reemplazo'})[action.kind]}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
+        <button type="submit" className={control}>Revisar {({activate:'activación',close:'cierre',replace:'reemplazo'})[action.kind]}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
       </fieldset>
     </form>}
     {cursor&&<button className={control} disabled={busy} onClick={()=>void load(cursor)}>Cargar más asignaciones</button>}

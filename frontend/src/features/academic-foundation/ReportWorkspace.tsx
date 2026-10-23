@@ -1,3 +1,4 @@
+import {useActionFeedback} from './ActionFeedback.js';
 import {ClassroomSteps,useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademicApiError, createAcademicClient } from './api.js';
@@ -12,8 +13,13 @@ const field = 'mt-2 block w-full rounded-lg border border-eval-ink/30 dark:borde
 
 type AcademicClient = ReturnType<typeof createAcademicClient>;
 type Period = ReturnType<typeof period>;
+const uncertainClosures=new WeakMap<AcademicClient,string>();
 
 export function ReportWorkspace({ client, academic, onExpired }: { client: ReportClient; academic: AcademicClient; onExpired: () => void }) {
+  const feedback=useActionFeedback();
+  const [uncertainPeriod,setUncertainPeriod]=useState<string|null>(()=>uncertainClosures.get(academic)??null);
+  const [bimestersReady,setBimestersReady]=useState(false);
+  const writing=useRef(false),bimesterGeneration=useRef(0);
   const task=useVicePrincipalTask();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [grades, setGrades] = useState<CatalogRow[]>([]);
@@ -25,7 +31,6 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
   const [section, setSection] = useState('');
   const [report, setReport] = useState<ClassroomReport | null>(null);
   const [bimesters, setBimesters] = useState<BimesterState[]>([]);
-  const [closeConfirm, setCloseConfirm] = useState<number | null>(null);
   const [reopenDialog, setReopenDialog] = useState<{ bimester: number; justification: string } | null>(null);
   const [reopenError, setReopenError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -93,7 +98,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
 
   function reset() {
     generation.current++;
-    setReport(null);
+    setReport(null);setReopenDialog(null);setReopenError('');
     setNotice('');
     setSearchQuery('');
     setStatusFilter('all');
@@ -117,62 +122,24 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
     }
   }
 
-  async function loadBimesters(periodId: string) {
-    if (!periodId) {
-      setBimesters([]);
-      return;
-    }
-    try {
-      const res = await academic.bimesters(periodId);
-      setBimesters(res.bimesters);
-    } catch {
-      setBimesters([]);
-    }
+  async function loadBimesters(periodId:string){
+    const request=++bimesterGeneration.current;setBimesters([]);setBimestersReady(false);if(!periodId)return;
+    try{const res=await academic.bimesters(periodId);if(request!==bimesterGeneration.current)return;if(res.period_id!==periodId)throw Error('Wrong bimester period');setBimesters(res.bimesters);setBimestersReady(true);return true;}
+    catch(error){if(request===bimesterGeneration.current){setBimesters([]);fail(error);}return false;}
   }
-
-  useEffect(() => {
-    if (period) void loadBimesters(period);
-    else setBimesters([]);
-  }, [period, academic]);
-
-  async function handleCloseBimester(bNum: number) {
-    if (!period) return;
-    setBusy(true);
-    setNotice('');
-    try {
-      await academic.closeBimester(period, bNum);
-      await loadBimesters(period);
-      setCloseConfirm(null);
-    } catch (e) {
-      fail(e);
-    } finally {
-      setBusy(false);
-    }
+  useEffect(()=>{setReopenDialog(null);void loadBimesters(period);return()=>{bimesterGeneration.current++;};},[period,academic]);
+  const canChangeBimesters=task==='bimesters'&&bimestersReady&&!uncertainPeriod&&periods.some(row=>row.id===period&&row.state==='active');
+  async function changeBimester(number:number,justification?:string){
+    if(!canChangeBimesters||busy||writing.current)return;writing.current=true;
+    const targetPeriod=period;
+    if(!await feedback.confirm({title:justification?'¿Reabrir este bimestre?':'¿Cerrar este bimestre?',message:justification?'Se habilitará nuevamente el registro de calificaciones.':'Se bloqueará el registro de calificaciones de este bimestre.',danger:true})){writing.current=false;return;}
+    setBusy(true);setNotice('');
+    try{if(justification)await academic.reopenBimester(targetPeriod,number,justification);else await academic.closeBimester(targetPeriod,number);setReopenDialog(null);feedback.success(justification?'Bimestre reabierto correctamente.':'Bimestre cerrado correctamente.');await loadBimesters(targetPeriod);}
+    catch(error){if(error instanceof AcademicApiError&&error.outcomeUnknown){uncertainClosures.set(academic,targetPeriod);setUncertainPeriod(targetPeriod);setNotice('No se pudo confirmar el resultado. Consulta el estado del año y no repitas la operación.');}else fail(error);}
+    finally{writing.current=false;setBusy(false);}
   }
-
-  async function handleReopenBimester() {
-    if (!period || !reopenDialog) return;
-    const just = reopenDialog.justification.trim();
-    if (just.length < 10) {
-      setReopenError('La justificación debe tener al menos 10 caracteres.');
-      return;
-    }
-    setBusy(true);
-    setReopenError('');
-    try {
-      await academic.reopenBimester(period, reopenDialog.bimester, just);
-      await loadBimesters(period);
-      setReopenDialog(null);
-    } catch (e) {
-      if (e instanceof AcademicApiError && e.category === 'invalid_justification') {
-        setReopenError('Justificación no válida (mínimo 10 caracteres).');
-        return;
-      }
-      fail(e);
-    } finally {
-      setBusy(false);
-    }
-  }
+  async function handleCloseBimester(number:number){await changeBimester(number);}
+  async function handleReopenBimester(){const justification=reopenDialog?.justification.trim()??'';if(!reopenDialog||justification.length<10||justification.length>500){setReopenError('Escribe una justificación de 10 a 500 caracteres.');return;}await changeBimester(reopenDialog.bimester,justification);}
 
   // Filtrado de estudiantes en memoria
   const filteredItems = useMemo(() => {
@@ -241,6 +208,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
         </div>
 
         <p role="status" className="my-3 text-sm font-medium">{notice}</p>
+        {uncertainPeriod&&<div role="alert"><p>Comprueba el resultado en el año donde hiciste el cambio antes de continuar.</p><button type="button" disabled={busy||period!==uncertainPeriod} onClick={()=>void loadBimesters(period)}>Consultar estado del año</button><button type="button" disabled={busy||period!==uncertainPeriod||!bimestersReady} onClick={()=>{uncertainClosures.delete(academic);setUncertainPeriod(null);setNotice('Resultado revisado.');}}>He revisado el resultado</button></div>}
 
         {task!==null&&<ClassroomSteps period={period} grade={grade} section={section} periods={periods} grades={grades} sections={sections} disabled={busy} onChange={(p,g,s)=>{setPeriod(p);setGrade(g);setSection(s);reset();}}/>}
         {task===null&&<div className="grid gap-4 md:grid-cols-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -381,11 +349,11 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                         )}
 
                         <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60 flex justify-end">
-                          {isLocked ? (
+                          {task==='bimesters'&&(isLocked ? (
                             <button
                               type="button"
                               className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
-                              disabled={busy}
+                              disabled={busy||!canChangeBimesters}
                               onClick={() => {
                                 setReopenError('');
                                 setReopenDialog({ bimester: bim.bimester_number, justification: '' });
@@ -397,12 +365,12 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                             <button
                               type="button"
                               className="text-xs text-rose-700 dark:text-rose-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
-                              disabled={busy}
-                              onClick={() => setCloseConfirm(bim.bimester_number)}
+                              disabled={busy||!canChangeBimesters}
+                              onClick={() => void handleCloseBimester(bim.bimester_number)}
                             >
                               🔒 Cerrar Bimestre
                             </button>
-                          )}
+                          ))}
                         </div>
                       </div>
                     );
@@ -875,46 +843,6 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
             <div className="eval-print-sig-box">
               <div className="eval-print-sig-line"></div>
               <span>V.° B.° Dirección General</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmación de Cierre de Bimestre */}
-      {closeConfirm !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>🔒 Confirmar Cierre de Bimestre</span>
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-              ¿Está seguro de cerrar formalmente el <strong>{closeConfirm}.° Bimestre</strong>?
-            </p>
-            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-800 dark:text-amber-300">
-              <p className="font-semibold">⚠️ Efectos del Cierre Institucional:</p>
-              <ul className="list-disc list-inside mt-1 space-y-0.5">
-                <li>Se bloqueará el registro y modificación de calificaciones para los docentes en este bimestre.</li>
-                <li>Las calificaciones pasarán a condición de <strong>CONSOLIDADO DEFINITIVO</strong>.</li>
-                <li>Cualquier modificación posterior requerirá reapertura autorizada por Dirección con justificación grabada en la bitácora inmutable.</li>
-              </ul>
-            </div>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setCloseConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleCloseBimester(closeConfirm)}
-                className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-lg shadow-sm cursor-pointer"
-              >
-                {busy ? 'Cerrando...' : 'Confirmar y Bloquear'}
-              </button>
             </div>
           </div>
         </div>

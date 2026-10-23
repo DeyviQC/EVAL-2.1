@@ -1,4 +1,8 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import {useActionFeedback} from './ActionFeedback.js';
+import {AccountError} from './accounts.js';
+import {AcademicApiError} from './api.js';
+import {supervisionOptions} from './supervision-navigation.js';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { Download, FileSpreadsheet, GraduationCap, Printer, Users } from 'lucide-react';
 import type { AccountClient } from './accounts.js';
 import type { AcademicClient } from './api.js';
@@ -28,7 +32,11 @@ type Props = {
   onComplete?: () => void;
 };
 
+const uncertainImports=new WeakSet<AccountClient>();
 export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
+  const feedback=useActionFeedback();
+  const writing=useRef(false);
+  const [blocked,setBlocked]=useState(()=>uncertainImports.has(client)),[catalogReady,setCatalogReady]=useState(false);
   const [importType, setImportType] = useState<'student' | 'teacher'>('student');
   const [fileName, setFileName] = useState('');
   const [rawText, setRawText] = useState('');
@@ -50,27 +58,14 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
     let active = true;
     if (!academic) return;
 
-    void Promise.all([
-      academic.directory('catalog/grade', catalogPage('grade')),
-      academic.directory('catalog/section', catalogPage('section')),
-      academic.directory('periods', periodPage),
-    ])
-      .then(([gRes, sRes, pRes]) => {
-        if (!active) return;
-        setGrades(gRes.items);
-        setSections(sRes.items);
-        const actPeriod = pRes.items.find((p: ReturnType<typeof period>) => p.state === 'active');
-        if (actPeriod) setActivePeriodId(actPeriod.id);
-      })
-      .catch(() => {
-        // En caso de que falle la consulta del catálogo, se continúa con validación básica
-      });
+    void supervisionOptions(academic).then(data=>{if(!active)return;setGrades(data.grades.filter(row=>row.is_active));setSections(data.sections.filter(row=>row.is_active));setActivePeriodId(data.periods.find(row=>row.state==='active')?.id??null);setCatalogReady(true);}).catch(error=>{if(!active)return;setCatalogReady(false);setGeneralNotice('No se pudo comprobar el catálogo. No se importarán estudiantes hasta cargarlo correctamente.');if(error instanceof AcademicApiError&&[401,419].includes(error.status??0))onExpired();});
 
     return () => {
       active = false;
     };
   }, [academic]);
 
+  useEffect(()=>{if(rawText)runValidation(rawText,importType);},[rawText,importType,grades,sections,catalogReady]);
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -123,14 +118,15 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
   async function executeImport() {
     const isStudent = importType === 'student';
     const total = isStudent ? validStudents.length : validTeachers.length;
-    if (total === 0) return;
+    if(total===0||writing.current||blocked||isStudent&&!catalogReady)return;writing.current=true;
+    if(!await feedback.confirm({title:'¿Importar '+total+' cuentas?',message:'Se crearán las filas válidas revisadas.'+(isStudent&&!activePeriodId?' No hay año activo: las cuentas quedarán sin matrícula.':'')})){writing.current=false;return;}
 
     setProcessing(true);
     setProgress({ current: 0, total });
     setGeneralNotice('');
 
     const createdCredentials: ImportedCredential[] = [];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
     try {
       if (isStudent) {
@@ -158,8 +154,10 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                   effective_until: null,
                 });
                 enrollmentStatus = 'enrolled';
-              } catch {
-                enrollmentStatus = 'failed';
+              } catch(error) {
+                enrollmentStatus='failed';
+                if(error instanceof AcademicApiError&&error.outcomeUnknown){uncertainImports.add(client);setBlocked(true);setGeneralNotice('Importación detenida: no se confirmó una matrícula. Revisa el resultado antes de repetirla.');createdCredentials.push({name:row.name,username:row.username,password,role:'student',gradeName:row.gradeName,sectionName:row.sectionName,enrollmentStatus});break;}
+                if(error instanceof AcademicApiError&&[401,419,403].includes(error.status??0)){onExpired();break;}
               }
             }
 
@@ -173,7 +171,8 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
               enrollmentStatus,
             });
           } catch (error: unknown) {
-            // Continuar con los siguientes estudiantes si uno falla (ej. usuario ya existente)
+            if(error instanceof AccountError&&(error.uncertain||[401,419,403].includes(error.status??0))){uncertainImports.add(client);setBlocked(true);setGeneralNotice('Importación detenida. No se pudo confirmar una cuenta; revisa Usuarios antes de repetirla.');if([401,419].includes(error.status??0))onExpired();break;}
+            // Confirmed row rejections do not replay the failed row.
             createdCredentials.push({
               name: row.name,
               username: row.username,
@@ -199,7 +198,8 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
               password: res.password ?? 'Generada',
               role: 'teacher',
             });
-          } catch {
+          } catch(error) {
+            if(error instanceof AccountError&&(error.uncertain||[401,419,403].includes(error.status??0))){uncertainImports.add(client);setBlocked(true);setGeneralNotice('Importación detenida. Revisa el resultado de la última cuenta antes de repetirla.');if([401,419].includes(error.status??0))onExpired();break;}
             createdCredentials.push({
               name: row.name,
               username: row.username,
@@ -210,11 +210,11 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
         }
       }
 
-      setResults(createdCredentials);
+      setResults(createdCredentials);if(!uncertainImports.has(client))feedback.success('Importación finalizada. Revisa el resultado de cada fila.');
     } catch {
       setGeneralNotice('Ocurrió un error inesperado durante el procesamiento masivo.');
     } finally {
-      setProcessing(false);
+      writing.current=false;setProcessing(false);
       setProgress(null);
     }
   }
@@ -222,7 +222,8 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
   const validCount = importType === 'student' ? validStudents.length : validTeachers.length;
 
   return (
-    <section className="space-y-6" aria-label="Carga masiva institucional">
+    <section className="space-y-6" aria-label="Carga masiva institucional" aria-busy={processing}>
+      {blocked&&<p role="alert">Importación bloqueada para evitar duplicados. Revisa las cuentas y matrículas afectadas antes de continuar.</p>}
       {/* Vista de pantalla regular */}
       <div className="eval-screen-only space-y-6">
         <header className="rounded-2xl border border-border bg-surface p-5 shadow-xs">
@@ -247,7 +248,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                   importType === 'student' ? 'bg-primary text-white shadow-xs' : 'text-text-muted hover:text-text'
                 }`}
                 onClick={() => switchType('student')}
-                disabled={processing}
+                disabled={processing||blocked}
               >
                 <GraduationCap size={18} aria-hidden="true" className="inline-block align-middle mr-1.5"/> Estudiantes
               </button>
@@ -340,7 +341,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
               {validCount > 0 && (
                 <button
                   type="button"
-                  disabled={processing}
+                  disabled={processing||blocked||(importType==='student'&&!catalogReady)}
                   onClick={() => void executeImport()}
                   className={
                     button +
