@@ -1,3 +1,4 @@
+import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
 import {catalogPage,periodPage,type CatalogRow} from './directory.js';
@@ -15,6 +16,9 @@ const uncertainClients=new WeakSet<AcademicClient>();
 const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
+  const task=useVicePrincipalTask();
+  const [selectedRecord,setSelectedRecord]=useState<string|null>(null);
+  useEffect(()=>{setSelectedRecord(null);setAction(null);},[task]);
   const [rows,setRows]=useState<Enrollment[]>([]);
   const [filters,setFilters]=useState<DirectoryFilters>({state:'active'});
   const scopeReady=!!(filters.academic_period_id&&filters.grade_id&&filters.section_id);
@@ -66,7 +70,7 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{if(mounted.current)setBusy(false);}
   }
   useEffect(()=>{mounted.current=true;void refresh();return()=>{mounted.current=false;generation.current++;};},[client]);
-  useEffect(()=>{setAction(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
+  useEffect(()=>{setAction(null);setSelectedRecord(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
@@ -100,14 +104,14 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
   const disabled=busy||uncertain||phase!=='ready';
   return <section aria-label="Gestión de matrículas" aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">Estudiantes por aula</h3>
-    <p className="my-3">Administra matrículas y conserva el historial de cada estudiante. Los traslados se aplican inmediatamente después de la confirmación del servidor.</p>
-    <ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} disabled={busy}/>
-    {!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar un aula.</p>}
+    <p className="my-3">Consulta las estudiantes de un aula o registra una matrícula.</p>
+    {task!=='create'&&<ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} disabled={busy}/>}
+    {task!=='create'&&!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar un aula.</p>}
     <button className={control} disabled={busy} onClick={()=>void refresh()}>Actualizar matrículas</button>
     {phase==='loading'&&<p role="status">Consultando matrículas…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Consulta los registros antes de continuar.</p>}
-    <form onSubmit={create} aria-label="Crear matrícula" className="my-5 rounded-xl border p-5">
+    {(task===null||task==='create')&&<form onSubmit={create} aria-label="Crear matrícula" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4">
         <legend className="mb-3 font-semibold">Nueva matrícula</legend>
         <label>Estudiante<select aria-label="Estudiante" name="student_id" required className={control}><option value="">Selecciona un estudiante</option>{options.students.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
@@ -118,9 +122,10 @@ export function EnrollmentWorkspace({client,onExpired}:{client:AcademicClient;on
         <label>Fin (opcional)<input name="effective_until" type="date" className={control}/></label>
         <button type="submit" className={control}>Crear matrícula</button>
       </fieldset>
-    </form>
+    </form>}
     <div className="my-3 flex flex-wrap gap-3">{(['students','periods','grades','sections'] as const).map(kind=>optionCursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,optionCursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({students:'estudiantes',periods:'períodos',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
-    {scopeReady&&phase==='ready'&&<><p role="status">{rows.length} matrículas mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay matrículas que coincidan con esta aula y búsqueda.</p>:<div className="eval-directory-table"><table><caption>{filters.state==='history'?'Historial de matrículas':'Estudiantes con matrícula actual'}</caption><thead><tr><th scope="col">Estudiante</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Fechas</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{row.student_name}</th><td>{row.grade_name} {row.section_name}</td><td>{({active:'Activa',transferred:'Trasladada',closed:'Cerrada'})[row.state]}</td><td>{row.effective_from}<small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td>{row.state==='active'?<div className="flex flex-wrap gap-2"><button className={control} disabled={disabled} onClick={()=>{setDestinationGrade(row.grade_id);setDestinationSection('');setAction({row,kind:'transfer'});}}>Trasladar</button><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar matrícula</button></div>:<span>Registro histórico</span>}</td></tr>)}</tbody></table></div>}</>}
+    {task!=='create'&&selectedRecord&&<button type="button" onClick={()=>{setSelectedRecord(null);setAction(null);}}>← Volver al listado</button>}
+    {task!=='create'&&scopeReady&&phase==='ready'&&<><p role="status">{rows.length} matrículas mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay matrículas que coincidan con esta aula y búsqueda.</p>:<div className="eval-directory-table"><table><caption>{filters.state==='history'?'Historial de matrículas':'Estudiantes con matrícula actual'}</caption><thead><tr><th scope="col">Estudiante</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Fechas</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.filter(row=>task===null||!selectedRecord||row.id===selectedRecord).map(row=><tr key={row.id}><th scope="row">{row.student_name}</th><td>{row.grade_name} {row.section_name}</td><td>{({active:'Activa',transferred:'Trasladada',closed:'Cerrada'})[row.state]}</td><td>{row.effective_from}<small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td>{task!==null&&!selectedRecord?<button type="button" onClick={()=>setSelectedRecord(row.id)}>Ver matrícula →</button>:row.state==='active'?<div className="flex flex-wrap gap-2"><button className={control} disabled={disabled} onClick={()=>{setDestinationGrade(row.grade_id);setDestinationSection('');setAction({row,kind:'transfer'});}}>Trasladar</button><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar matrícula</button></div>:<span>Registro histórico</span>}</td></tr>)}</tbody></table></div>}</>}
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de matrícula" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{action.kind==='close'?'Cerrar matrícula':'Traslado inmediato'}: {action.row.student_name}</legend>
         <p className="w-full">{action.kind==='close'?'El cierre conserva esta matrícula en el historial.':'El traslado cierra el contexto actual y crea la matrícula de destino; no cambia las entregas anteriores.'}</p>

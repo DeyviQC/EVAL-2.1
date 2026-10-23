@@ -1,3 +1,4 @@
+import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
 import {enrollmentPage,enrollmentRow} from './enrollments.js';
@@ -6,7 +7,9 @@ type Kind='enrollments'|'assignments';
 type Row=ReturnType<typeof enrollmentRow>|ReturnType<typeof assignmentRow>;
 const labels={active:'Activo',planned:'Planificado',closed:'Cerrado',transferred:'Trasladado'};
 export function HistoryWorkspace({client,kinds,onExpired}:{client:AcademicClient;kinds:Kind[];onExpired:()=>void}){
+ const task=useVicePrincipalTask();
  const [kind,setKind]=useState<Kind>(kinds[0]!),[rows,setRows]=useState<Row[]>([]),[after,setAfter]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');const generation=useRef(0);
+ useEffect(()=>{if(task==='enrollments'||task==='assignments')setKind(task);},[task]);
  async function load(cursor:string|null=null){const current=++generation.current;setBusy(true);setError('');setRows([]);setAfter(null);try{const page=kind==='enrollments'?await client.history(kind,enrollmentPage,cursor):await client.history(kind,assignmentPage,cursor);if(current!==generation.current)return;setRows(page.items);setAfter(page.next_after);}catch(e){if(current!==generation.current)return;if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}setError('No se pudo consultar el historial. Vuelve a consultar.');}finally{if(current===generation.current)setBusy(false);}}
  useEffect(()=>{void load();return ()=>{generation.current++;};},[client,kind]);
  return <section aria-label="Historial académico" aria-busy={busy} className="space-y-6">
@@ -17,16 +20,16 @@ export function HistoryWorkspace({client,kinds,onExpired}:{client:AcademicClient
        </span>
      </div>
      <h2 className="font-serif text-2xl sm:text-3xl font-normal text-text tracking-tight">Historial académico</h2>
-     <p className="text-xs sm:text-sm text-text-muted mt-1">Consulta matrículas y asignaciones conservadas. Estos registros no habilitan nuevas actividades ni cambian entregas anteriores.</p>
+     <p className="text-xs sm:text-sm text-text-muted mt-1">Consulta los registros anteriores y sus fechas.</p>
    </header>
 
    <div className="bg-surface border border-border rounded-xl p-4 shadow-xs flex flex-wrap items-end gap-3 max-w-lg">
-     <div className="flex-1 min-w-[200px]">
+     {task===null&&<div className="flex-1 min-w-[200px]">
        <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1" htmlFor="history-kind">Tipo de historial</label>
        <select id="history-kind" className="w-full rounded-xl border border-border bg-surface text-text p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary" value={kind} disabled={busy} onChange={e=>setKind(e.target.value as Kind)}>
          {kinds.map(k=><option key={k} value={k}>{k==='enrollments'?'Matrículas':'Asignaciones'}</option>)}
        </select>
-     </div>
+     </div>}
      <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 hover:bg-surface text-text px-4 py-2.5 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50" disabled={busy} onClick={()=>void load()}>
        Consultar historial
      </button>

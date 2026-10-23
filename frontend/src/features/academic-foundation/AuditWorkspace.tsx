@@ -1,3 +1,4 @@
+import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademicApiError, type AcademicClient } from './api.js';
 import { auditLedgerPage, type AuditLedgerEntry } from './audit.js';
@@ -24,6 +25,7 @@ const eventBadgeStyles: Record<string, string> = {
 };
 
 export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; onExpired: () => void }) {
+  const task=useVicePrincipalTask();
   const [entityFilter, setEntityFilter] = useState<EntityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -87,14 +89,14 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
             SEGURIDAD Y CONTROL INSTITUCIONAL
           </span>
           <span className="text-[11px] font-medium text-text-muted bg-surface-2 px-2 py-0.5 rounded-md border border-border">
-            Append-Only Ledger
+            {task===null?'Append-Only Ledger':'Solo consulta'}
           </span>
         </div>
         <h2 className="font-serif text-2xl sm:text-3xl font-normal text-text tracking-tight">
           Bitácora de Auditoría Académica
         </h2>
         <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-2xl">
-          Registro inmutable y cronológico de todas las mutaciones del ciclo de vida académico (matrículas, traslados, asignaciones docentes y cambios de estado). Evidencia protegida contra modificación y eliminación.
+          {task===null?'Registro inmutable y cronológico de las operaciones académicas.':'Consulta quién realizó cada cambio y cuándo.'}
         </p>
       </header>
 
@@ -102,7 +104,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
       <div className="bg-surface border border-border rounded-xl p-4 shadow-xs flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1" htmlFor="audit-entity-filter">
-            Filtrar por Entidad
+            Tipo de registro
           </label>
           <select
             id="audit-entity-filter"
@@ -120,13 +122,13 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
 
         <div className="flex-1 min-w-[240px] relative">
           <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1" htmlFor="audit-search">
-            Buscar en Bitácora (Global)
+            Buscar movimiento
           </label>
           <div className="relative">
             <input
               id="audit-search"
               type="text"
-              placeholder="Buscar por actor, correlación, clave..."
+              placeholder="Nombre, operación o referencia…"
               className="w-full rounded-xl border border-border bg-surface text-text p-2.5 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
               value={searchQuery}
               disabled={busy}
@@ -160,7 +162,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
         <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-surface-2/80 border border-border text-xs text-text-muted">
           <span className="flex items-center gap-1.5">
             <span>🔍</span>
-            <span>Búsqueda global activa en todo el ledger: <strong className="text-text">"{debouncedSearch}"</strong></span>
+            <span>Búsqueda: <strong className="text-text">"{debouncedSearch}"</strong></span>
           </span>
           <button
             type="button"
@@ -175,7 +177,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
       {busy && rows.length === 0 && (
         <div className="p-4 rounded-xl bg-surface border border-border text-xs text-text-muted flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p role="status">Consultando registros del ledger inmutable…</p>
+          <p role="status">Consultando movimientos…</p>
         </div>
       )}
 
@@ -239,6 +241,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
                 </div>
               </div>
 
+              <details className="vp-audit-details"><summary>Ver referencias del movimiento</summary>
               {/* Trazabilidad Técnica */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-text-muted bg-surface-2/60 px-3 py-1.5 rounded-lg border border-border/50">
                 <div>
@@ -253,6 +256,7 @@ export function AuditWorkspace({ client, onExpired }: { client: AcademicClient; 
                   <span>Registro #{event.id}</span>
                 </div>
               </div>
+              </details>
             </article>
           );
         })}

@@ -40,7 +40,7 @@ const guides: Record<string, Guide> = {
   supervision: {
     title: 'Supervisión de materiales',
     description: 'Revisa los recursos que un docente publicó en sus cursos y comunícate con el autor mediante observaciones privadas.',
-    steps: ['Consulta los cursos disponibles y selecciona uno.', 'Consulta sus materiales; abre el archivo o revisa sus versiones.', 'Escribe una observación para el docente original y revisa su respuesta.'],
+    steps: ['Elige año, grado, sección y curso.', 'Abre el material que deseas revisar.', 'Envía una observación al docente y consulta su respuesta.'],
     note: 'La observación acompaña al docente; no es una aprobación necesaria para publicar.',
   },
   reports: {
@@ -77,10 +77,10 @@ export function VicePrincipalModuleGuide({ section }: { section: string }) {
   const guide = guides[section];
   if (!guide) return null;
   return (
-    <aside className="vp-module-guide" aria-label={`Guía de ${guide.title}`}>
+    <details key={section} className="vp-guide-disclosure" aria-label={`Guía de ${guide.title}`}>
+      <summary>Ayuda para este apartado</summary>
+      <div className="vp-module-guide">
       <div className="vp-module-guide-copy">
-        <span className="vp-module-guide-kicker">GUÍA RÁPIDA</span>
-        <h2>¿Para qué sirve {guide.title.toLocaleLowerCase('es-PE')}?</h2>
         <p>{guide.description}</p>
         {guide.note && <p className="vp-module-guide-note"><strong>Ten en cuenta:</strong> {guide.note}</p>}
       </div>
@@ -88,6 +88,7 @@ export function VicePrincipalModuleGuide({ section }: { section: string }) {
         <h3>Pasos habituales</h3>
         <ol>{guide.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
       </div>
-    </aside>
+      </div>
+    </details>
   );
 }
