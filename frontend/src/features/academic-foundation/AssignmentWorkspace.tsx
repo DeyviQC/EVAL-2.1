@@ -1,3 +1,4 @@
+import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
 import {assignmentPage,type assignmentRow} from './assignments.js';
@@ -16,6 +17,9 @@ const uncertainClients=new WeakSet<AcademicClient>();
 const control='rounded-lg border border-eval-ink/30 px-3 py-2';
 
 export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;onExpired:()=>void}){
+  const task=useVicePrincipalTask();
+  const [selectedRecord,setSelectedRecord]=useState<string|null>(null);
+  useEffect(()=>{setSelectedRecord(null);setAction(null);},[task]);
   const [rows,setRows]=useState<Assignment[]>([]);
   const [filters,setFilters]=useState<DirectoryFilters>({});
   const scopeReady=!!(filters.academic_period_id&&filters.grade_id&&filters.section_id);
@@ -61,7 +65,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     finally{if(mounted.current)setBusy(false);}
   }
   useEffect(()=>{mounted.current=true;void refresh();return()=>{mounted.current=false;generation.current++;};},[client]);
-  useEffect(()=>{setAction(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
+  useEffect(()=>{setAction(null);setSelectedRecord(null);setRows([]);setCursor(null);const timer=setTimeout(()=>void load(),200);return()=>{clearTimeout(timer);generation.current++;};},[filters]);
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
@@ -90,14 +94,14 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   const disabled=busy||uncertain||phase!=='ready';
   return <section aria-label="Gestión de asignaciones" aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">Organización docente</h3>
-    <p className="my-3">Planifica y activa asignaciones por docente, materia o área y aula. Un reemplazo conserva la asignación y autoría anteriores.</p>
-    <ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} teachers={options.teachers} entries={options.entries} disabled={busy}/>
-    {!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar las asignaciones del aula.</p>}
+    <p className="my-3">Organiza quién enseña cada curso y conserva los cambios anteriores.</p>
+    {task!=='create'&&<ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} teachers={options.teachers} entries={options.entries} disabled={busy}/>}
+    {task!=='create'&&!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar las asignaciones del aula.</p>}
     <button className={control} disabled={busy} onClick={()=>void refresh()}>Actualizar asignaciones</button>
     {phase==='loading'&&<p role="status">Consultando asignaciones…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica los registros antes de continuar.</p>}
-    <form onSubmit={create} aria-label="Planificar asignación" className="my-5 rounded-xl border p-5">
+    {(task===null||task==='create')&&<form onSubmit={create} aria-label="Planificar asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">Nueva asignación planificada</legend>
         <label>Docente <select aria-label="Docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
         <label>Período <select aria-label="Período" name="academic_period_id" required className={control}><option value="">Selecciona un período</option>{options.periods.map(row=><option key={row.id} value={row.id}>{row.name} ({row.state==='active'?'activo':'planificado'})</option>)}</select></label>
@@ -107,12 +111,13 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
         <label>Inicio <input name="effective_from" type="date" required className={control}/></label><label>Fin (opcional) <input name="effective_until" type="date" className={control}/></label>
         <button type="submit" className={control}>Planificar asignación</button>
       </fieldset>
-    </form>
+    </form>}
     <div className="my-3 flex flex-wrap gap-3">{kinds.map(kind=>cursors[kind]&&<button key={kind} className={control} disabled={busy} onClick={()=>{setBusy(true);void loadOption(kind,cursors[kind]).catch(failed).finally(()=>setBusy(false));}}>Cargar más {({teachers:'docentes',periods:'períodos',entries:'materias y áreas',grades:'grados',sections:'secciones'})[kind]}</button>)}</div>
-    {scopeReady&&phase==='ready'&&<><p role="status">{rows.length} asignaciones mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay asignaciones que coincidan con los filtros de esta aula.</p>:<div className="eval-directory-table"><table><caption>Asignaciones docentes del aula</caption><thead><tr><th scope="col">Docente</th><th scope="col">Área o materia</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{row.teacher_name}</th><td>{row.entry_name}{row.replaces_assignment_id&&<small className="block">Reemplazo con historial conservado</small>}</td><td>{row.grade_name} {row.section_name}</td><td>{({planned:'Planificada',active:'Activa',closed:'Cerrada'})[row.state]}<small className="block">Desde {row.effective_from}</small><small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td><div className="flex flex-wrap gap-2">
+    {task!=='create'&&selectedRecord&&<button type="button" onClick={()=>{setSelectedRecord(null);setAction(null);}}>← Volver al listado</button>}
+    {task!=='create'&&scopeReady&&phase==='ready'&&<><p role="status">{rows.length} asignaciones mostradas{cursor?' · Hay más resultados':''}.</p>{rows.length===0?<p>No hay asignaciones que coincidan con los filtros de esta aula.</p>:<div className="eval-directory-table"><table><caption>Asignaciones docentes del aula</caption><thead><tr><th scope="col">Docente</th><th scope="col">Área o materia</th><th scope="col">Aula</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>{rows.filter(row=>task===null||!selectedRecord||row.id===selectedRecord).map(row=><tr key={row.id}><th scope="row">{row.teacher_name}</th><td>{row.entry_name}{row.replaces_assignment_id&&<small className="block">Reemplazo con historial conservado</small>}</td><td>{row.grade_name} {row.section_name}</td><td>{({planned:'Planificada',active:'Activa',closed:'Cerrada'})[row.state]}<small className="block">Desde {row.effective_from}</small><small className="block">Fin: {row.effective_until??'Sin fecha de fin'}</small></td><td>{task!==null&&!selectedRecord?<button type="button" onClick={()=>setSelectedRecord(row.id)}>Ver asignación →</button>:<div className="flex flex-wrap gap-2">
         {row.state==='planned'&&row.period_state==='active'&&<button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'activate'})}>Activar asignación</button>}
         {row.state==='active'&&<><button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'close'})}>Cerrar asignación</button>{row.period_state==='active'&&<button className={control} disabled={disabled} onClick={()=>setAction({row,kind:'replace'})}>Reemplazar docente</button>}</>}
-      </div></td></tr>)}</tbody></table></div>}</>}
+      </div>}</td></tr>)}</tbody></table></div>}</>}
     {action&&<form onSubmit={confirm} aria-label="Confirmar cambio de asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{({activate:'Activar asignación',close:'Cerrar asignación',replace:'Reemplazar docente'})[action.kind]}: {action.row.teacher_name}</legend>
         <p className="w-full">{action.kind==='replace'?'El reemplazo se aplica al confirmar el servidor y conserva la autoría anterior.':action.kind==='close'?'El cierre conserva la asignación y sus recursos históricos.':'El servidor comprobará el período, fechas y conflictos antes de activar.'}</p>

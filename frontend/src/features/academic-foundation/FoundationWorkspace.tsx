@@ -1,7 +1,9 @@
+import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AcademicApiError, type createAcademicClient } from './api.js';
 import { periodPage, catalogPage, type CatalogKind, type CatalogRow } from './directory.js';
 import { type period } from './contracts.js';
+import {CatalogWorkspace} from './CatalogWorkspace.js';
 type Client=ReturnType<typeof createAcademicClient>;
 type Period=ReturnType<typeof period>;
 const control='rounded-lg border border-eval-ink/30 px-3 py-2';
@@ -15,6 +17,7 @@ function errorMessage(error:unknown){
   return 'No se pudo completar la consulta. Verifica la conexión y consulta de nuevo.';
 }
 export function FoundationWorkspace({section,client,onExpired}:{section:'periods'|'catalog';client:Client;onExpired:()=>void}){
+  const task=useVicePrincipalTask();
   const [kind,setKind]=useState<CatalogKind>('entry');const [periods,setPeriods]=useState<Period[]>([]);const [rows,setRows]=useState<CatalogRow[]>([]);
   const [grades,setGrades]=useState<CatalogRow[]>([]);const [gradeCursor,setGradeCursor]=useState<string|null>(null);
   const [gradeBusy,setGradeBusy]=useState(false);const gradeRequest=useRef(false);
@@ -25,8 +28,11 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
   function failed(error:unknown){setMessage(errorMessage(error));if(error instanceof AcademicApiError){if(error.status===401||error.status===419)onExpired();if(error.outcomeUnknown)setUncertain(true);}}
   async function load(after:string|null=null,append=after!==null){const current=++generation.current;setPhase('loading');setMessage('');
     try{if(section==='periods'){const page=await client.directory('periods',periodPage,after);if(!mounted.current||current!==generation.current)return;setPeriods(old=>append?[...old,...page.items]:page.items);setCursor(page.next_after);}
-      else{const page=await client.directory(`catalog/${kind}`,catalogPage(kind),after);if(!mounted.current||current!==generation.current)return;setRows(old=>append?[...old,...page.items]:page.items);setCursor(page.next_after);}
-      setPhase('ready');
+      else{let page=await client.directory(`catalog/${kind}`,catalogPage(kind),after);const collected=[...page.items];
+        // Grade navigation must include sections beyond the first directory page.
+        while(kind==='section'&&page.next_after!==null){const previous=page.next_after;page=await client.directory('catalog/section',catalogPage('section'),previous);if(!mounted.current||current!==generation.current)return;if(page.items.some(row=>BigInt(row.id)<=BigInt(previous)))throw new Error('Invalid section cursor');collected.push(...page.items);if(page.next_after!==null&&BigInt(page.next_after)<=BigInt(previous))throw new Error('Invalid section cursor');}
+        if(!mounted.current||current!==generation.current)return;setRows(old=>append?[...old,...collected]:collected);setCursor(page.next_after);}
+      setPhase('ready');return true;
     }catch(error){if(!mounted.current||current!==generation.current)return;setPeriods([]);setRows([]);setCursor(null);setPhase('error');failed(error);}
   }
   async function loadGrades(after:string|null=null){if(gradeRequest.current)return;gradeRequest.current=true;setGradeBusy(true);
@@ -34,25 +40,25 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
     catch(error){if(mounted.current){setGrades([]);failed(error);}}finally{gradeRequest.current=false;if(mounted.current)setGradeBusy(false);}}
   useEffect(()=>{mounted.current=true;lastPage.current=null;void load();if(section==='catalog'&&kind==='section')void loadGrades();return ()=>{mounted.current=false;generation.current++;};},[section,kind]);
   const lastPage=useRef<string|null>(null);
-  async function mutate(operation:()=>Promise<unknown>,created=false){if(writing.current||uncertain)return;writing.current=true;setBusy(true);setMessage('');
-    try{const result=await operation() as {id:string};if(!mounted.current)return;setConfirm(null);
-      if(created){const prior=(BigInt(result.id)-1n).toString();lastPage.current=prior==='0'?null:prior;}
-      await load(lastPage.current,false);setMessage('Operación confirmada. Registros actualizados.');}
-    catch(error){if(mounted.current)failed(error);}finally{writing.current=false;if(mounted.current)setBusy(false);}
+  async function mutate(operation:()=>Promise<unknown>,created=false):Promise<boolean>{if(writing.current||uncertain)return false;writing.current=true;setBusy(true);setMessage('');
+    try{const result=await operation() as {id:string};if(!mounted.current)return false;setConfirm(null);
+      if(created&&!(section==='catalog'&&kind==='section')){const prior=(BigInt(result.id)-1n).toString();lastPage.current=prior==='0'?null:prior;}
+      const refreshed=await load(lastPage.current,false);if(mounted.current)setMessage(refreshed?'Cambio guardado.':'Cambio guardado. No se pudo actualizar la lista. Pulsa Actualizar.');return true;}
+    catch(error){if(mounted.current)failed(error);return false;}finally{writing.current=false;if(mounted.current)setBusy(false);}
   }
   function create(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=event.currentTarget;const data=new FormData(form);const name=String(data.get('name')??'');
     if(section==='periods')void mutate(()=>client.createPeriod({name,start_on:String(data.get('start_on')),end_on:String(data.get('end_on'))}),true);
     else void mutate(()=>client.createCatalog(kind,{name,...(kind==='entry'?{kind:String(data.get('kind'))}:kind==='section'?{grade_id:String(data.get('grade_id'))}:{})}),true);
   }
+  if(section==='catalog')return <CatalogWorkspace kind={kind} rows={rows} grades={grades} loading={phase==='loading'} busy={busy} uncertain={uncertain} message={message} error={phase==='error'} more={cursor!==null} gradeBusy={gradeBusy} moreGrades={gradeCursor!==null} onKind={next=>{generation.current++;setRows([]);setCursor(null);setPhase('loading');setKind(next);}} onRefresh={()=>{void load();if(kind==='section'&&!grades.length)void loadGrades();}} onMore={()=>void load(cursor)} onMoreGrades={()=>void loadGrades(gradeCursor)} onCreate={input=>mutate(()=>client.createCatalog(kind,input),true)} onRename={(id,name)=>mutate(()=>client.updateCatalog(kind,id,{name}))} onState={(id,is_active)=>mutate(()=>client.updateCatalog(kind,id,{is_active}))}/>;
   return <section aria-label={section==='periods'?'Gestión de períodos':'Gestión de catálogo'} aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">{section==='periods'?'Períodos académicos':'Catálogo académico'}</h3>
-    <p>Las operaciones se validan en el servidor y conservan el historial.</p>
-    {section==='catalog'&&<label>Tipo de catálogo <select className={control} value={kind} disabled={busy} onChange={event=>{setConfirm(null);setKind(event.target.value as CatalogKind);}}><option value="entry">Materias y áreas</option><option value="grade">Grados</option><option value="section">Secciones</option></select></label>}
+    <p>Consulta las fechas y el estado del año académico.</p>
     <button className={control} disabled={busy} onClick={()=>void load()}>Actualizar registros</button>
     {phase==='loading'&&<p role="status">Consultando registros…</p>}
     {message&&<p role={phase==='error'||uncertain?'alert':'status'}>{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica el resultado con administración antes de iniciar otra sesión de trabajo.</p>}
-    <form onSubmit={create} className="my-5 flex flex-wrap gap-3" aria-label={section==='periods'?'Crear período':'Crear registro de catálogo'}>
+    {(task===null||task==='create')&&<form onSubmit={create} className="my-5 flex flex-wrap gap-3" aria-label={section==='periods'?'Crear período':'Crear registro de catálogo'}>
       <fieldset disabled={busy||uncertain||phase!=='ready'} className="flex flex-wrap gap-3">
         <legend>{section==='periods'?'Crear período':'Crear registro'}</legend>
         <label>Nombre <input className={control} name="name" required maxLength={255}/></label>
@@ -61,9 +67,9 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
           kind==='section'?<><label>Grado <select className={control} name="grade_id" aria-label="Grado" required disabled={gradeBusy}><option value="">Selecciona un grado</option>{grades.map(grade=><option key={grade.id} value={grade.id}>{grade.name}{grade.is_active?'':' (inactivo)'}</option>)}</select></label>{gradeCursor&&<button type="button" disabled={gradeBusy} onClick={()=>void loadGrades(gradeCursor)}>Cargar más grados</button>}</>:null}
         <button className={control} type="submit">{section==='periods'?'Crear período':'Crear registro'}</button>
       </fieldset>
-    </form>
+    </form>}
     {phase==='ready'&&(section==='periods'?periods.length===0:rows.length===0)&&<p>No hay registros para mostrar.</p>}
-    {phase==='ready'&&section==='periods'&&periods.map(row=><article key={row.id} className="my-4 rounded-lg border p-4" aria-label={row.name}>
+    {task!=='create'&&phase==='ready'&&section==='periods'&&periods.map(row=><article key={row.id} className="my-4 rounded-lg border p-4" aria-label={row.name}>
       <h4 className="font-semibold whitespace-pre-wrap">{row.name}</h4><p>Estado: {({planned:'Planificado',active:'Activo',closed:'Cerrado'})[row.state]}</p><p>Inicio: {row.start_on} · Fin: {row.end_on}</p>
       {row.state!=='closed'&&<button className={control} disabled={busy||uncertain} onClick={()=>setConfirm({id:row.id,name:row.name,action:row.state==='planned'?'activate':'close'})}>{row.state==='planned'?'Solicitar activación':'Solicitar cierre'}</button>}
     </article>)}
@@ -72,13 +78,6 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
       <button className={control} disabled={busy||uncertain} onClick={()=>void mutate(()=>client.transitionPeriod(confirm.id,confirm.action))}>Confirmar {confirm.action==='activate'?'activación':'cierre'}</button>
       <button className={control} disabled={busy} onClick={()=>setConfirm(null)}>Cancelar</button>
     </section>}
-    {phase==='ready'&&section==='catalog'&&rows.map(row=><article key={row.id} className="my-4 rounded-lg border p-4" aria-label={row.name}>
-      <h4 className="font-semibold whitespace-pre-wrap">{row.name}</h4><p>{row.kind==='subject'?'Materia':row.kind==='area'?'Área':kind==='grade'?'Grado':'Sección'} · {row.is_active?'Activo':'Inactivo'}</p>
-      <form aria-label={'Editar '+row.name} onSubmit={event=>{event.preventDefault();const name=String(new FormData(event.currentTarget).get('name'));void mutate(()=>client.updateCatalog(kind,row.id,{name}));}}>
-        <label>Nuevo nombre <input className={control} name="name" defaultValue={row.name} required maxLength={255} disabled={busy||uncertain}/></label><button className={control} disabled={busy||uncertain}>Guardar nombre</button>
-      </form>
-      <button className={control} disabled={busy||uncertain} onClick={()=>void mutate(()=>client.updateCatalog(kind,row.id,{is_active:!row.is_active}))}>{row.is_active?'Desactivar':'Reactivar'}</button>
-    </article>)}
     {phase==='ready'&&cursor&&<button className={control} disabled={busy} onClick={()=>void load(cursor)}>Cargar más registros</button>}
   </section>;
 }

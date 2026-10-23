@@ -51,5 +51,11 @@ import { materialMaintenanceCases } from '../.test-build/features/academic-found
 import { observationCases } from '../.test-build/features/academic-foundation/material-observations.test.js';
 import { bulkImportCases } from '../.test-build/features/academic-foundation/bulk-import.test.js';
 import { auditCases } from '../.test-build/features/academic-foundation/audit.test.js';
+import {supervisionNavigationCases} from '../.test-build/features/academic-foundation/supervision-navigation.test.js';
+import {catalogWorkspaceCases} from '../.test-build/features/academic-foundation/catalog-workspace.test.js';
+for(const [name,run] of catalogWorkspaceCases)test(name,run);
+for(const [name,run] of supervisionNavigationCases)test(name,run);
 for (const [name, run] of [...cases,...uiCases,...studentShellCases,...navigationCases,...directoryCases,...courseCases,...materialCases,...enrollmentCases,...assignmentCases,...accountCases,...studentDashboardCases,...studentTasksCases,...bulkImportCases,...activityCases,...assessmentCases,...reportCases,...notificationCases,...historyCases,...recordedTimeCases,...materialMaintenanceCases,...observationCases,...materialFileCases,...calendarCases,...weekCases,...auditCases]) test(name, run);
 
+import {vicePrincipalFlowCases} from '../.test-build/features/academic-foundation/vice-principal-workspace.test.js';
+for(const [name,run] of vicePrincipalFlowCases)test(name,run);

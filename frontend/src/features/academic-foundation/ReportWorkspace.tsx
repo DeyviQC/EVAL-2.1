@@ -1,3 +1,4 @@
+import {ClassroomSteps,useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademicApiError, createAcademicClient } from './api.js';
 import { periodPage, catalogPage, type CatalogRow } from './directory.js';
@@ -13,6 +14,7 @@ type AcademicClient = ReturnType<typeof createAcademicClient>;
 type Period = ReturnType<typeof period>;
 
 export function ReportWorkspace({ client, academic, onExpired }: { client: ReportClient; academic: AcademicClient; onExpired: () => void }) {
+  const task=useVicePrincipalTask();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [grades, setGrades] = useState<CatalogRow[]>([]);
   const [sections, setSections] = useState<CatalogRow[]>([]);
@@ -195,7 +197,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               Consulta el avance del aula y descarga consolidados oficiales para la I.E. Nuestra Señora de las Mercedes.
             </p>
           </div>
-          {report && (
+          {report && task!=='bimesters' && (
             <div className="flex items-center gap-2">
               <a
                 href={client.officialUrl ? client.officialUrl(period, grade, section) : officialClassroomReportUrl(period, grade, section)}
@@ -240,7 +242,8 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
 
         <p role="status" className="my-3 text-sm font-medium">{notice}</p>
 
-        <div className="grid gap-4 md:grid-cols-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+        {task!==null&&<ClassroomSteps period={period} grade={grade} section={section} periods={periods} grades={grades} sections={sections} disabled={busy} onChange={(p,g,s)=>{setPeriod(p);setGrade(g);setSection(s);reset();}}/>}
+        {task===null&&<div className="grid gap-4 md:grid-cols-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <label>
             <span className="font-semibold text-sm">Período</span>
             <select
@@ -280,7 +283,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               {sections.filter(s => s.grade_id === grade).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
-        </div>
+        </div>}
 
         <div className="my-4 flex flex-wrap items-center gap-3">
           {(['period', 'grade', 'section'] as const).map(kind =>
@@ -318,7 +321,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
             </div>
 
             {/* Control Institucional de Bimestres y Bloqueo de Calificaciones */}
-            {bimesters.length > 0 && (
+            {(task===null||task==='bimesters')&&bimesters.length > 0 && (
               <div className="mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <div>
@@ -408,6 +411,8 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               </div>
             )}
 
+            {task==='bimesters'&&bimesters.length===0&&<p role="status">No hay estados de bimestres disponibles para este año.</p>}
+            {task!=='bimesters'&&<>
             {/* Switcher de Vistas */}
             <div className="flex items-center gap-2 mt-4 border-b border-slate-200 dark:border-slate-800">
               <button
@@ -756,6 +761,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 </button>
               )}
             </div>
+            </>}
           </div>
         )}
       </div>
