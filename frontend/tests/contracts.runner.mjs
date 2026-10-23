@@ -1,3 +1,5 @@
+import {studentTaskFlowCases} from '../.test-build/features/academic-foundation/student-task-flow.test.js';
+for(const [name,run] of studentTaskFlowCases)test(name,run);
 import {weeklyNavigationCases} from '../.test-build/features/academic-foundation/weekly-navigation.test.js';
 import {sharedCourseCases} from '../.test-build/features/academic-foundation/shared-course.test.js';
 for(const [name,run] of sharedCourseCases)test(name,run);

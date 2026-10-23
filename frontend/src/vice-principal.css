@@ -651,24 +651,7 @@
 .eval-layout[data-role="vice_principal"] .vp-calendar-bimester summary p { color:var(--text-muted); }
 .eval-layout[data-role="vice_principal"] .vp-calendar-bimester .eval-week-grid { margin-top:1rem; }
 /* Clear confirmation and outcome colors, based on the institutional palette. */
-.eval-action-dialog { color:var(--text,#142D56); background:var(--surface,#fff); border:1px solid var(--border,#d8e0ed); border-top:4px solid #D4AF37; border-radius:1.2rem; padding:1.7rem; width:min(460px,calc(100vw - 32px)); box-shadow:0 24px 90px #07162955; }
-.eval-action-dialog::backdrop { background:#08182bb3; backdrop-filter:blur(3px); }
-.eval-action-dialog h2 { font-size:1.4rem; font-weight:700; margin:.9rem 0 .7rem; }
-.eval-action-dialog p { color:var(--text-muted,#53647b); line-height:1.65; margin-bottom:1.4rem; }
-.eval-confirm-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:#fff2c7; color:#805c00; }
-.eval-confirm-buttons { display:flex; justify-content:flex-end; gap:.8rem; flex-wrap:wrap; }
-.eval-confirm-buttons button { border:1px solid var(--border,#d8e0ed); border-radius:.7rem; padding:.7rem 1.3rem; min-height:46px; font-size:1rem; color:var(--text,#142D56); background:var(--surface-2,#f3f6fb); cursor:pointer; }
-.eval-confirm-buttons .eval-confirm-accept { background:#28599B; color:#fff; border-color:#28599B; }
-.eval-action-dialog.is-danger { border-top-color:#b73342; }
-.eval-action-dialog.is-danger .eval-confirm-accept { background:#a62636; border-color:#a62636; }
-.eval-action-dialog.is-danger .eval-confirm-icon { background:#ffe4e7; color:#a62636; }
-.eval-action-dialog button:focus-visible { outline:3px solid #D4AF37; outline-offset:3px; }
-.eval-action-notice { position:fixed; z-index:100; right:24px; top:100px; display:flex; align-items:center; gap:.8rem; max-width:min(480px,calc(100vw - 32px)); background:#e9f8ef; color:#155431; border:1px solid #9bd3af; border-left:5px solid #248044; padding:1rem 1.2rem; border-radius:.9rem; box-shadow:0 8px 30px #142d5622; }
-.eval-action-notice button { margin-left:auto; border:0; min-height:44px; min-width:44px; background:transparent; color:inherit; cursor:pointer; }
-.dark .eval-action-notice { background:#123023; color:#b5f0cc; border-color:#397453; }
-@media(max-width:600px){.eval-action-notice { top:85px; right:16px; }.eval-confirm-buttons button { flex:1; }}
 .eval-layout[data-role="vice_principal"] .vp-task-content form button[type="submit"],
 .eval-layout[data-role="vice_principal"] .vp-task-content form button:not([type]) { background:#28599B; color:#fff; border-color:#28599B; }
 .eval-layout[data-role="vice_principal"] .vp-task-content [aria-label^="Confirmar cambio"] { border:1px solid #D4AF37; background:var(--surface-2); }
 .eval-layout[data-role="vice_principal"] .vp-catalog-confirm { border-left:4px solid #D4AF37; }
-.eval-action-dialog { position:fixed; inset:0; margin:auto; max-height:calc(100dvh - 32px); overflow:auto; }

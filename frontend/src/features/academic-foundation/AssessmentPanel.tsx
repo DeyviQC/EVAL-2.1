@@ -1,5 +1,6 @@
+import {useActionFeedback} from './ActionFeedback.js';
 import { RecordedTime } from './RecordedTime.js';
-import { useState, useRef, type FormEvent } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { evidenceUrl, type ActivityClient, type Assessment, type Delivery } from './activities.js';
 import { Sparkles, CheckCircle2, Clock } from 'lucide-react';
 
@@ -68,7 +69,10 @@ export function AssessmentPanel({
   onSaved: () => Promise<void>;
   onError: (error: unknown) => void;
 }) {
+  const actionFeedback = useActionFeedback();
   const writing = useRef(false);
+  const alive = useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[delivery.id,delivery.version.id]);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<Assessment[]>([]);
   const [open, setOpen] = useState(false);
@@ -94,24 +98,29 @@ export function AssessmentPanel({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (writing.current || busy || blocked || client.isUncertain()) return;
+    if (!delivery.can_assess || !isGradeKey(grade) || !feedback.trim() || feedback.length > 5000) return;
+    const selectedGrade=grade, comments=feedback.trim();
     writing.current = true;
     setBusy(true);
     setNotice('');
     try {
+      if (!await actionFeedback.confirm({title:delivery.assessment?'¿Corregir la calificación?':'¿Guardar la calificación?',message:delivery.student_name+' · Nota '+selectedGrade+' · Se registrará la retroalimentación de esta entrega.'}) || !alive.current) return;
       await client.assess(
         delivery.id,
         delivery.version.id,
         delivery.assessment?.id ?? null,
-        grade,
-        feedback
+        selectedGrade,
+        comments
       );
+      if (!alive.current) return;
+      actionFeedback.success('Calificación guardada correctamente.');
       setNotice('Calificación guardada correctamente.');
       await onSaved();
     } catch (e) {
-      onError(e);
+      if (alive.current) onError(e);
     } finally {
       writing.current = false;
-      setBusy(false);
+      if (alive.current) setBusy(false);
     }
   }
 
@@ -241,6 +250,7 @@ export function AssessmentPanel({
                     <button
                       type="button"
                       key={g}
+                      aria-pressed={isSelected}
                       onClick={() => setGrade(g)}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected ? meta.activeColor : meta.color + ' hover:opacity-90'
@@ -305,7 +315,7 @@ export function AssessmentPanel({
                 >
                   Retroalimentación formativa *
                 </label>
-                <span className="text-[10px] text-text-muted">Obligatoria según MINEDU</span>
+                <span className="text-[10px] text-text-muted">Obligatoria</span>
               </div>
               <textarea
                 id={`feedback-${delivery.id}`}

@@ -74,9 +74,11 @@ export function UsersWorkspace({client,academic,onExpired}:{client:AccountClient
   </div>
  </section>;
 }
-export function OwnAccountWorkspace({client,account,onExpired}:{client:AccountClient;account:OwnAccount;onExpired:()=>void}){
+export function OwnAccountWorkspace({client,account,onExpired,profileLabel="Subdirector"}:{client:AccountClient;account:OwnAccount;onExpired:()=>void;profileLabel?:string}){
  const feedback=useActionFeedback();
- const task=useVicePrincipalTask();
+ const parentTask=useVicePrincipalTask();
+ const [localTask,setLocalTask]=useState<'profile'|'security'|null>(null);
+ const task=parentTask??localTask;
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[unknown,setUnknown]=useState(false);
  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=event.currentTarget,values=new FormData(form),password=String(values.get('password'));if(password!==values.get('confirm')){setNotice('Las contraseñas nuevas no coinciden.');return;}const bytes=new TextEncoder().encode(password).length;if(bytes<12||bytes>72){setNotice('La nueva contraseña debe tener entre 12 y 72 bytes UTF-8.');return;}if(busy||unknown||!await feedback.confirm({title:'¿Cambiar tu contraseña?',message:'Se actualizará tu acceso y tendrás que iniciar sesión nuevamente.'}))return;setBusy(true);setNotice('');try{await client.changePassword(String(values.get('current_password')),password);feedback.success('Contraseña actualizada.');form.reset();onExpired();}catch(error){form.reset();if(error instanceof AccountError&&[401,419].includes(error.status??0)){onExpired();return;}setUnknown(error instanceof AccountError&&error.uncertain);setNotice(message(error));}finally{setBusy(false);}}
  return <section className="space-y-6 max-w-lg">
@@ -90,8 +92,9 @@ export function OwnAccountWorkspace({client,account,onExpired}:{client:AccountCl
     <p className="text-xs sm:text-sm text-text-muted mt-1">{account.name} · {account.username}</p>
   </header>
   {notice&&<div className="p-3.5 rounded-xl bg-surface-2 border border-border text-xs text-text"><p role="status">{notice}</p></div>}
-  {task!=='profile'&&<form onSubmit={event=>void submit(event)} className="p-6 bg-surface border border-border rounded-2xl shadow-xs"><fieldset disabled={busy||unknown} className="space-y-4"><legend className="font-bold text-text text-base">Cambiar contraseña</legend><label className="block text-xs font-semibold text-text uppercase tracking-wider">Contraseña actual<input className={field} name="current_password" type="password" required autoComplete="current-password" /></label><label className="block text-xs font-semibold text-text uppercase tracking-wider">Nueva contraseña<input className={field} name="password" type="password" required autoComplete="new-password" /></label><label className="block text-xs font-semibold text-text uppercase tracking-wider">Confirmar nueva contraseña<input className={field} name="confirm" type="password" required autoComplete="new-password" /></label><p className="text-xs text-text-muted">Entre 12 y 72 bytes UTF-8. Después del cambio deberás ingresar con la nueva contraseña.</p><button className={button+' bg-accent text-navy-950 hover:bg-accent-hover font-bold border-transparent px-5 py-2.5'}>Cambiar contraseña</button></fieldset></form>}
-  {task==='profile'&&<dl className="vp-profile-card"><dt>Nombre</dt><dd>{account.name}</dd><dt>Usuario</dt><dd>{account.username}</dd><dt>Perfil</dt><dd>Subdirector</dd></dl>}
+  {parentTask===null&&(localTask===null?<nav className="eval-consult-grid" aria-label="Opciones de mi cuenta"><button type="button" onClick={()=>setLocalTask('profile')}><strong>Mis datos</strong><span>Nombre, usuario y perfil</span><b>Consultar →</b></button><button type="button" onClick={()=>setLocalTask('security')}><strong>Cambiar contraseña</strong><span>Actualiza tu acceso personal</span><b>Abrir →</b></button></nav>:<button type="button" className="eval-role-back" disabled={busy} onClick={()=>setLocalTask(null)}>← Volver a mi cuenta</button>)}
+  {task==='security'&&<form onSubmit={event=>void submit(event)} className="p-6 bg-surface border border-border rounded-2xl shadow-xs"><fieldset disabled={busy||unknown} className="space-y-4"><legend className="font-bold text-text text-base">Cambiar contraseña</legend><label className="block text-xs font-semibold text-text uppercase tracking-wider">Contraseña actual<input className={field} name="current_password" type="password" required autoComplete="current-password" /></label><label className="block text-xs font-semibold text-text uppercase tracking-wider">Nueva contraseña<input className={field} name="password" type="password" required autoComplete="new-password" /></label><label className="block text-xs font-semibold text-text uppercase tracking-wider">Confirmar nueva contraseña<input className={field} name="confirm" type="password" required autoComplete="new-password" /></label><p className="text-xs text-text-muted">Entre 12 y 72 bytes UTF-8. Después del cambio deberás ingresar con la nueva contraseña.</p><button className={button+' bg-accent text-navy-950 hover:bg-accent-hover font-bold border-transparent px-5 py-2.5'}>Cambiar contraseña</button></fieldset></form>}
+  {task==='profile'&&<dl className="vp-profile-card eval-profile-card"><dt>Nombre</dt><dd>{account.name}</dd><dt>Usuario</dt><dd>{account.username}</dd><dt>Perfil</dt><dd>{profileLabel}</dd></dl>}
   {unknown&&<button className={button} onClick={onExpired}>Volver a ingresar para comprobar el resultado</button>}
  </section>;
 }
@@ -109,6 +112,8 @@ export function MandatoryPasswordChangeWorkspace({
   const [notice, setNotice] = useState('');
   const [unknown, setUnknown] = useState(false);
   const [success, setSuccess] = useState(false);
+  const actionFeedback=useActionFeedback();
+  const passwordWriting=useRef(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,10 +137,14 @@ export function MandatoryPasswordChangeWorkspace({
       return;
     }
 
+    if(busy||unknown||passwordWriting.current)return;
+    passwordWriting.current=true;
     setBusy(true);
     setNotice('');
     try {
+      if(!await actionFeedback.confirm({title:'¿Guardar tu nueva contraseña?',message:'Se actualizará tu acceso y tendrás que iniciar sesión nuevamente.'}))return;
       await client.changePassword(current, password);
+      actionFeedback.success('Contraseña actualizada correctamente.');
       form.reset();
       setSuccess(true);
     } catch (error) {
@@ -146,6 +155,7 @@ export function MandatoryPasswordChangeWorkspace({
       setUnknown(error instanceof AccountError && error.uncertain);
       setNotice(message(error));
     } finally {
+      passwordWriting.current=false;
       setBusy(false);
     }
   }

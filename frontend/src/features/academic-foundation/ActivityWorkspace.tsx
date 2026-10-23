@@ -1,3 +1,4 @@
+import {useActionFeedback} from './ActionFeedback.js';
 import { RecordedTime } from './RecordedTime.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { DeliveryContext } from './DeliveryContext.js';
@@ -123,6 +124,7 @@ export function ActivityCard({
   teacherMode?: boolean;
   initialPanel?: 'detail' | 'deliveries' | null;
 }) {
+  const actionFeedback = useActionFeedback();
   const [panel, setPanel] = useState<'detail' | 'deliveries' | null>(initialPanel);
   const [pending, setPending] = useState<{ id: string; student_name: string }[]>([]);
   const [pendingAfter, setPendingAfter] = useState<string | null>(null);
@@ -131,7 +133,6 @@ export function ActivityCard({
   const [after, setAfter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [confirm, setConfirm] = useState(false);
   const [closed, setClosed] = useState(activity.state === 'closed');
   const [blocked, setBlocked] = useState(client.isUncertain());
   const [ready, setReady] = useState(false);
@@ -195,13 +196,14 @@ export function ActivityCard({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (writing.current || client.isUncertain()) return;
+    if (writing.current || busy || !current.can_submit || closed || client.isUncertain()) return;
     const form = event.currentTarget,
       data = new FormData(form),
       file = data.get('file'),
       answer = String(data.get('answer') ?? '');
     if (file instanceof File && file.name === '') data.delete('file');
     const evidence = data.get('file');
+    if (answer.length > 10000) {setNotice('La respuesta admite hasta 10.000 caracteres.');return;}
     if (!answer.trim() && !(evidence instanceof File)) {
       setNotice('Escribe una respuesta o adjunta una evidencia.');
       return;
@@ -221,8 +223,10 @@ export function ActivityCard({
     setBusy(true);
     setNotice('');
     try {
+      if (!await actionFeedback.confirm({title:deliveries.length?'¿Actualizar tu entrega?':'¿Enviar este trabajo?',message:activity.title+' · Se guardará tu respuesta y el archivo adjunto.'}) || !alive.current) return;
       await client.submit(activity.id, data);
       if (!alive.current) return;
+      actionFeedback.success('Trabajo enviado correctamente.');
       form.reset();
       try {
         const page = await client.deliveries(activity.id);
@@ -243,14 +247,15 @@ export function ActivityCard({
   }
 
   async function close() {
-    if (writing.current || client.isUncertain()) return;
+    if (writing.current || busy || !current.can_close || closed || client.isUncertain()) return;
     writing.current = true;
     setBusy(true);
     try {
+      if (!await actionFeedback.confirm({title:'¿Cerrar esta actividad?',message:activity.title+' · No se admitirán nuevas entregas. Las anteriores se conservarán.',danger:true}) || !alive.current) return;
       await client.close(activity.id);
       if (alive.current) {
         setClosed(true);
-        setConfirm(false);
+        actionFeedback.success('Actividad cerrada correctamente.');
         setNotice('Actividad cerrada correctamente.');
       }
     } catch (error) {
@@ -384,41 +389,7 @@ export function ActivityCard({
 
       {panel === 'detail' && current.can_close && !closed && (
         <div className="my-4 p-4 rounded-xl bg-surface-2 border border-border space-y-3">
-          {confirm ? (
-            <>
-              <p className="text-xs text-text">
-                ¿Cerrar la actividad para nuevas entregas y actualizaciones? Las entregas anteriores
-                se conservan.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className={button + ' bg-danger text-white hover:bg-danger/90 border-transparent'}
-                  disabled={busy || blocked}
-                  onClick={() => void close()}
-                >
-                  Confirmar cierre
-                </button>
-                <button
-                  type="button"
-                  className={button}
-                  disabled={busy}
-                  onClick={() => setConfirm(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              className={button}
-              disabled={busy || blocked}
-              onClick={() => setConfirm(true)}
-            >
-              Cerrar actividad
-            </button>
-          )}
+          <button type="button" className={button} disabled={busy || blocked} onClick={() => void close()}>Cerrar actividad</button>
         </div>
       )}
 

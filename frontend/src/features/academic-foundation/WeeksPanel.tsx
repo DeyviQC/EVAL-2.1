@@ -1,3 +1,5 @@
+import {todayInLima} from './form-gates.js';
+import {useActionFeedback} from './ActionFeedback.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AcademicWeekNavigation } from './AcademicWeekNavigation.js';
 import { AcademicDialog } from './AcademicDialog.js';
@@ -24,6 +26,7 @@ export function WeeksPanel({
   onExpired: () => void;
   teacherMode?: boolean;
 }) {
+  const actionFeedback = useActionFeedback();
   const [calendar, setCalendar] = useState<CourseCalendar | null>(null);
   const [selection, setSelection] = useState<WeekSelection>({ bucket: 'unassigned' });
   const [materials, setMaterials] = useState<WeekPage | null>(null);
@@ -139,14 +142,18 @@ export function WeeksPanel({
   }
 
   async function save() {
-    if (!editing || writing.current || client.isUncertain()) return;
+    if (!editing || busy || writing.current || !course.can_publish || client.isUncertain()) return;
+    if (chosen && !calendar?.current?.blocks.some(block=>block.weeks.some(week=>week.id===chosen))) return;
+    const token=generation.current;
     writing.current = true;
     setBusy(true);
     setMessage('');
     try {
+      if (!await actionFeedback.confirm({title:'¿Cambiar la semana?',message:'Se actualizará la ubicación del recurso. Su contenido y entregas se conservarán.'}) || !alive.current || token!==generation.current) return;
       await client.set(editing, chosen ? calendar?.current?.id ?? null : null, chosen || null);
       if (!alive.current) return;
       setEditing(null);
+      actionFeedback.success('Semana actualizada correctamente.');
       setMessage('Semana guardada. El contenido y las entregas se conservan.');
       await load(selection, filter, true);
     } catch (error) {
@@ -200,13 +207,16 @@ export function WeeksPanel({
   async function publish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (writing.current || activities.isUncertain() || client.isUncertain() || !course.can_publish || selection.bucket !== 'week') return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    if (!form.checkValidity() || !String(data.get('title')??'').trim() || !String(data.get('instructions')??'').trim() || !selection.revision || !selection.week) return;
+    const token=generation.current;
     writing.current = true;
     setBusy(true);
     setMessage('');
-    const form = event.currentTarget;
-    const data = new FormData(form);
     let published = false;
     try {
+      if (!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+course.subject+' · '+heading}) || !alive.current || token!==generation.current) return;
       const result = await activities.publish(
         course.id,
         String(data.get('title')),
@@ -218,6 +228,8 @@ export function WeeksPanel({
       setCreating(false);
       const association = await client.consult('activity', result.id);
       await client.set(association, selection.revision!, selection.week!);
+      actionFeedback.success('Actividad publicada en esta semana.');
+      if (!alive.current) return;
       setMessage('Actividad publicada en esta semana.');
       await load(selection, filter, true);
     } catch (error) {
@@ -391,10 +403,11 @@ export function WeeksPanel({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+              <label htmlFor={"weekly-title-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                 Título de la actividad
               </label>
               <input
+                id={"weekly-title-"+course.id}
                 name="title"
                 required
                 maxLength={200}
@@ -404,10 +417,11 @@ export function WeeksPanel({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+              <label htmlFor={"weekly-instructions-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                 Instrucciones
               </label>
               <textarea
+                id={"weekly-instructions-"+course.id}
                 name="instructions"
                 required
                 maxLength={10000}
@@ -418,11 +432,12 @@ export function WeeksPanel({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+              <label htmlFor={"weekly-due_on-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                 Fecha límite opcional
               </label>
               <input
-                name="due_on"
+                id={"weekly-due_on-"+course.id}
+                name="due_on" min={todayInLima()}
                 type="date"
                 className="block w-full sm:w-auto rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />

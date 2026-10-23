@@ -60,7 +60,7 @@ final class DeliveryAssessment {
                    foreach ($blocks as $block) {
                        if (($block['kind'] ?? '') === 'teaching') {
                            $teachingIdx++;
-                           if (isset($block['start_date'], $block['end_date']) && $actDate >= $block['start_date'] && $actDate <= $block['end_date']) {
+                           if (isset($block['start_on'], $block['end_on']) && $actDate >= $block['start_on'] && $actDate <= $block['end_on']) {
                                return $teachingIdx;
                            }
                        }
@@ -108,9 +108,12 @@ final class DeliveryAssessment {
  public function projection(AuthenticatedActor $actor,string $id):array {
   $r=$this->delivery($id);$roles=$this->authorize($actor,$r);$current=null;if(!$this->db->getSchemaBuilder()->hasTable('delivery_assessments'))return ['assessment'=>null,'can_assess'=>false];
   if($r['current_assessment_id']!==null){$row=$this->db->table('delivery_assessments')->where('id',$r['current_assessment_id'])->where('submission_id',$id)->first();if(!$row)throw new AcademicCommandFailure('reference_unavailable');$current=$this->view((array)$row);}
-  $bimester=$this->resolveBimesterNumber((string)$r['academic_period_id'],(string)$r['activity_id']);
-  $anyLocked=$this->db->getSchemaBuilder()->hasTable('bimester_grade_closures')&&$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('state','locked')->exists();
-  $isLocked=$bimester!==null?$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('bimester_number',$bimester)->where('state','locked')->exists():$anyLocked;
+  // Match the command's compatibility rule: an installation without the
+  // optional closure table has no stored locks. Never query that absent table.
+  $hasClosures=$this->db->getSchemaBuilder()->hasTable('bimester_grade_closures');
+  $bimester=$hasClosures?$this->resolveBimesterNumber((string)$r['academic_period_id'],(string)$r['activity_id']):null;
+  $anyLocked=$hasClosures&&$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('state','locked')->exists();
+  $isLocked=$hasClosures&&($bimester!==null?$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('bimester_number',$bimester)->where('state','locked')->exists():$anyLocked);
   $unmapped=($bimester===null)&&$anyLocked;
   return ['assessment'=>$current,'can_assess'=>$r['period_state']==='active'&&(string)$r['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)&&!$isLocked,'is_locked'=>$isLocked,'unmapped_bimester'=>$unmapped];
  }
