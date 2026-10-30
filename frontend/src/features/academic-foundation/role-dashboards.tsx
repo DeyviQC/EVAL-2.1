@@ -19,9 +19,49 @@ export function dashboardRole(wire:unknown):DashboardRole{
  return row.role as DashboardRole;
 }
 export function allowedSection(role:DashboardRole,id:string|null){return id===null||roleMenus[role].some(e=>e.id===id);}
-function Home({role,name,title,description,onSelect,client}:{client?:AccountClient;role:DashboardRole;name:string;title:string;description:string;onSelect:(id:string)=>void}){
- const cards=roleMenus[role].slice(0,role==='director_admin'?3:4);
- return <div className={'eval-dashboard eval-dashboard-'+role+' space-y-6'}><section className="eval-role-hero relative overflow-hidden rounded-2xl p-6 sm:p-8 bg-gradient-to-r from-navy-950 via-primary-dark to-primary text-white shadow-md"><div><p className="eval-eyebrow text-accent text-xs font-bold uppercase tracking-wider mb-2">{role==='student'?'TU COMUNIDAD DE APRENDIZAJE':role==='director_admin'?'VISIÓN INSTITUCIONAL':role==='teacher'?'ENSEÑANZA Y ACOMPAÑAMIENTO':'ORGANIZACIÓN ACADÉMICA'}</p><h3 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-white mb-2">{title}, {name.split(' ')[0]}.</h3><p className="text-sm text-slate-200 max-w-xl">{description}</p><span className="eval-role-tag inline-block mt-4 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-white">{roleLabels[role]}{role==='director_admin'?' · Solo lectura':''}</span></div><div className="eval-role-art hidden sm:block opacity-20 hover:opacity-30 transition-opacity" aria-hidden="true"><Icon name={role==='student'?'grid':role==='director_admin'?'chart':role==='teacher'?'file':'calendar'}/><span className="eval-art-orbit"/></div></section>{client&&<DashboardSummary client={client} role={role} onSelect={onSelect}/>}<div className="eval-dashboard-heading mt-8 mb-4"><h4>{role==='student'?'¿Qué quieres hacer hoy?':role==='teacher'?'Tu espacio de trabajo':role==='director_admin'?'Consulta y supervisión':'Herramientas de gestión'}</h4><p className="text-xs sm:text-sm text-text-muted mt-1">{role==='director_admin'?'Información institucional autorizada, sin acciones de modificación.':'Elige una sección para concentrarte en una tarea.'}</p></div><div className="eval-role-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{cards.map(entry=><button key={entry.id} onClick={()=>onSelect(entry.id)} className="text-left p-5 rounded-xl border border-border bg-surface hover:bg-surface-2 hover:border-primary/40 transition-all shadow-xs group"><span className="eval-card-icon inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary-soft text-primary mb-3 group-hover:scale-105 transition-transform"><Icon name={entry.icon}/></span><strong className="block text-sm font-semibold text-text group-hover:text-primary transition-colors">{entry.label}</strong><span className="block text-xs text-text-muted mt-1 line-clamp-2">{entry.description}</span><span className="eval-card-link inline-flex items-center gap-1 text-xs font-semibold text-primary mt-3 group-hover:gap-2 transition-all">{role==='director_admin'?'Consultar':'Abrir'} <span aria-hidden="true">→</span></span></button>)}</div></div>;
+function DirectorHome({name,onSelect,client}:{client:AccountClient|undefined;name:string;onSelect:(id:string)=>void}){
+ const currentDate=new Date(),hour=currentDate.getHours(),firstName=name.trim().split(/\s+/).filter(Boolean)[0]??'Dirección';
+ const greeting=hour>=5&&hour<12?'Buenos días':hour>=12&&hour<19?'Buenas tardes':'Buenas noches';
+ const todayRaw=new Intl.DateTimeFormat('es-PE',{weekday:'long',day:'numeric',month:'long'}).format(currentDate),today=todayRaw.charAt(0).toUpperCase()+todayRaw.slice(1);
+ const dateTime=[currentDate.getFullYear(),String(currentDate.getMonth()+1).padStart(2,'0'),String(currentDate.getDate()).padStart(2,'0')].join('-');
+ const shortcuts=roleMenus.director_admin.filter(entry=>entry.id!=='account');
+ return <div className="eval-director-home">
+  <header className="eval-director-heading">
+   <div><p className="eval-director-eyebrow">EVAL <span aria-hidden="true">/</span> DIRECCIÓN</p><h2>{greeting}, {firstName}</h2><p>Una vista clara para consultar el estado académico de la institución.</p></div>
+   <time dateTime={dateTime}>{today}</time>
+  </header>
+  <section className="eval-director-hero" aria-labelledby="eval-director-hero-title">
+   <div className="eval-director-hero-copy">
+    <p className="eval-director-hero-kicker">VISIÓN INSTITUCIONAL</p>
+    <h3 id="eval-director-hero-title">Acompaña el avance de la comunidad educativa.</h3>
+    <p>Consulta reportes e información académica autorizada desde un solo lugar.</p>
+    <span className="eval-director-readonly"><Icon name="lock"/> {roleLabels.director_admin} · Solo lectura</span>
+   </div>
+   <div className="eval-director-hero-art" aria-hidden="true"><span/><Icon name="home"/><small>EVAL · INSTITUCIÓN</small></div>
+  </section>
+  {client&&<DashboardSummary client={client} role="director_admin" onSelect={onSelect}/>}
+  <section className="eval-director-consultations" aria-labelledby="eval-director-consultations-title">
+   <div className="eval-director-section-heading"><div><p>ACCESOS DIRECTOS</p><h3 id="eval-director-consultations-title">¿Qué deseas consultar?</h3></div><span>Información disponible en modo consulta</span></div>
+   <div className="eval-director-consultation-layout">
+    <nav className="eval-director-shortcut-grid" aria-label="Consultas de dirección">
+     {shortcuts.map(entry=><button type="button" key={entry.id} className="eval-director-shortcut" onClick={()=>onSelect(entry.id)}>
+      <span className="eval-director-shortcut-icon"><Icon name={entry.icon}/></span>
+      <span className="eval-director-shortcut-copy"><strong>{entry.label}</strong><small>{entry.description}</small></span>
+      <span className="eval-director-shortcut-action">Solo consulta <span aria-hidden="true">→</span></span>
+     </button>)}
+    </nav>
+    <aside className="eval-director-boundary" aria-labelledby="eval-director-boundary-title">
+     <span className="eval-director-boundary-icon" aria-hidden="true"><Icon name="lock"/></span>
+     <p className="eval-director-boundary-kicker">TU ACCESO</p>
+     <h4 id="eval-director-boundary-title">Consulta con confianza.</h4>
+     <p>El panel presenta información para revisión. No incluye acciones para crear, editar o eliminar registros.</p>
+     <div className="eval-director-boundary-rule"/>
+     <strong><span aria-hidden="true"/>Perfil de Dirección</strong>
+     <small>Permisos de consulta</small>
+    </aside>
+   </div>
+  </section>
+ </div>;
 }
 type HomeProps={client?:AccountClient;academic?:Pick<AcademicClient,'myCourses'>;name:string;onSelect:(id:string)=>void;onCourseSelect?:(assignmentId:string,selection:CourseClassroomSelection)=>void;onActivitySelect?:(activityId:string)=>void};
 import {StudentHome} from './dashboard/StudentHome.js';
@@ -29,5 +69,5 @@ import {TeacherHome} from './dashboard/TeacherHome.js';
 import {VicePrincipalHome} from './dashboard/VicePrincipalHome.js';
 export const StudentDashboard=(props:HomeProps)=><StudentHome {...props}/>;
 export const TeacherDashboard=(props:HomeProps)=><TeacherHome name={props.name} onSelect={props.onSelect} client={props.client} academic={props.academic}/>;
-export const DirectorDashboard=(props:HomeProps)=><Home {...props} role="director_admin" title="Panel de dirección" description="Una visión clara de la organización del colegio y del seguimiento académico, mediante consultas y reportes."/>;
+export const DirectorDashboard=(props:HomeProps)=><DirectorHome name={props.name} onSelect={props.onSelect} client={props.client}/>;
 export const VicePrincipalDashboard=(props:HomeProps)=><VicePrincipalHome {...props}/>;
