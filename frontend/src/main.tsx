@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { SessionShell } from './features/academic-foundation/SessionShell.js';
 import './styles.css';
+import './director-home.css';
 import './vice-principal.css';
 import './vice-principal-home.css';
 import './role-workflows.css';
