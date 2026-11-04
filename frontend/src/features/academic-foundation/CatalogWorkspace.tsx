@@ -1,13 +1,15 @@
 import {useFormGate} from './form-gates.js';
+import {compareGrades,compareSections} from './catalog-order.js';
 import {useState,type FormEvent} from 'react';
 import type {CatalogKind,CatalogRow} from './directory.js';
 
 type Input={name:string;kind?:string;grade_id?:string};
 type Props={kind:CatalogKind;rows:CatalogRow[];grades:CatalogRow[];loading:boolean;busy:boolean;uncertain:boolean;message:string;error:boolean;more:boolean;gradeBusy:boolean;moreGrades:boolean;onKind:(kind:CatalogKind)=>void;onRefresh:()=>void;onMore:()=>void;onMoreGrades:()=>void;onCreate:(input:Input)=>Promise<boolean>;onRename:(id:string,name:string)=>Promise<boolean>;onState:(id:string,active:boolean)=>Promise<boolean>};
-export function sectionsForGrade(rows:CatalogRow[],gradeId:string){return rows.filter(row=>row.grade_id===gradeId).sort((a,b)=>a.name.localeCompare(b.name,'es',{numeric:true}));}
+export function sectionsForGrade(rows:CatalogRow[],gradeId:string){return rows.filter(row=>row.grade_id===gradeId).sort(compareSections);}
 const categories:readonly {kind:CatalogKind;label:string;singular:string}[]=[{kind:'entry',label:'Áreas y materias',singular:'área o materia'},{kind:'grade',label:'Grados',singular:'grado'},{kind:'section',label:'Secciones',singular:'sección'}];
 export function CatalogWorkspace(props:Props){
- const {kind,rows,grades,loading,busy,uncertain}=props;
+ const {kind,rows,loading,busy,uncertain}=props;
+ const grades=[...props.grades].sort(compareGrades);
  const [creating,setCreating]=useState(false),[editing,setEditing]=useState<string|null>(null);
  const [entered,setEntered]=useState(false);
  const [selectedRecord,setSelectedRecord]=useState<string|null>(null);
@@ -15,7 +17,7 @@ export function CatalogWorkspace(props:Props){
  const gradeId=selectedGrade;
  const gate=useFormGate([creating,editing,kind,gradeId]);
  const grade=grades.find(item=>item.id===gradeId);
- const visibleRows=kind==='section'?sectionsForGrade(rows,gradeId):rows;
+ const visibleRows=kind==='section'?sectionsForGrade(rows,gradeId):kind==='grade'?[...rows].sort(compareGrades):rows;
  const rowLabel=(row:CatalogRow)=>kind==='section'?`${grades.find(item=>item.id===row.grade_id)?.name??'Grado'} · Sección ${row.name}`:row.name;
  const category=categories.find(item=>item.kind===kind)!;
  const blocked=busy||loading||uncertain||props.error;

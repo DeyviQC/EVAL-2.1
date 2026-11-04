@@ -5,6 +5,7 @@ import './director-home.css';
 import './vice-principal.css';
 import './vice-principal-home.css';
 import './role-workflows.css';
+import './theme-readability.css';
 const root=document.getElementById('root');
 if(!root) throw new Error('Missing EVAL root');
 createRoot(root).render(<SessionShell />);

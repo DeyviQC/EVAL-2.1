@@ -63,6 +63,12 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     if(!mounted.current)return;
     setOptions(old=>({...old,[kind]:after?[...old[kind],...page.items]:page.items}));setCursors(old=>({...old,[kind]:page.next_after}));
   }
+  async function refreshSelectedClassroom(){
+    if(busy||!scopeReady)return;
+    setBusy(true);setMessage('');
+    try{const page=await load();if(page&&mounted.current)actionFeedback.success('Asignaciones actualizadas correctamente.');}
+    finally{if(mounted.current)setBusy(false);}
+  }
   async function refresh(){
     setBusy(true);setMessage('');
     try{await Promise.all([load(),...kinds.map(kind=>loadOption(kind))]);}
@@ -74,7 +80,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
   useEffect(()=>{if(message)feedback.current?.focus();},[message]);
   async function mutate(operation:()=>Promise<unknown>){
     if(writing.current||uncertainClients.has(client))return;
-    writing.current=true;if(!await actionFeedback.confirm({title:action?'¿Confirmar este cambio?':'¿Crear esta asignación docente?',message:action?'Se aplicará el cambio al registro de '+action.row.teacher_name+'. Se conservará su historial.':'Se guardarán los datos de la nueva asignación docente.',danger:!!action})){writing.current=false;return;}if(!mounted.current){writing.current=false;return;}setBusy(true);setMessage('');
+    writing.current=true;if(!await actionFeedback.confirm({title:action?({activate:'¿Activar esta asignación docente?',close:'¿Cerrar esta asignación docente?',replace:'¿Reemplazar esta asignación docente?'})[action.kind]:'¿Crear esta asignación docente?',message:action?'Se aplicará el cambio al registro de '+action.row.teacher_name+'. Se conservará su historial.':'Se guardarán los datos de la nueva asignación docente.',danger:!!action})){writing.current=false;return;}if(!mounted.current){writing.current=false;return;}setBusy(true);setMessage('');
     try{
       const result=await operation() as {id?:string;successor_id?:string};if(!mounted.current)return;actionFeedback.success('Operación confirmada correctamente.');setAction(null);
       const page=await load();if(!mounted.current)return;
@@ -102,7 +108,8 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     <p className="my-3">Organiza quién enseña cada curso y conserva los cambios anteriores.</p>
     {task!=='create'&&<ClassroomFilters value={filters} onChange={setFilters} periods={options.periods} grades={options.grades} sections={options.sections} teachers={options.teachers} entries={options.entries} disabled={busy}/>}
     {task!=='create'&&!scopeReady&&<p className="eval-scope-hint">Selecciona período, grado y sección para consultar las asignaciones del aula.</p>}
-    <button className={control} disabled={busy} onClick={()=>void refresh()}>Actualizar asignaciones</button>
+    <button className={control} disabled={busy||phase==='loading'||!scopeReady} onClick={()=>void refreshSelectedClassroom()}>Actualizar asignaciones</button>
+    {!scopeReady&&<p className="text-sm text-text-muted">Selecciona el año, el grado y la sección para actualizar las asignaciones.</p>}
     {phase==='loading'&&<p role="status">Consultando asignaciones…</p>}
     {message&&<p role="status" tabIndex={-1} ref={feedback} className="my-4 rounded-lg border p-3">{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica los registros antes de continuar.</p>}
@@ -128,7 +135,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
         <p className="w-full">{action.kind==='replace'?'El reemplazo se aplica al confirmar el servidor y conserva la autoría anterior.':action.kind==='close'?'El cierre conserva la asignación y sus recursos históricos.':'El servidor comprobará el período, fechas y conflictos antes de activar.'}</p>
         {action.kind==='close'&&<label>Fecha de cierre <input name="effective_until" type="date" required min={action.row.effective_from} max={todayInLima()} className={control}/></label>}
         {action.kind==='replace'&&<label>Nuevo docente <select aria-label="Nuevo docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.filter(row=>row.id!==action.row.teacher_id).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
-        <button type="submit" className={control}>Revisar {({activate:'activación',close:'cierre',replace:'reemplazo'})[action.kind]}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
+        <button type="submit" className={control}>Confirmar {({activate:'activación',close:'cierre',replace:'reemplazo'})[action.kind]}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
       </fieldset>
     </form>}
     {cursor&&<button className={control} disabled={busy} onClick={()=>void load(cursor)}>Cargar más asignaciones</button>}
