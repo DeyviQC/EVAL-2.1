@@ -39,6 +39,9 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
       setPhase('ready');return true;
     }catch(error){if(!mounted.current||current!==generation.current)return;setPeriods([]);setRows([]);setCursor(null);setPhase('error');failed(error);}
   }
+  async function refreshRecords(){
+    if(await load())feedback.success(section==='periods'?'Períodos actualizados correctamente.':'Catálogo actualizado correctamente.');
+  }
   async function loadGrades(after:string|null=null){if(gradeRequest.current)return;gradeRequest.current=true;setGradeBusy(true);
     try{const page=await client.directory('catalog/grade',catalogPage('grade'),after);if(!mounted.current)return;setGrades(old=>after?[...old,...page.items]:page.items);setGradeCursor(page.next_after);}
     catch(error){if(mounted.current){setGrades([]);failed(error);}}finally{gradeRequest.current=false;if(mounted.current)setGradeBusy(false);}}
@@ -54,11 +57,11 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
     if(section==='periods')void mutate(()=>client.createPeriod({name,start_on:String(data.get('start_on')),end_on:String(data.get('end_on'))}),true);
     else void mutate(()=>client.createCatalog(kind,{name,...(kind==='entry'?{kind:String(data.get('kind'))}:kind==='section'?{grade_id:String(data.get('grade_id'))}:{})}),true);
   }
-  if(section==='catalog')return <CatalogWorkspace kind={kind} rows={rows} grades={grades} loading={phase==='loading'} busy={busy} uncertain={uncertain} message={message} error={phase==='error'} more={cursor!==null} gradeBusy={gradeBusy} moreGrades={gradeCursor!==null} onKind={next=>{generation.current++;setRows([]);setCursor(null);setPhase('loading');setKind(next);}} onRefresh={()=>{void load();if(kind==='section'&&!grades.length)void loadGrades();}} onMore={()=>void load(cursor)} onMoreGrades={()=>void loadGrades(gradeCursor)} onCreate={input=>mutate(()=>client.createCatalog(kind,input),true)} onRename={(id,name)=>mutate(()=>client.updateCatalog(kind,id,{name}))} onState={(id,is_active)=>mutate(()=>client.updateCatalog(kind,id,{is_active}),false,true,(is_active?'¿Reactivar':'¿Desactivar')+' este registro?',!is_active)}/>;
+  if(section==='catalog')return <CatalogWorkspace kind={kind} rows={rows} grades={grades} loading={phase==='loading'} busy={busy} uncertain={uncertain} message={message} error={phase==='error'} more={cursor!==null} gradeBusy={gradeBusy} moreGrades={gradeCursor!==null} onKind={next=>{generation.current++;setRows([]);setCursor(null);setPhase('loading');setKind(next);}} onRefresh={()=>{void refreshRecords();if(kind==='section'&&!grades.length)void loadGrades();}} onMore={()=>void load(cursor)} onMoreGrades={()=>void loadGrades(gradeCursor)} onCreate={input=>mutate(()=>client.createCatalog(kind,input),true)} onRename={(id,name)=>mutate(()=>client.updateCatalog(kind,id,{name}))} onState={(id,is_active)=>mutate(()=>client.updateCatalog(kind,id,{is_active}),false,true,(is_active?'¿Reactivar':'¿Desactivar')+' este registro?',!is_active)}/>;
   return <section aria-label={section==='periods'?'Gestión de períodos':'Gestión de catálogo'} aria-busy={busy||phase==='loading'}>
     <h3 className="text-xl font-semibold">{section==='periods'?'Períodos académicos':'Catálogo académico'}</h3>
     <p>Consulta las fechas y el estado del año académico.</p>
-    <button className={control} disabled={busy} onClick={()=>void load()}>Actualizar registros</button>
+    <button className={control} disabled={busy||phase==='loading'} onClick={()=>void refreshRecords()}>Actualizar registros</button>
     {phase==='loading'&&<p role="status">Consultando registros…</p>}
     {message&&<p role={phase==='error'||uncertain?'alert':'status'}>{message}</p>}
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica el resultado con administración antes de iniciar otra sesión de trabajo.</p>}

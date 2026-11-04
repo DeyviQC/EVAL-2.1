@@ -17,9 +17,9 @@ export const vicePrincipalTasks:Record<string,{title:string;choices:Choice[]}>= 
 };
 const FlowContext=createContext<string|null>(null);
 export const useVicePrincipalTask=()=>useContext(FlowContext);
-export function VicePrincipalWorkspace({section,children}:{section:string;children:ReactNode}){
+export function VicePrincipalWorkspace({section,children,initialTask=null}:{section:string;children:ReactNode;initialTask?:string|null}){
  const [pending,setPending]=useState(false);
- const config=vicePrincipalTasks[section];const [task,setTask]=useState<string|null>(null),[menu,setMenu]=useState(true);const root=useRef<HTMLElement>(null);const title=useRef<HTMLHeadingElement>(null);
+ const config=vicePrincipalTasks[section];const [task,setTask]=useState<string|null>(initialTask),[menu,setMenu]=useState(!initialTask);const root=useRef<HTMLElement>(null);const title=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{const node=root.current;if(!node)return;const refresh=()=>setPending(!!node.querySelector('[aria-busy="true"]'));const observer=new MutationObserver(refresh);observer.observe(node,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-busy']});refresh();return()=>observer.disconnect();},[task,menu]);
  useEffect(()=>{window.scrollTo({top:0,behavior:'instant'});title.current?.focus({preventScroll:true});},[menu,task]);
  if(!config)return <>{children}</>;
@@ -28,7 +28,8 @@ export function VicePrincipalWorkspace({section,children}:{section:string;childr
   <header className="vp-workflow-heading"><span className="vp-workflow-eyebrow">SUBDIRECCIÓN</span><h2 ref={title} tabIndex={-1}>{config.title}</h2><p>{menu?'¿Qué deseas hacer?':current?.label}</p></header>
   {menu&&<nav className="vp-action-grid" aria-label={'Acciones de '+config.title}>{config.choices.map(({id,label,description,icon:Icon})=><button key={id} type="button" onClick={()=>{setTask(id);setMenu(false);}}><span className="vp-action-icon"><Icon size={25} strokeWidth={1.6} aria-hidden="true"/></span><strong>{label}</strong><span>{description}</span><ArrowRight size={20} aria-hidden="true"/></button>)}</nav>}
   {!menu&&<nav className="vp-flow-path" aria-label="Ubicación del módulo"><button type="button" disabled={pending} onClick={()=>{if(root.current?.querySelector('[aria-busy="true"]'))return;setMenu(true);}}><ArrowLeft size={18} aria-hidden="true"/> Volver a opciones</button><span>{config.title} / {current?.label}</span></nav>}
-  {task&&<div hidden={menu} className="vp-task-content"><FlowContext.Provider value={task}>{children}</FlowContext.Provider></div>}
+  {!menu&&<div className="vp-action-progress" role="status" aria-live="polite">{pending?'Procesando la solicitud. Espera un momento…':current?.id==='create'?'Completa los datos obligatorios para continuar.':current?.label+' · Listo para continuar.'}</div>}
+  {!menu&&task&&<div className="vp-task-content"><FlowContext.Provider value={task}>{children}</FlowContext.Provider></div>}
  </section>;
 }
 

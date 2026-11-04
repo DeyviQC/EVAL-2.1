@@ -1,0 +1,65 @@
+/* Keep foregrounds paired with their surfaces when the theme changes. */
+.eval-layout[data-role="vice_principal"] :is(.vp-action-progress,.vp-action-result) { margin-block:1rem; padding:.85rem 1rem; border:1px solid var(--border); border-inline-start:4px solid var(--primary); border-radius:.75rem; background:var(--surface-2); color:var(--text); font-size:1rem; line-height:1.6; }
+.eval-layout[data-role="vice_principal"] [role="alert"] { border-inline-start-color:var(--danger); }
+.eval-layout[data-role="vice_principal"] { --text-muted:#475569; --link:#234b91; font-size:16px; }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] { --text-muted:#c4d0e5; --link:#b9d4ff; }
+.eval-layout[data-role="vice_principal"] .text-eval-ink { color:var(--text); }
+@layer utilities {
+  .eval-layout[data-role="vice_principal"] .text-primary { color: var(--link); }
+}
+
+.eval-layout[data-role="vice_principal"] :is(.eval-breadcrumb strong,.eval-shortcut-grid strong,.eval-period-summary strong,.eval-week-grid strong),
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(label,legend,summary),
+.eval-layout[data-role="vice_principal"] .eval-classroom,
+.eval-layout[data-role="vice_principal"] .eval-dashboard-heading h4,
+.eval-layout[data-role="vice_principal"] .eval-session-loading { color: var(--text); }
+
+.eval-layout[data-role="vice_principal"] :is(.eval-eyebrow,.eval-breadcrumb,.eval-welcome-note,.eval-section-heading p,.eval-period-summary p,.eval-week-grid small),
+.eval-layout[data-role="vice_principal"] .eval-shortcut-grid span:first-of-type,
+.eval-layout[data-role="vice_principal"] .eval-classroom :is(.eval-week-toolbar p,.eval-content-toolbar p,.eval-resource-type,.eval-empty-state p,.eval-secondary-tools) { color: var(--text-muted); }
+
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea),
+.eval-layout[data-role="vice_principal"] .eval-academic-dialog {
+  color: var(--text);
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.eval-layout[data-role="vice_principal"] :is(input,textarea)::placeholder { color: var(--text-muted); opacity: 1; }
+.eval-layout[data-role="vice_principal"] select option { color: var(--text); background: var(--surface); }
+.eval-layout[data-role="vice_principal"] .eval-workspace-content label { font-size: 1rem; }
+
+/* Shared panels previously kept white backgrounds under dark foreground tokens. */
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(.eval-period-picker,.eval-period-summary,.eval-read-profile dl,.eval-course-tabs,.eval-course-view-tabs,.eval-content-types,.eval-weekly-content,table),
+.eval-layout[data-role="vice_principal"] .eval-workspace-content article {
+  background-color: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(.eval-week-grid li,th) {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(.eval-period-picker,.eval-period-summary) :is(label,strong) { color: var(--text); }
+.eval-layout[data-role="vice_principal"] .eval-workspace-content .eval-period-summary p { color: var(--text-muted); font-size: 1rem; }
+.eval-layout[data-role="vice_principal"] .eval-workspace-content .eval-period-summary p.text-text { color: var(--text); }
+.eval-layout[data-role="vice_principal"] .eval-workspace-content :is(.eval-course-view-tabs,.eval-content-types,.eval-content-toolbar) button:not([aria-pressed="true"]):not([aria-selected="true"]) {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace :is(.text-slate-900,.text-slate-800,.text-slate-700,.text-gray-900,.text-gray-800,.text-gray-700) { color: var(--text); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace :is(.text-slate-600,.text-slate-500,.text-slate-400,.text-gray-600,.text-gray-500,.text-gray-400) { color: var(--text-muted); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace :is(.bg-white,.bg-slate-50,.bg-gray-50) { background-color: var(--surface); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace-content article article { background: var(--surface-2); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] :is(.eval-welcome,.eval-course-hero,.eval-role-cards > button,.eval-dashboard-director_admin .eval-role-hero) { background: var(--surface); color: var(--text); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-dashboard-director_admin .eval-role-hero :is(h3,p) { color: var(--text); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace-content button:not([aria-pressed]):not([aria-selected="true"]):not([type="submit"]):not(.bg-eval-teal):not(.eval-primary-action):not(.bg-primary):not(.bg-accent) { color: var(--text); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace-content a[href]:not(.vp-material-open) { color: var(--link); }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace-content [role="alert"] { color: #fecaca; background: #3b2029; border-color: #925161; }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-workspace-content [role="status"]:not(:empty):not(.eval-course-toast) { color: #bfdbfe; background: #152948; }
+:is(.dark,[data-theme="dark"]) .eval-layout[data-role="vice_principal"] .eval-inline-notice { color: #fef3c7; background: #382c10; }
+
+/* Small supporting copy must remain legible on dashboards and in navigation. */
+.eval-layout[data-role="vice_principal"] :is(.text-xs,.text-\[10px\],.text-\[11px\]) { font-size: .875rem; }
