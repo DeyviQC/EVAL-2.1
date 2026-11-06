@@ -6,7 +6,7 @@ import { certificateOptions, loopbackCertificate, resolveBrowserExecutable } fro
 
 const root=process.env.EVAL_DEV_ROOT;
 const chunks=[];for await(const chunk of process.stdin)chunks.push(chunk);
-const {password}=JSON.parse(Buffer.concat(chunks).toString());
+const {vice_principal:password}=JSON.parse(Buffer.concat(chunks).toString());
 const browser=await chromium.launch({...certificateOptions(await loopbackCertificate(readFileSync(resolve(root,'cert.pem')))),headless:true,executablePath:resolveBrowserExecutable()??chromium.executablePath()});
 let checks=0;
 const check=(value)=>{assert.ok(value,'Directory browser check '+(checks+1));checks++;};
@@ -21,7 +21,7 @@ try{
  const workspace=page.getByRole('region',{name:'Gestión de usuarios'});
  await workspace.getByRole('button',{name:'Buscar',exact:true}).waitFor();
  await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
- check(await workspace.getByRole('article').count()>0);
+ check(await workspace.locator('tbody tr').count()>0);
  const form=workspace.getByRole('form',{name:'Filtrar alumnos y docentes'});
  const search=form.getByLabel('Nombre o DNI/usuario');
  await search.fill('DOC');
@@ -32,8 +32,8 @@ try{
  const query=new URL((await requested).url()).searchParams;
  check(query.get('role')==='teacher'&&query.get('status')==='active');
  await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
- check(await workspace.getByRole('article').count()>0);
- check((await workspace.getByRole('article').allTextContents()).every(t=>t.includes('Docente')));
+ check(await workspace.locator('tbody tr').count()>0);
+ check((await workspace.locator('tbody tr').allTextContents()).every(t=>t.includes('Docente')));
  await search.focus();
  check(await search.evaluate(el=>{const css=getComputedStyle(el);return css.borderBottomColor==='rgb(42, 85, 163)'&&css.borderTopWidth==='0px'&&css.outlineStyle==='none';}));
  const state=form.getByLabel('Estado');
@@ -45,6 +45,18 @@ try{
  await form.getByRole('button',{name:'Limpiar filtros',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
  check(await search.inputValue()===''&&await state.inputValue()==='');
+ const grade=form.getByLabel('Grado',{exact:true}),section=form.getByLabel('Sección',{exact:true});
+ await grade.selectOption({index:1});
+ await section.selectOption({index:1});
+ const gradeId=await grade.inputValue(),sectionId=await section.inputValue();
+ const classroomRequest=page.waitForRequest(r=>r.url().includes('/users?')&&r.url().includes('grade_id='));
+ await form.getByRole('button',{name:'Buscar',exact:true}).click();
+ const classroomParams=new URL((await classroomRequest).url()).searchParams;
+ check(classroomParams.get('grade_id')===gradeId&&classroomParams.get('section_id')===sectionId&&classroomParams.get('role')==='student');
+ await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
+ check((await workspace.locator('tbody tr').allTextContents()).every(t=>t.includes('Estudiante')));
+ await form.getByRole('button',{name:'Limpiar filtros',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
  const searchButton=form.getByRole('button',{name:'Buscar',exact:true});
  await page.mouse.move(0,0);
  const normal=await searchButton.evaluate(el=>getComputedStyle(el).backgroundColor);
@@ -60,7 +72,7 @@ try{
  await page.unroute('**/users?*');
  await workspace.getByRole('button',{name:'Reintentar consulta',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.eval-users-workspace')?.getAttribute('aria-busy')==='false');
- check(await workspace.getByRole('article').count()>0);
+ check(await workspace.locator('tbody tr').count()>0);
  check(await workspace.getByText('No se pudo actualizar el directorio.',{exact:true}).count()===0);
  let release;
  const delayed=new Promise(resolve=>{release=resolve;});
@@ -78,6 +90,7 @@ try{
  await state.selectOption('');
  await page.setViewportSize({width:390,height:844});
  check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ check(await workspace.locator('tbody tr').first().evaluate(el=>getComputedStyle(el).display==='block'));
  await page.screenshot({path:resolve(root,'vice-principal-directory-mobile.png'),fullPage:true});
  await page.setViewportSize({width:1280,height:900});
  await page.screenshot({path:resolve(root,'vice-principal-directory-desktop.png'),fullPage:true});

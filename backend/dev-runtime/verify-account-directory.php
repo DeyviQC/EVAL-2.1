@@ -18,12 +18,19 @@ $deny=function(string $category,callable $run)use($assert){try{$run();throw new 
 $db->beginTransaction();
 try{
     $prefix='directory.'.bin2hex(random_bytes(5));
+    $period=$db->table('academic_periods')->orderBy('id')->first();
+    $grade=$db->table('grades')->orderBy('id')->first();
+    if(!$period||!$grade)throw new RuntimeException('Directory verification requires a period and grade');
+    $sections=$db->table('sections')->where('grade_id',$grade->id)->orderBy('id')->limit(2)->get();
+    $otherSection=$db->table('sections')->where('grade_id','!=',$grade->id)->orderBy('id')->first();
+    if(!$period||$sections->count()<2||!$otherSection)throw new RuntimeException('Directory verification requires two classrooms and a period');
     $ids=[];
     for($n=0;$n<54;$n++){
         $id=(string)$db->table('retained_identities')->insertGetId(['credential_status'=>$n===53?'deactivated':'active']);$ids[]=$id;
         $db->table('local_credentials')->insert(['id'=>$id,'login'=>$prefix.'.'.$n,'password'=>'fixture-unusable-hash']);
         $db->table('retained_identity_profiles')->insert(['identity_id'=>$id,'display_name'=>$prefix.' Alice '.($n===53?'%_!':($n===52?'AlphaZ!':'Person '.$n))]);
         $db->table('local_role_grants')->insert(['identity_id'=>$id,'role'=>$n===53?'teacher':'student']);
+        if($n<52)$db->table('student_enrollments')->insert(['student_id'=>$id,'academic_period_id'=>$period->id,'grade_id'=>$grade->id,'section_id'=>$sections[$n===51?1:0]->id,'state'=>'active','effective_from'=>$period->start_on,'operational_start_key'=>1]);
     }
     $manager=$actor('subdirector');
     $first=$service->directory($manager,['search'=>strtoupper($prefix),'role'=>'student','status'=>'active']);
@@ -36,10 +43,20 @@ try{
     $assert(count($service->directory($manager,['search'=>$prefix.'.3'])['items'])===11);
     $assert(count($service->directory($manager,['username'=>strtoupper($prefix.'.3')])['items'])===1);
     $assert($service->directory($manager,['search'=>$prefix,'role'=>'student','status'=>'inactive'])['items']===[]);
+    $classroom=['search'=>$prefix,'role'=>'student','grade_id'=>(string)$grade->id,'section_id'=>(string)$sections[0]->id];
+    $classroomFirst=$service->directory($manager,$classroom);
+    $assert(count($classroomFirst['items'])===50&&$classroomFirst['next_after']===$ids[49]);
+    $assert($classroomFirst['items'][0]['classroom']===['grade'=>$grade->name,'section'=>$sections[0]->name]);
+    $classroomLast=$service->directory($manager,$classroom+['after'=>$classroomFirst['next_after']]);
+    $assert(array_column($classroomLast['items'],'id')===[$ids[50]]&&$classroomLast['next_after']===null);
+    $assert($service->directory($manager,['username'=>$prefix.'.52'])['items'][0]['classroom']===null);
+    $assert($match['items'][0]['classroom']===null);
+    $assert(array_column($service->directory($manager,['search'=>$prefix,'grade_id'=>(string)$grade->id,'section_id'=>(string)$sections[1]->id])['items'],'id')===[$ids[51]]);
+    $assert(count($service->directory($manager,['search'=>$prefix,'grade_id'=>(string)$grade->id])['items'])===50);
     $assert(count($service->directory($actor('director'),['search'=>$prefix,'role'=>'teacher'])['items'])===1);
     foreach(['docente','estudiante'] as $login)$deny('forbidden',fn()=>$service->directory($actor($login),['search'=>$prefix]));
-    foreach([['search'=>str_repeat('x',101)],['search'=>[]],['role'=>'director_admin'],['status'=>'deleted'],['after'=>'0'],['unknown'=>'x']] as $input)$deny('invalid_input',fn()=>$service->directory($manager,$input));
-    $assert(array_keys($match['items'][0])===['id','name','username','role','active']);
+    foreach([['search'=>str_repeat('x',101)],['search'=>[]],['role'=>'director_admin'],['status'=>'deleted'],['after'=>'0'],['unknown'=>'x'],['section_id'=>(string)$sections[0]->id],['grade_id'=>'0'],['grade_id'=>(string)$grade->id,'section_id'=>(string)$otherSection->id],['role'=>'teacher','grade_id'=>(string)$grade->id]] as $input)$deny('invalid_input',fn()=>$service->directory($manager,$input));
+    $assert(array_keys($match['items'][0])===['id','name','username','role','active','classroom']);
 }finally{$db->rollBack();}
 $assert(!$db->table('local_credentials')->where('login','like',$prefix.'%')->exists());
 echo json_encode(['checks'=>$checks,'fixtures_rolled_back'=>true]).PHP_EOL;
