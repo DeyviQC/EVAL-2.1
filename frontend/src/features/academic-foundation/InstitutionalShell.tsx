@@ -71,7 +71,9 @@ export function SessionPanel({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const input = { login, password };
+    const cleanLogin = login.trim().toLowerCase();
+    const cleanPassword = password.trim();
+    const input = { login: cleanLogin, password: cleanPassword };
     setPassword('');
     await onLogin(input);
   }
@@ -153,7 +155,7 @@ export function SessionPanel({
 
         {/* Modern compact sidebar */}
         <AppSidebar
-          role={role}
+
           selected={selected}
           onSelect={onSelect}
           account={account}
@@ -161,7 +163,7 @@ export function SessionPanel({
           unread={unread}
           onLogout={onLogout}
           isDark={isDark}
-          onToggleTheme={toggleTheme}
+          onToggleTheme={toggleTheme} role={role}
         />
 
         {/* Content area with floating header */}
@@ -186,10 +188,10 @@ export function SessionPanel({
 
           {/* Mobile bottom navigation bar */}
           <MobileNavBar
-            role={role}
+  
             selected={selected}
             onSelect={onSelect}
-            pendingCount={unread}
+            pendingCount={unread} role={role}
           />
         </div>
 
@@ -203,7 +205,7 @@ export function SessionPanel({
           }}
           onLogout={() => void onLogout()}
           isDark={isDark}
-          onToggleTheme={toggleTheme}
+          onToggleTheme={toggleTheme} role={role}
         />
       </div>
     );
@@ -334,6 +336,9 @@ export function SessionPanel({
                   id="eval-login"
                   name="login"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={login}
                   onChange={(event) => setLogin(event.target.value)}
                   required
@@ -360,6 +365,9 @@ export function SessionPanel({
                   name="password"
                   type="password"
                   autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required

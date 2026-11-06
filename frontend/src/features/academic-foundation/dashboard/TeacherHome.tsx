@@ -38,12 +38,13 @@ function subjectColor(subject: string): string {
 
 type Props = {
   name: string;
-  onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted') => void;
+  onSelect: (id: string, filter?: 'all' | 'pending' | 'submitted', courseId?: string) => void;
   client?: AccountClient | undefined;
   academic?: Pick<AcademicClient, 'myCourses'> | undefined;
+  onUnread?: ((count: number) => void) | undefined;
 };
 
-export function TeacherHome({ name, onSelect, client, academic }: Props) {
+export function TeacherHome({ name, onSelect, client, academic, onUnread }: Props) {
   const [data, setData] = useState<ReturnType<typeof dashboardOverview> | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesState, setCoursesState] = useState<'loading' | 'ready' | 'error'>(academic ? 'loading' : 'ready');
@@ -83,7 +84,10 @@ export function TeacherHome({ name, onSelect, client, academic }: Props) {
       client
         .overview()
         .then((res) => {
-          if (active) setData(res);
+          if (active) {
+            setData(res);
+            onUnread?.(res.unread);
+          }
         })
         .catch(() => {
           if (active) setData(null);
@@ -258,7 +262,7 @@ export function TeacherHome({ name, onSelect, client, academic }: Props) {
                     teacherName={`Período: ${course.period}`}
                     subjectColor={subjectColor(course.subject)}
                     progress={null}
-                    onOpen={() => onSelect('my_assignments')}
+                    onOpen={() => onSelect('my_assignments', undefined, course.id)}
                   />
                 ))}
             </div>

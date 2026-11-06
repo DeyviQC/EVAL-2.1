@@ -95,6 +95,7 @@ export function MaterialsPanel({
           cursor: page.next_after,
         }));
       }
+      setBlocked(client.isUncertain(course.id));
     } catch (problem) {
       if (alive.current && current === generation.current) {
         setView({ phase: 'error', items: [], cursor: null });
@@ -211,9 +212,22 @@ export function MaterialsPanel({
       )}
 
       {blocked && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50/60 p-3.5 text-xs text-amber-900">
-          <span>⚠️</span>
-          <span>No repitas la publicación. Consulta los materiales y verifica el resultado antes de continuar.</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-700 p-3.5 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>No repitas la publicación. Consulta los materiales y verifica el resultado antes de continuar.</span>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-400 dark:border-amber-600 bg-surface text-text hover:bg-surface-2 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={busy || view.phase === 'loading' || (client.isUncertain(course.id) && !client.canReview(course.id))}
+            onClick={() => {
+              if (client.isUncertain(course.id)) client.review(course.id);
+              setBlocked(false);
+            }}
+          >
+            He revisado el resultado
+          </button>
         </div>
       )}
 

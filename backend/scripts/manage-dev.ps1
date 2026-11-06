@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo','bimester-maintenance','verify-bimesters','verify-all','migrate-all')][string]$Command='status',
+    [ValidateSet('prepare','start','status','stop','open','accounts','snapshot','normalize-demo-names','verify-integral-demo','seed-integral-demo','seed-school-sample','seed-test-students','verify-logins','verify','verify-enrollments','verify-assignments','verify-users','verify-activities','verify-assessments','verify-reports','verify-notifications','verify-history','verify-audit','verify-activity-recovery','verify-delivery-context','verify-library','verify-write-recovery','verify-recorded-time','verify-material-maintenance','verify-observations','verify-file-replacement','verify-tablet-interface','verify-school-sample','calendar-maintenance','verify-calendar','resource-week-maintenance','verify-weeks','verify-week-reads','configure-calendar-demo','bimester-maintenance','verify-bimesters','verify-all','migrate-all')][string]$Command='status',
     [switch]$Maintenance,
     [switch]$AccountsOnly,
     [switch]$BrowserOnly,
@@ -120,7 +120,7 @@ function Verify-MySQL {
         }
         [IO.File]::WriteAllText($existingPath,($existing|ConvertTo-Json),[Text.UTF8Encoding]::new($false));Protect-Path $existingPath
     }
-    if(!$mysql -and $Command -eq 'start'){
+    if(!$mysql -and ($Command -eq 'start' -or $Command -eq 'seed-test-students' -or $Command -eq 'verify-logins')){
         if(Get-NetTCPConnection -LocalPort 3307 -State Listen -ErrorAction SilentlyContinue){throw 'Foreign MySQL listener is retained.'}
         try {
             & (Join-Path $PSScriptRoot 'start-u1.ps1')
@@ -247,6 +247,13 @@ try {
         $stage='integral_demo';$null=Verify-MySQL
         $demoEnvironment=Db-Environment 'runtime';$demoEnvironment.EVAL_INTEGRAL_DEMO='1'
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\seed-integral-demo.php')+'"') $demoEnvironment '' $null $true).Trim()
+    } elseif($Command -eq 'seed-test-students'){
+        $stage='seed_test_students';$null=Verify-MySQL
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\ensure-test-accounts.php')+'"') (Db-Environment 'migration') '' $null $true).Trim()
+    } elseif($Command -eq 'verify-logins'){
+        $stage='verify_logins';$null=Verify-MySQL
+        $environment=Db-Environment 'runtime';$environment.EVAL_RUNTIME_KEY=Decrypt $state.key
+        Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\verify-logins.php')+'"') $environment '' $null $true).Trim()
     } elseif($Command -eq 'seed-school-sample'){
         $stage='school_sample';$null=Verify-MySQL
         Write-Output (Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\seed-school-sample.php')+'"') (Db-Environment 'runtime') '' $null $true).Trim()
@@ -266,6 +273,10 @@ try {
     } elseif($Command -eq 'start'){
         $stage='start_checks';$null=Verify-MySQL
         $null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\inspect.php')+'"') (Db-Environment 'runtime') '' $null $true
+        $ensureScript = Join-Path $repo 'backend\dev-runtime\ensure-test-accounts.php'
+        if(Test-Path -LiteralPath $ensureScript){
+            $null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+$ensureScript+'"') (Db-Environment 'migration') '' $null $true
+        }
         foreach($record in @($state.workers)){if(Owned-Process $record){throw 'EVAL already has owned workers; use status or stop.'}}
         if(!(Test-Path -LiteralPath (Join-Path $repo 'frontend\dist\index.html'))){throw 'Build frontend first.'}
         foreach($port in @(8443,18080)){if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Application port is occupied; foreign process is retained.'}}
@@ -273,13 +284,18 @@ try {
         $actualLanIp = $LanIp
         if($Tablet -or $LanIp){
             if(!$actualLanIp){
-                $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
+                $activeAdapters = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
                     $_.IPAddress -notlike "127.*" -and 
                     $_.IPAddress -notlike "169.254.*" -and 
-                    $_.InterfaceAlias -notlike "*Loopback*" -and
-                    $_.InterfaceAlias -notlike "*vEthernet*"
-                } | Select-Object -First 1
-                $actualLanIp = if($activeAdapter){$activeAdapter.IPAddress}else{'192.168.1.100'}
+                    $_.InterfaceAlias -notlike "*Loopback*" -and 
+                    $_.InterfaceAlias -notlike "*vEthernet*" -and 
+                    $_.InterfaceAlias -notlike "*Virtual*" -and 
+                    $_.InterfaceAlias -notlike "*VMware*" -and 
+                    $_.InterfaceAlias -notlike "*WSL*"
+                })
+                $wifi = $activeAdapters | Where-Object { $_.InterfaceAlias -like "*Wi-Fi*" -or $_.InterfaceAlias -like "*Wireless*" } | Select-Object -First 1
+                $targetAdapter = if ($wifi) { $wifi } else { $activeAdapters | Select-Object -First 1 }
+                $actualLanIp = if($targetAdapter){$targetAdapter.IPAddress}else{"192.168.0.101"}
             }
             $setupLanScript = Join-Path $repo 'backend\scripts\setup-lan.ps1'
             if(Test-Path -LiteralPath $setupLanScript){
@@ -291,6 +307,7 @@ try {
         $secret=Secret;$environment=Db-Environment 'runtime';$environment.EVAL_PROXY_KEY=$secret;$environment.EVAL_RUNTIME_KEY=Decrypt $state.key
         if($Tablet -or $LanIp){
             $environment.EVAL_RUNTIME_ORIGIN="$($state.origin),https://${actualLanIp}:8443"
+            $environment.PHP_CLI_SERVER_WORKERS='8'
         } else {
             $environment.EVAL_RUNTIME_ORIGIN=$state.origin
         }

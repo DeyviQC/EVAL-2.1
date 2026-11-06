@@ -64,7 +64,9 @@ if ([string]::IsNullOrWhiteSpace($lanIp)) {
         $_.IPAddress -notlike '169.254.*' -and 
         $_.InterfaceAlias -notlike '*Loopback*' -and
         $_.InterfaceAlias -notlike '*vEthernet*' -and
-        $_.InterfaceAlias -notlike '*Virtual*'
+        $_.InterfaceAlias -notlike '*Virtual*' -and
+        $_.InterfaceAlias -notlike '*VMware*' -and
+        $_.InterfaceAlias -notlike '*WSL*'
     })
 
     # Priorizar Wi-Fi si existe
@@ -75,7 +77,7 @@ if ([string]::IsNullOrWhiteSpace($lanIp)) {
         $lanIp = $targetAdapter.IPAddress
         $adapterName = $targetAdapter.InterfaceAlias
     } else {
-        $lanIp = '192.168.0.207'
+        $lanIp = '192.168.0.101'
         $adapterName = 'Por defecto'
     }
 }
@@ -117,23 +119,10 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Obtener credenciales de prueba
-$accountsRaw = & $manageDev accounts -Console
-$passDirector = ''
-$passSubdirector = ''
-$passDocente = ''
-$passEstudiante = ''
-
-foreach ($line in @($accountsRaw)) {
-    $parts = $line.Split(':')
-    if ($parts.Count -eq 2) {
-        $u = $parts[0].Trim()
-        $p = $parts[1].Trim()
-        if ($u -eq 'director') { $passDirector = $p }
-        elseif ($u -eq 'subdirector') { $passSubdirector = $p }
-        elseif ($u -eq 'docente') { $passDocente = $p }
-        elseif ($u -eq 'estudiante') { $passEstudiante = $p }
-    }
+# Generar portal interactivo con Codigo QR para tablets
+$qrScript = Join-Path $scriptDir "generate-qr-portal.ps1"
+if (Test-Path -LiteralPath $qrScript) {
+    & $qrScript -LanIp $lanIp | Out-Null
 }
 
 # Abrir navegador local si se solicito
@@ -163,13 +152,16 @@ Write-Host ''
 Write-Host '    >>> LAPTOP DEL SERVIDOR (LOCAL) <<<' -ForegroundColor Gray
 Write-Host '    https://127.0.0.1:8443' -ForegroundColor Cyan
 Write-Host ''
-Write-Host '  [CUENTAS DE DEMOSTRACION OFICIALES]' -ForegroundColor White
-Write-Host '    Rol           Usuario       Contrasena' -ForegroundColor DarkGray
-Write-Host '    -----------   ------------  ------------------------' -ForegroundColor DarkGray
-Write-Host "    Director:     director      $passDirector" -ForegroundColor Green
-Write-Host "    Subdirector:  subdirector   $passSubdirector" -ForegroundColor Green
-Write-Host "    Docente:      docente       $passDocente" -ForegroundColor Green
-Write-Host "    Estudiante:   estudiante    $passEstudiante" -ForegroundColor Green
+Write-Host '  [CUENTAS DE ACCESO RAPIDO (Usuario = Contrasena)]' -ForegroundColor White
+Write-Host '    Rol             Usuario       Contrasena' -ForegroundColor DarkGray
+Write-Host '    -------------   ------------  ------------' -ForegroundColor DarkGray
+Write-Host '    Docente:        docente       docente' -ForegroundColor Green
+Write-Host '    Estudiante 1:   estu01        estu01' -ForegroundColor Green
+Write-Host '    Estudiante 2:   estu02        estu02' -ForegroundColor Green
+Write-Host '    Estudiante 3:   estu03        estu03' -ForegroundColor Green
+Write-Host '    Estudiante 4:   estu04        estu04' -ForegroundColor Green
+Write-Host '    Director:       director      director' -ForegroundColor Green
+Write-Host '    Subdirector:    subdirector   subdirector' -ForegroundColor Green
 Write-Host ''
 Write-Host '  [PASOS PARA CONECTAR LAS TABLETS EN EL COLEGIO]' -ForegroundColor White
 Write-Host '    1. Conectar la laptop y las tablets a la MISMA red Wi-Fi del colegio.' -ForegroundColor Gray
@@ -182,8 +174,8 @@ Write-Host '    5. Listo! La Pantalla de Aula, PDFs, imágenes y tareas cargan a
 Write-Host ''
 Write-Host '--------------------------------------------------------------------------------' -ForegroundColor DarkGray
 Write-Host '  ATAJOS DISPONIBLES EN ESTA CONSOLA:' -ForegroundColor White
-Write-Host '    [O] Abrir navegador en esta laptop      [B] Crear copia de respaldo (Backup)' -ForegroundColor Cyan
-Write-Host '    [R] Reiniciar servidor                  [Q] Detener servidor y salir' -ForegroundColor Cyan
+Write-Host '    [O] Abrir navegador en esta laptop      [W] Ver Codigo QR para Tablets' -ForegroundColor Cyan
+Write-Host '    [B] Crear copia de respaldo (Backup)   [R] Reiniciar servidor   [Q] Salir' -ForegroundColor Cyan
 Write-Host '--------------------------------------------------------------------------------' -ForegroundColor DarkGray
 Write-Host ''
 
@@ -208,6 +200,14 @@ try {
                     Write-Host ''
                     Write-Host 'Abriendo EVAL en el navegador local...' -ForegroundColor Cyan
                     Start-Process 'https://127.0.0.1:8443'
+                }
+                'W' {
+                    Write-Host ''
+                    Write-Host 'Abriendo Portal con Codigo QR para Tablets...' -ForegroundColor Yellow
+                    $portalFile = Join-Path $devRoot 'portal-tablets.html'
+                    if (Test-Path -LiteralPath $portalFile) {
+                        Start-Process $portalFile
+                    }
                 }
                 'B' {
                     Write-Host ''

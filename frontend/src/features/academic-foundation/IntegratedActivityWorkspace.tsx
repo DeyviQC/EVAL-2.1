@@ -38,7 +38,7 @@ export function IntegratedActivityWorkspace({
     [blocked,setBlocked]=useState(client.isUncertain()),
     [tabFilter,setTabFilter]=useState<'all'|'pending'|'closed'>(initialFilter==='pending'?'pending':'all');
 
-  const scope=classroom??local,generation=useRef(0),writing=useRef(false);
+  const scope=classroom??local,generation=useRef(0),writing=useRef(false),instructionsRef=useRef<HTMLTextAreaElement>(null);
 
   function fail(e:unknown){
     if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}
@@ -81,7 +81,7 @@ export function IntegratedActivityWorkspace({
           const metadata=await client.classrooms();
           if(token!==generation.current)return;
           setClassrooms(metadata);
-          if(!selectedClassroom(metadata,scope))return;
+          if(!selectedClassroom(metadata,scope)){if(initialFilter==='pending'&&metadata.length>0){const firstClass=metadata[0]!;const nextScope={gradeId:firstClass.grade_id,sectionId:firstClass.section_id};if(onClassroomChange)onClassroomChange(nextScope);else setLocal(nextScope);}return;}
         }
         const page=await client.courses(null,teacherMode?scope:undefined);
         if(token===generation.current){
@@ -255,7 +255,7 @@ export function IntegratedActivityWorkspace({
         ) : (
           !busy && (
             <div className="p-6 bg-surface border border-border rounded-xl text-center">
-              <p className="text-xs text-text-muted">No tienes cursos asignados en este período.</p>
+              <p className="text-xs text-text-muted">{teacherMode&&classrooms.length>0&&!selectedClassroom(classrooms,scope)?'Selecciona primero un grado y una sección arriba para mostrar los cursos de esa aula.':'No tienes cursos asignados en este período.'}</p>
             </div>
           )
         )}
@@ -390,7 +390,18 @@ export function IntegratedActivityWorkspace({
             </label>
             <label className="block text-xs font-semibold text-text uppercase tracking-wider">
               Instrucciones
-              <textarea name="instructions" className={field} required rows={4} maxLength={10000} />
+              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1">
+                {[
+                  {label:'📋 Estructura CNEB completa',text:'Propósito de aprendizaje:\n- \n\nInstrucciones paso a paso:\n1. \n2. \n\nCriterios de evaluación (AD / A / B / C):\n- \n\nEvidencia esperada:\n- '},
+                  {label:'🎯 Consigna paso a paso',text:'1. Lee detenidamente el material de la semana.\n2. Desarrolla las actividades propuestas fundamentando tus respuestas.\n3. Adjunta tu evidencia en formato PDF, imagen o documento.'},
+                  {label:'✅ Lista de criterios',text:'Criterios de evaluación:\n• Comprende y aplica los conceptos trabajados en la sesión.\n• Sustenta su procedimiento o análisis con claridad.\n• Presenta su evidencia completa y organizada.'},
+                ].map(tpl=>(
+                  <button key={tpl.label} type="button" onClick={()=>{if(instructionsRef.current){const cur=instructionsRef.current.value.trim();instructionsRef.current.value=cur?`${cur}\n\n${tpl.text}`:tpl.text;instructionsRef.current.focus();}}} className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-surface-3 border border-border text-[11px] font-medium text-text normal-case tracking-normal cursor-pointer transition-colors">
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+              <textarea ref={instructionsRef} name="instructions" className={field} required rows={5} maxLength={10000} placeholder="Detalla el propósito, los pasos de la consigna y los criterios de evaluación CNEB..." />
             </label>
             <label className="block text-xs font-semibold text-text uppercase tracking-wider">
               Fecha límite (opcional)
@@ -411,7 +422,8 @@ export function IntegratedActivityWorkspace({
           client={client}
           mode="deliveries"
           teacherMode={teacherMode}
-          initialPanel={initialFilter === 'submitted' ? 'deliveries' : null}
+          initialPanel={initialFilter === 'submitted' || (teacherMode && initialFilter === 'pending') ? 'deliveries' : null}
+          initialDeliveryFilter={teacherMode && initialFilter === 'pending' ? 'unassessed' : 'all'}
           onExpired={onExpired}
         />
       ))}

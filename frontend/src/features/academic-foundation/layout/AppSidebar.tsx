@@ -16,7 +16,7 @@ import {
   Layers,
   Users,
   Settings,
-  ShieldAlert,
+  ShieldAlert, FileText,
 } from 'lucide-react';
 import type { DashboardRole } from '../role-dashboards.js';
 import type { OwnAccount } from '../accounts.js';
@@ -70,7 +70,7 @@ export function AppSidebar({
   ] : role === 'teacher' ? [
     { id: null, label: 'Inicio', icon: Home },
     { id: 'my_assignments', label: 'Cursos y aulas', icon: BookOpen },
-    { id: 'activities', label: 'Tareas y entregas', icon: ClipboardList, badge: unread },
+    { id: 'activities', label: 'Tareas y entregas', icon: ClipboardList, badge: unread }, { id: 'materials', label: 'Materiales', icon: FileText },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'history', label: 'Historial docente', icon: TrendingUp },
   ] : role === 'director_admin' ? [

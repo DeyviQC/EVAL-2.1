@@ -26,7 +26,7 @@ export function publicationForm(title:string,description:string,file:File){
 }
 /** UI validation is convenience only; server remains authoritative for types, macros and scope. */
 export function createMaterialClient(transport:typeof fetch,csrf:()=>string){
-  const pending=new Set<string>(),uncertain=new Set<string>();
+  const pending=new Set<string>(),uncertain=new Set<string>(),reviewed=new Set<string>();
   async function request<T>(path:string,decode:(value:unknown)=>T,body?:FormData){let response:Response;
     const headers:Record<string,string>={Accept:'application/json'};if(body){const token=csrf();if(!token)throw new AcademicApiError('session_not_initialized',419);headers['X-CSRF-TOKEN']=text(token);}
     try{response=await transport('/academic/'+path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',headers,...(body?{body}:{})});}
@@ -41,9 +41,9 @@ export function createMaterialClient(transport:typeof fetch,csrf:()=>string){
     }
     try{return decode(exact(wire,['data']).data);}catch{throw new AcademicApiError('invalid_response',response.status,null,!!body);}
   }
-  return {observations:createObservationClient(csrf,transport),maintenance:createMaterialMaintenanceClient(transport,csrf),search:(id:string,term:string,after:string|null=null)=>{term=term.trim();if(Array.from(term).length>100||/[\x00-\x1f\x7f]/.test(term))throw new Error('Invalid search');return request('my-courses/'+decimalId(id)+'/library?q='+encodeURIComponent(term)+(after?'&after='+decimalId(after):''),materialsPage);},list:(id:string,after:string|null=null)=>request('my-courses/'+decimalId(id)+'/materials'+(after?'?after='+decimalId(after):''),materialsPage),
-    detail:(id:string)=>request('materials/'+decimalId(id),material),isUncertain:(id:string)=>uncertain.has(decimalId(id)),
+  return {observations:createObservationClient(csrf,transport),maintenance:createMaterialMaintenanceClient(transport,csrf),search:(id:string,term:string,after:string|null=null)=>{term=term.trim();if(Array.from(term).length>100||/[\x00-\x1f\x7f]/.test(term))throw new Error('Invalid search');return request('my-courses/'+decimalId(id)+'/library?q='+encodeURIComponent(term)+(after?'&after='+decimalId(after):''),materialsPage);},list:async(id:string,after:string|null=null)=>{const cid=decimalId(id);const page=await request('my-courses/'+cid+'/materials'+(after?'?after='+decimalId(after):''),materialsPage);if(uncertain.has(cid))reviewed.add(cid);return page;},
+    detail:(id:string)=>request('materials/'+decimalId(id),material),isUncertain:(id:string)=>uncertain.has(decimalId(id)),canReview:(id:string)=>{const cid=decimalId(id);return uncertain.has(cid)&&reviewed.has(cid);},review:(id:string)=>{const cid=decimalId(id);if(uncertain.has(cid)&&!reviewed.has(cid))throw new AcademicApiError('consultation_required',null);uncertain.delete(cid);reviewed.delete(cid);},
     publish:async(id:string,form:FormData)=>{id=decimalId(id);if(uncertain.has(id))throw new AcademicApiError('commit_outcome_unknown',503,null,true);if(pending.has(id))throw new AcademicApiError('publication_pending',409);
-      pending.add(id);try{return await request('my-courses/'+id+'/materials',identityResult,form);}catch(problem){if(problem instanceof AcademicApiError&&problem.outcomeUnknown)uncertain.add(id);throw problem;}finally{pending.delete(id);}}
+      pending.add(id);try{return await request('my-courses/'+id+'/materials',identityResult,form);}catch(problem){if(problem instanceof AcademicApiError&&problem.outcomeUnknown){reviewed.delete(id);uncertain.add(id);}throw problem;}finally{pending.delete(id);}}
   };
 }

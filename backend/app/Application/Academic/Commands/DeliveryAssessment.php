@@ -112,7 +112,19 @@ final class DeliveryAssessment {
   $anyLocked=$this->db->getSchemaBuilder()->hasTable('bimester_grade_closures')&&$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('state','locked')->exists();
   $isLocked=$bimester!==null?$this->db->table('bimester_grade_closures')->where('period_id',(string)$r['academic_period_id'])->where('bimester_number',$bimester)->where('state','locked')->exists():$anyLocked;
   $unmapped=($bimester===null)&&$anyLocked;
-  return ['assessment'=>$current,'can_assess'=>$r['period_state']==='active'&&(string)$r['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)&&!$isLocked,'is_locked'=>$isLocked,'unmapped_bimester'=>$unmapped];
+  return ['assessment'=>$current,'can_assess'=>$r['period_state']==='active'&&(string)$r['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)&&!$isLocked,'is_locked'=>$isLocked,'unmapped_bimester'=>$unmapped];}
+ public function projections(AuthenticatedActor $actor,array $rows,array $assignment,array $roles,string $activityId):array {
+  if(!$rows)return [];
+  if(!$this->db->getSchemaBuilder()->hasTable('delivery_assessments')){$empty=[];foreach($rows as $r)$empty[(string)$r->submission_id]=['assessment'=>null,'can_assess'=>false];return $empty;}
+  $periodId=(string)$assignment['academic_period_id'];$periodActive=$this->db->table('academic_periods')->where('id',$periodId)->value('state')==='active';
+  $bimester=$this->resolveBimesterNumber($periodId,$activityId);$hasClosureTable=$this->db->getSchemaBuilder()->hasTable('bimester_grade_closures');
+  $anyLocked=$hasClosureTable&&$this->db->table('bimester_grade_closures')->where('period_id',$periodId)->where('state','locked')->exists();
+  $isLocked=$bimester!==null?($hasClosureTable&&$this->db->table('bimester_grade_closures')->where('period_id',$periodId)->where('bimester_number',$bimester)->where('state','locked')->exists()):$anyLocked;
+  $unmapped=($bimester===null)&&$anyLocked;$canAssess=$periodActive&&(string)$assignment['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)&&!$isLocked;
+  $assessmentIds=array_values(array_filter(array_map(fn($r)=>$r->current_assessment_id,$rows),fn($id)=>$id!==null));
+  $assessments=$assessmentIds?$this->db->table('delivery_assessments')->whereIn('id',$assessmentIds)->get()->keyBy(fn($row)=>(string)$row->id):collect();
+  $result=[];foreach($rows as $r){$sid=(string)$r->submission_id;$current=null;if($r->current_assessment_id!==null){$row=$assessments->get((string)$r->current_assessment_id);if(!$row||(string)$row->submission_id!==$sid)throw new AcademicCommandFailure('reference_unavailable');$current=$this->view((array)$row);}$result[$sid]=['assessment'=>$current,'can_assess'=>$canAssess,'is_locked'=>$isLocked,'unmapped_bimester'=>$unmapped];}
+  return $result;
  }
  public function history(AuthenticatedActor $actor,string $id,?string $after):array {
   $this->authorize($actor,$this->delivery($id));$q=$this->db->table('delivery_assessments')->where('submission_id',$id);if($after!==null)$q->where('id','>',AcademicLockSet::id($after));$rows=$q->orderBy('id')->limit(51)->get();$items=$rows->take(50)->map(fn($r)=>$this->view((array)$r))->values()->all();return ['items'=>$items,'next_after'=>$rows->count()>50?end($items)['id']:null];

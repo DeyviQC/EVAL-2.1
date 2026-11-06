@@ -24,6 +24,10 @@ function errorMessage(error: unknown) {
       return 'La calificación cambió. Consulta su última revisión antes de corregirla.';
     if (error.category === 'already_assessed')
       return 'La entrega ya fue calificada y no admite nuevas versiones.';
+    if (error.category === 'bimester_locked')
+      return 'El bimestre correspondiente a esta actividad está cerrado y no admite nuevas calificaciones.';
+    if (error.category === 'unmapped_bimester')
+      return 'Existen bimestres cerrados en el período; asigna la actividad a una semana del calendario antes de calificar.';
     if (error.status === 409)
       return 'La actividad o tu matrícula cambió. Consulta nuevamente antes de continuar.';
     if (error.status === 403 || error.status === 404)
@@ -80,13 +84,25 @@ function VersionHistory({
               </p>
               <p className="whitespace-pre-wrap text-xs text-text">{v.answer}</p>
               {v.filename && (
-                <a
-                  className="inline-block mt-2 text-xs font-medium text-primary hover:underline"
-                  href={evidenceUrl(v.id)}
-                  download
-                >
-                  Descargar {v.filename}
-                </a>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {/\.(pdf|jpe?g|png)$/i.test(v.filename) && (
+                    <a
+                      className="inline-block text-xs font-medium text-primary hover:underline"
+                      href={evidenceUrl(v.id, 'inline')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      👁️ Abrir {v.filename}
+                    </a>
+                  )}
+                  <a
+                    className="inline-block text-xs font-medium text-primary hover:underline"
+                    href={evidenceUrl(v.id)}
+                    download
+                  >
+                    Descargar {v.filename}
+                  </a>
+                </div>
               )}
             </section>
           ))}
@@ -114,6 +130,7 @@ export function ActivityCard({
   onDenied,
   teacherMode = false,
   initialPanel = null,
+  initialDeliveryFilter = 'all',
 }: {
   activity: Activity;
   client: ActivityClient;
@@ -122,6 +139,7 @@ export function ActivityCard({
   onDenied?: () => void;
   teacherMode?: boolean;
   initialPanel?: 'detail' | 'deliveries' | null;
+  initialDeliveryFilter?: 'all' | 'unassessed' | 'assessed' | 'missing';
 }) {
   const [panel, setPanel] = useState<'detail' | 'deliveries' | null>(initialPanel);
   const [pending, setPending] = useState<{ id: string; student_name: string }[]>([]);
@@ -135,7 +153,7 @@ export function ActivityCard({
   const [closed, setClosed] = useState(activity.state === 'closed');
   const [blocked, setBlocked] = useState(client.isUncertain());
   const [ready, setReady] = useState(false);
-  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'unassessed' | 'assessed' | 'missing'>('all');
+  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'unassessed' | 'assessed' | 'missing'>(initialDeliveryFilter);
 
   const writing = useRef(false);
   const alive = useRef(true);
@@ -567,13 +585,25 @@ export function ActivityCard({
                     <RecordedTime value={d.version.recorded_at} />
                   </p>
                   {d.version.filename && (
-                    <a
-                      className={button + ' inline-block my-2'}
-                      href={evidenceUrl(d.version.id)}
-                      download
-                    >
-                      Descargar evidencia
-                    </a>
+                    <div className="flex flex-wrap gap-2 my-2">
+                      {/\.(pdf|jpe?g|png)$/i.test(d.version.filename) && (
+                        <a
+                          className={button}
+                          href={evidenceUrl(d.version.id, 'inline')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          👁️ Abrir evidencia ({d.version.filename})
+                        </a>
+                      )}
+                      <a
+                        className={button}
+                        href={evidenceUrl(d.version.id)}
+                        download
+                      >
+                        Descargar evidencia
+                      </a>
+                    </div>
                   )}
                   {
                     <AssessmentPanel
@@ -596,7 +626,7 @@ export function ActivityCard({
               </details>
             </section>
           ))}
-          {after && deliveryFilter === 'all' && (
+          {after && deliveryFilter !== 'missing' && (
             <button
               type="button"
               className={button + ' mt-3'}

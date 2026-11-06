@@ -32,24 +32,67 @@ const gradeDefinitions: Record<GradeKey, { label: string; desc: string; color: s
   },
 };
 
-const feedbackSuggestions: Record<string, string[]> = {
-  AD: [
-    'Demuestra un dominio sobresaliente y autonomía en el logro del propósito de aprendizaje.',
-    'Cumple y supera los criterios con argumentos fundamentados y propuestas pertinentes.',
-  ],
-  A: [
-    'Cumple satisfactoriamente con los criterios de evaluación establecidos en la actividad.',
-    'Logro esperado alcanzado. Se recomienda seguir profundizando en las conclusiones.',
-  ],
-  B: [
-    'En proceso. Se sugiere revisar nuevamente la consigna y profundizar en la argumentación.',
-    'Avance significativo. Es necesario completar todos los pasos solicitados en las instrucciones.',
-  ],
-  C: [
-    'En inicio. Requiere acompañamiento para alcanzar el nivel esperado. Se sugiere coordinar asesoría.',
-    'Revisa los materiales de clase compartidos y consulta tus dudas para la siguiente entrega.',
-  ],
-};
+function buildFeedbackSuggestions(studentName: string): Record<GradeKey, { tag: string; text: string }[]> {
+  const firstName = studentName.split(/\s+/).filter(Boolean)[0] ?? 'Estudiante';
+  return {
+    AD: [
+      {
+        tag: 'Logro destacado + Autonomía',
+        text: `${firstName}, evidencias un dominio sobresaliente del propósito de aprendizaje. Sustentas tus ideas con argumentos sólidos, ejemplos propios y gran claridad. ¿Cómo podrías aplicar esta estrategia en un nuevo reto o compartir tu método con el aula?`,
+      },
+      {
+        tag: 'Profundidad + Transferencia',
+        text: `¡Excelente trabajo, ${firstName}! Cumples y superas todos los criterios de evaluación establecidos, integrando los conceptos trabajados en clase con pensamiento crítico y originalidad.`,
+      },
+      {
+        tag: 'Criterio de excelencia',
+        text: `Fortaleza destacada: organización rigurosa de la evidencia y conclusiones bien fundamentadas. Continúa profundizando con la misma autonomía académica.`,
+      },
+    ],
+    A: [
+      {
+        tag: 'Logro esperado + Proyección',
+        text: `${firstName}, has alcanzado satisfactoriamente el propósito de la actividad cumpliendo los criterios de evaluación previstos. Para dar el siguiente paso hacia el nivel destacado, ¿qué ejemplo o caso concreto podrías añadir en tus conclusiones?`,
+      },
+      {
+        tag: 'Claridad + Mejora puntual',
+        text: `Buen desarrollo de la evidencia, ${firstName}. Tus respuestas responden con pertinencia a la consigna. Te sugiero revisar la precisión de algunos términos clave para fortalecer aún más tu argumentación.`,
+      },
+      {
+        tag: 'Criterio cumplido',
+        text: `Fortaleza: desarrollo completo y ordenado de los pasos solicitados. Sugerencia formativa: profundizar en la justificación final de tu procedimiento.`,
+      },
+    ],
+    B: [
+      {
+        tag: 'Avance + Pregunta mediadora',
+        text: `${firstName}, muestras un avance importante en la primera parte de la actividad; sin embargo, aún está en proceso sustentar el desarrollo completo según los criterios. ¿Qué información de la guía de clase te ayudaría a completar el segundo paso?`,
+      },
+      {
+        tag: 'Ruta de mejora paso a paso',
+        text: `Estás cerca del logro esperado, ${firstName}. Te recomiendo: 1) Releer la consigna principal, 2) Completar los ejemplos pendientes con tus propias palabras y 3) Verificar que tu conclusión responda a la pregunta retadora.`,
+      },
+      {
+        tag: 'Revisión de criterios',
+        text: `Logro parcial: identificas las ideas centrales del tema, pero falta relacionarlas con la evidencia solicitada. Apóyate en los recursos publicados en el aula para fortalecer tu análisis.`,
+      },
+    ],
+    C: [
+      {
+        tag: 'Acompañamiento + Andamiaje',
+        text: `${firstName}, valoro tu entrega inicial. Para alcanzar los criterios de la actividad necesitamos reforzar la comprensión del propósito. Empecemos identificando la idea principal del material de clase: ¿cuál consideras que es el dato clave del problema?`,
+      },
+      {
+        tag: 'Orientación prioritaria',
+        text: `En inicio, ${firstName}. La evidencia enviada aún no desarrolla los pasos indicados en la consigna. Te sugiero revisar la guía de la semana paso a paso y consultarme tus dudas en clase para acompañarte en su resolución.`,
+      },
+      {
+        tag: 'Plan de apoyo',
+        text: `Aspecto por fortalecer: comprensión de la consigna y desarrollo de las actividades propuestas. Revisa los ejemplos trabajados en el aula y realiza las correcciones sugeridas.`,
+      },
+    ],
+  };
+}
 
 function isGradeKey(value: string): value is GradeKey {
   return value === 'AD' || value === 'A' || value === 'B' || value === 'C';
@@ -143,9 +186,8 @@ export function AssessmentPanel({
               {delivery.assessment ? `Nota ${delivery.assessment.grade}` : 'Sin calificar'}
             </p>
             {delivery.assessment && (
-              <p className="text-[11px] text-text-muted mt-0.5">
-                Calificada: <RecordedTime value={delivery.assessment.recorded_at} /> · Evidencia versión{' '}
-                {delivery.assessment.version_id}
+              <p className="text-[11px] text-text-muted mt-0.5" title={`Versión de evidencia #${delivery.assessment.version_id}`}>
+                Calificada: <RecordedTime value={delivery.assessment.recorded_at} /> · Evidencia evaluada
               </p>
             )}
           </div>
@@ -177,27 +219,39 @@ export function AssessmentPanel({
           </button>
           {open && (
             <div className="space-y-3 mt-3 pt-3 border-t border-border">
-              {history.map((r) => (
+              {history.map((r, idx) => (
                 <section
                   key={r.id}
                   className="rounded-xl border border-border bg-surface p-3 text-xs space-y-1"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="font-bold text-text">Nota {r.grade}</p>
+                    <p className="font-bold text-text">Nota {r.grade} · Revisión #{history.length - idx}</p>
                     <span className="text-[11px] text-text-muted">
                       <RecordedTime value={r.recorded_at} />
                     </span>
                   </div>
                   <p className="whitespace-pre-wrap text-text">{r.feedback}</p>
-                  <p className="text-[11px] text-text-muted">Evidencia versión {r.version_id}</p>
+                  <p className="text-[11px] text-text-muted">Evidencia asociada a esta calificación</p>
                   {delivery.version.filename && (
-                    <a
-                      href={evidenceUrl(r.version_id)}
-                      download
-                      className="inline-block mt-1 text-primary hover:underline font-medium"
-                    >
-                      Descargar evidencia calificada
-                    </a>
+                    <div className="flex flex-wrap gap-3 pt-1">
+                      {/\.(pdf|jpe?g|png)$/i.test(delivery.version.filename) && (
+                        <a
+                          href={evidenceUrl(r.version_id, 'inline')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block text-primary hover:underline font-medium"
+                        >
+                          👁️ Abrir evidencia calificada
+                        </a>
+                      )}
+                      <a
+                        href={evidenceUrl(r.version_id)}
+                        download
+                        className="inline-block text-primary hover:underline font-medium"
+                      >
+                        Descargar evidencia calificada
+                      </a>
+                    </div>
                   )}
                 </section>
               ))}
@@ -213,6 +267,17 @@ export function AssessmentPanel({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {!delivery.can_assess && (delivery.is_locked || delivery.unmapped_bimester) && (
+        <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+          <span>🔒</span>
+          <span>
+            {delivery.unmapped_bimester
+              ? 'Calificación bloqueada: existen bimestres cerrados en este período y la actividad aún no está asociada a una semana del calendario escolar vigente.'
+              : 'Bimestre cerrado: el registro y la corrección de calificaciones de este período han sido bloqueados por Subdirección.'}
+          </span>
         </div>
       )}
 
@@ -274,22 +339,34 @@ export function AssessmentPanel({
               </label>
             </div>
 
-            {/* Plantillas de sugerencia rápida según la nota elegida */}
-            {grade && feedbackSuggestions[grade] && (
-              <div className="space-y-1.5 p-2.5 rounded-xl bg-surface-2 border border-border/80">
-                <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-accent" />
-                  Sugerencias para nota {grade} (clic para insertar):
-                </span>
-                <div className="flex flex-col gap-1">
-                  {feedbackSuggestions[grade].map((suggestion, idx) => (
+            {/* Plantillas de sugerencia rápida CNEB según la nota elegida */}
+            {grade && isGradeKey(grade) && (
+              <div className="space-y-2 p-3 rounded-xl bg-surface-2 border border-border/80">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold text-text-muted flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    Asistente de retroalimentación CNEB para nota {grade} (clic para agregar):
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {buildFeedbackSuggestions(delivery.student_name)[grade].map((suggestion, idx) => (
                     <button
                       type="button"
                       key={idx}
-                      onClick={() => setFeedback(suggestion)}
-                      className="text-left text-[11px] p-1.5 rounded-lg bg-surface hover:bg-surface-3 text-text border border-border/60 transition-colors cursor-pointer"
+                      onClick={() =>
+                        setFeedback((prev) => {
+                          const trimmed = prev.trim();
+                          if (!trimmed) return suggestion.text;
+                          if (trimmed.includes(suggestion.text)) return prev;
+                          return `${trimmed}\n\n${suggestion.text}`;
+                        })
+                      }
+                      className="text-left text-[11px] p-2 rounded-lg bg-surface hover:bg-surface-3 text-text border border-border/60 hover:border-primary/40 transition-all cursor-pointer space-y-0.5"
                     >
-                      💡 {suggestion}
+                      <span className="block font-semibold text-primary text-[10px] uppercase tracking-wider">
+                        💡 {suggestion.tag}
+                      </span>
+                      <span className="block text-text-muted leading-relaxed">{suggestion.text}</span>
                     </button>
                   ))}
                 </div>
@@ -305,7 +382,20 @@ export function AssessmentPanel({
                 >
                   Retroalimentación formativa *
                 </label>
-                <span className="text-[10px] text-text-muted">Obligatoria según MINEDU</span>
+                <div className="flex items-center gap-2">
+                  {feedback.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFeedback('')}
+                      className="text-[10px] font-medium text-text-muted hover:text-danger transition-colors cursor-pointer"
+                    >
+                      Limpiar texto
+                    </button>
+                  )}
+                  <span className="text-[10px] text-text-muted">
+                    {Array.from(feedback).length}/5000 · Obligatoria según MINEDU
+                  </span>
+                </div>
               </div>
               <textarea
                 id={`feedback-${delivery.id}`}
@@ -314,9 +404,9 @@ export function AssessmentPanel({
                 maxLength={5000}
                 value={feedback}
                 onChange={(event) => setFeedback(event.target.value)}
-                placeholder="Escribe comentarios formativos que orienten el aprendizaje de la estudiante..."
-                className="block w-full rounded-xl border border-border bg-surface text-text p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-h-[90px]"
-                rows={3}
+                placeholder="Describe los logros alcanzados, los aspectos por mejorar según los criterios y una recomendación o pregunta reflexiva..."
+                className="block w-full rounded-xl border border-border bg-surface text-text p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-h-[100px]"
+                rows={4}
               />
             </div>
 

@@ -20,7 +20,7 @@ function getSubjectAccent(subject: string) {
   return { bar: 'bg-primary', chip: 'bg-primary-soft text-primary border-primary/20' };
 }
 
-export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void}){
+export function MyCourses({client,materials,weeks,activities,onExpired,materialsOnly=false,libraryOnly=false,teacherMode=false,classroom,onClassroomChange,initialCourseId=null,onCourseOpened}:{client:ReturnType<typeof createAcademicClient>;materials:ReturnType<typeof createMaterialClient>;weeks?:WeeksClient;activities?:ActivityClient;onExpired:()=>void;materialsOnly?:boolean;libraryOnly?:boolean;teacherMode?:boolean;classroom?:CourseClassroomSelection;onClassroomChange?:(value:CourseClassroomSelection)=>void;initialCourseId?:string|null;onCourseOpened?:()=>void}){
   const [localClassroom,setLocalClassroom]=useState(emptyClassroom);
   const scope=classroom??localClassroom;
   const changeClassroom=onClassroomChange??setLocalClassroom;
@@ -44,7 +44,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
     const current=++generation.current;setRows([]);setSelected(null);setCursor(null);setPhase('loading');setMessage('');
     void (async()=>{try{
       if(teacherMode){const available=await client.courseClassrooms(courseClassrooms);if(current!==generation.current)return;setClassrooms(available);
-        if(!selectedClassroom(available,scope)){if(scope.sectionId||scope.gradeId&&!available.some(row=>row.grade_id===scope.gradeId))changeClassroom(emptyClassroom());setPhase('ready');return;}}
+        if(initialCourseId){const opened=await client.course(initialCourseId,course);if(current!==generation.current)return;const matched=available.find(row=>row.grade===opened.grade&&row.section===opened.section);if(matched&&(scope.gradeId!==matched.grade_id||scope.sectionId!==matched.section_id)){changeClassroom({gradeId:matched.grade_id,sectionId:matched.section_id});return;}const page=matched?await client.myCourses(coursesPage,null,{grade_id:matched.grade_id,section_id:matched.section_id}):{items:[],next_after:null};if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);setSelected(opened);setPhase('ready');return;}if(!selectedClassroom(available,scope)){if(scope.sectionId||scope.gradeId&&!available.some(row=>row.grade_id===scope.gradeId))changeClassroom(emptyClassroom());setPhase('ready');return;}}
       const page=await client.myCourses(coursesPage,null,teacherMode?{grade_id:scope.gradeId,section_id:scope.sectionId}:{});
       if(current!==generation.current)return;setRows(page.items);setCursor(page.next_after);setPhase('ready');
     }catch(error){if(current===generation.current)fail(error);}})();
@@ -66,7 +66,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
             {sectionTitle}
           </h3>
           <p className="text-xs sm:text-sm text-text-muted mt-1">
-            {libraryOnly ? 'Consulta y descarga libros, guías y recursos de consulta para tus áreas.' : materialsOnly ? 'Revisa los materiales y documentos de clase compartidos por tus docentes.' : 'Espacio de aprendizaje de tus áreas curriculares, tareas y seguimiento.'}
+            {libraryOnly ? 'Consulta y descarga libros, guías y recursos de consulta para tus áreas.' : materialsOnly ? (teacherMode ? 'Publica, actualiza y organiza guías, lecturas y recursos para tus estudiantes.' : 'Revisa los materiales y documentos de clase compartidos por tus docentes.') : (teacherMode ? 'Gestiona tus áreas curriculares, sesiones semanales, tareas y recursos por aula.' : 'Espacio de aprendizaje de tus áreas curriculares, tareas y seguimiento.')}
           </p>
         </header>
       )}
@@ -77,14 +77,14 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
 
       {teacherMode && !selected && (
         <div className="bg-surface border border-border rounded-xl p-4 shadow-xs">
-          <CourseClassroomButtons rows={classrooms} value={scope} onChange={value=>{generation.current++;setRows([]);setSelected(null);setCursor(null);changeClassroom(value);}} disabled={phase==='loading'}/>
+          <CourseClassroomButtons rows={classrooms} value={scope} onChange={value=>{generation.current++;onCourseOpened?.();setRows([]);setSelected(null);setCursor(null);changeClassroom(value);}} disabled={phase==='loading'}/>
         </div>
       )}
 
       {(materialsOnly||libraryOnly)&&!selected&&(!teacherMode||activeClassroom)&&(
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-soft/50 border border-primary/20 text-xs text-primary">
           <span>💡</span>
-          <p>Selecciona un curso para consultar sus materiales.</p>
+          <p>{teacherMode && materialsOnly ? 'Selecciona un curso para publicar o gestionar sus materiales.' : 'Selecciona un curso para consultar sus materiales.'}</p>
         </div>
       )}
 
@@ -125,7 +125,7 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
           {...activities?{activities}:{}}
           teacherMode={teacherMode}
           onExpired={onExpired}
-          onBack={()=>void load()}
+          onBack={()=>{onCourseOpened?.();void load();}}
           initial={libraryOnly?'library':materialsOnly?'materials':'weeks'}
         />
       ):(
@@ -172,6 +172,11 @@ export function MyCourses({client,materials,weeks,activities,onExpired,materials
             {rows.length===0&&(!teacherMode||activeClassroom)&&(
               <div className="p-8 text-center bg-surface border border-border rounded-xl">
                 <p className="text-sm text-text-muted">No tienes cursos disponibles para esta consulta.</p>
+              </div>
+            )}
+            {teacherMode&&classrooms.length>0&&!activeClassroom&&(
+              <div className="p-8 text-center bg-surface border border-border rounded-xl">
+                <p className="text-sm text-text-muted">Selecciona primero un grado y una sección arriba para mostrar los cursos de esa aula.</p>
               </div>
             )}
             {teacherMode&&classrooms.length===0&&(

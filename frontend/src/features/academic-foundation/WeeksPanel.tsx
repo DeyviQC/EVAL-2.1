@@ -4,7 +4,7 @@ import { AcademicDialog } from './AcademicDialog.js';
 import { ClassroomPresentation } from './ClassroomPresentation.js';
 import { progressLabels } from './learning-progress.js';
 import { AcademicApiError } from './api.js';
-import { materialFileUrl, type Material } from './materials.js';
+import { materialFileUrl, publicationForm, type createMaterialClient, type Material } from './materials.js';
 import { type Activity, type ActivityClient } from './activities.js';
 import { ActivityCard } from './ActivityWorkspace.js';
 import { type Course } from './courses.js';
@@ -15,12 +15,14 @@ export function WeeksPanel({
   course,
   client,
   activities,
+  materialClient,
   onExpired,
   teacherMode = false,
 }: {
   course: Course;
   client: WeeksClient;
   activities: ActivityClient;
+  materialClient?: ReturnType<typeof createMaterialClient>;
   onExpired: () => void;
   teacherMode?: boolean;
 }) {
@@ -38,6 +40,8 @@ export function WeeksPanel({
   const [reviewed, setReviewed] = useState<WeekAssociation | null>(null);
   const [contentView, setContentView] = useState<'all' | 'material' | 'activity'>('all');
   const [creating, setCreating] = useState(false);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const instructionsRef = useRef<HTMLTextAreaElement>(null);
   const activityTrigger = useRef<HTMLElement | null>(null);
   const projectionTrigger = useRef<HTMLElement | null>(null);
   const [projecting, setProjecting] = useState(false);
@@ -223,7 +227,50 @@ export function WeeksPanel({
     } catch (error) {
       if (published) {
         setCreating(false);
-        setMessage('La actividad ya está publicada. Revisa Otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarla.');
+        setMessage('La actividad ya está publicada. Revisa 🔍 Buscar y consultar otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarla.');
+      } else {
+        fail(error);
+      }
+    } finally {
+      writing.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function publishMaterial(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!materialClient || writing.current || materialClient.isUncertain(course.id) || client.isUncertain() || !course.can_publish || selection.bucket !== 'week') return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const file = data.get('file');
+    if (!(file instanceof File)) {
+      setMessage('Selecciona un archivo.');
+      return;
+    }
+    let payload: FormData;
+    try {
+      payload = publicationForm(String(data.get('title') ?? ''), String(data.get('description') ?? ''), file);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Revisa los campos del material.');
+      return;
+    }
+    writing.current = true;
+    setBusy(true);
+    setMessage('');
+    let published = false;
+    try {
+      const result = await materialClient.publish(course.id, payload);
+      published = true;
+      form.reset();
+      setUploadingMaterial(false);
+      const association = await client.consult('material', result.id);
+      await client.set(association, selection.revision!, selection.week!);
+      setMessage('Material publicado en esta semana.');
+      await load(selection, filter, true);
+    } catch (error) {
+      if (published) {
+        setUploadingMaterial(false);
+        setMessage('El material ya está publicado. Revisa 🔍 Buscar y consultar otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarlo.');
       } else {
         fail(error);
       }
@@ -324,14 +371,33 @@ export function WeeksPanel({
           </button>
 
           {teacherMode && course.can_publish && selection.bucket === 'week' && (
-            <button
-              className="eval-primary-action inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
-              disabled={busy || activities.isUncertain() || client.isUncertain()}
-              aria-expanded={creating}
-              onClick={() => setCreating(!creating)}
-            >
-              {creating ? '✕ Cancelar' : '＋ Crear actividad'}
-            </button>
+            <>
+              {materialClient && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-semibold shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                  disabled={busy || materialClient.isUncertain(course.id) || client.isUncertain()}
+                  aria-expanded={uploadingMaterial}
+                  onClick={() => {
+                    setUploadingMaterial(!uploadingMaterial);
+                    if (!uploadingMaterial) setCreating(false);
+                  }}
+                >
+                  {uploadingMaterial ? '✕ Cancelar material' : '＋ Subir material'}
+                </button>
+              )}
+              <button
+                className="eval-primary-action inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                disabled={busy || activities.isUncertain() || client.isUncertain()}
+                aria-expanded={creating}
+                onClick={() => {
+                  setCreating(!creating);
+                  if (!creating) setUploadingMaterial(false);
+                }}
+              >
+                {creating ? '✕ Cancelar' : '＋ Crear actividad'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -407,12 +473,35 @@ export function WeeksPanel({
               <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
                 Instrucciones
               </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[
+                  {label:'📋 Estructura CNEB',text:'Propósito de aprendizaje:\n- \n\nInstrucciones paso a paso:\n1. \n2. \n\nCriterios de evaluación (AD / A / B / C):\n- \n\nEvidencia esperada:\n- '},
+                  {label:'🎯 Consigna paso a paso',text:'1. Lee detenidamente el material de la semana.\n2. Desarrolla las actividades propuestas fundamentando tus respuestas.\n3. Adjunta tu evidencia en formato PDF, imagen o documento.'},
+                  {label:'✅ Lista de criterios',text:'Criterios de evaluación:\n• Comprende y aplica los conceptos trabajados en la sesión.\n• Sustenta su procedimiento o análisis con claridad.\n• Presenta su evidencia completa y organizada.'},
+                ].map(tpl=>(
+                  <button
+                    key={tpl.label}
+                    type="button"
+                    onClick={() => {
+                      if (instructionsRef.current) {
+                        const cur = instructionsRef.current.value.trim();
+                        instructionsRef.current.value = cur ? `${cur}\n\n${tpl.text}` : tpl.text;
+                        instructionsRef.current.focus();
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-surface-3 border border-border text-[11px] font-medium text-text cursor-pointer transition-colors"
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
               <textarea
+                ref={instructionsRef}
                 name="instructions"
                 required
                 maxLength={10000}
-                rows={3}
-                placeholder="Detalla las instrucciones para los estudiantes…"
+                rows={4}
+                placeholder="Detalla el propósito, las instrucciones paso a paso y los criterios de evaluación CNEB…"
                 className="block w-full rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
@@ -438,6 +527,80 @@ export function WeeksPanel({
               <button
                 type="button"
                 onClick={() => setCreating(false)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-medium transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      )}
+
+      {uploadingMaterial && materialClient && course.can_publish && (
+        <form
+          className="eval-compact-form my-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4 animate-in fade-in duration-200"
+          aria-label="Publicar material en esta semana"
+          onSubmit={event => void publishMaterial(event)}
+        >
+          <fieldset disabled={busy || materialClient.isUncertain(course.id) || client.isUncertain()} className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <legend className="text-sm font-semibold text-text">Material educativo · {title}</legend>
+              <button
+                type="button"
+                onClick={() => setUploadingMaterial(false)}
+                className="text-xs text-text-muted hover:text-text cursor-pointer p-1"
+                aria-label="Cerrar formulario de material"
+              >
+                ✕
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Título del material
+              </label>
+              <input
+                name="title"
+                required
+                maxLength={255}
+                placeholder="Ej: Guía de aprendizaje o Ficha de lectura"
+                className="block w-full rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Descripción o indicaciones (opcional)
+              </label>
+              <textarea
+                name="description"
+                maxLength={10000}
+                rows={2}
+                placeholder="Orientaciones breves para revisar este recurso…"
+                className="block w-full rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Archivo adjunto
+              </label>
+              <input
+                name="file"
+                type="file"
+                required
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png"
+                className="block w-full text-xs text-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover file:cursor-pointer cursor-pointer border border-border rounded-lg bg-surface-2 p-1.5"
+              />
+              <p className="mt-1 text-[11px] text-text-muted">PDF, Word, PowerPoint, Excel o JPG/PNG · Hasta 25 MiB · Sin macros</p>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                className="eval-primary-action inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover transition-all cursor-pointer disabled:opacity-50"
+                type="submit"
+              >
+                Publicar material en esta semana
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadingMaterial(false)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-medium transition-all cursor-pointer"
               >
                 Cancelar
@@ -599,13 +762,25 @@ export function WeeksPanel({
                   <p className="text-xs text-text-muted break-all">
                     {(resource as Material).filename}
                   </p>
-                  <a
-                    className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline pt-1"
-                    href={materialFileUrl(resource.id, 'attachment')}
-                    download
-                  >
-                    ↓ Descargar material
-                  </a>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {['application/pdf', 'image/jpeg', 'image/png'].includes((resource as Material).mime) && (
+                      <a
+                        className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                        href={materialFileUrl(resource.id, 'inline')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        👁️ Abrir material
+                      </a>
+                    )}
+                    <a
+                      className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                      href={materialFileUrl(resource.id, 'attachment')}
+                      download
+                    >
+                      ↓ Descargar material
+                    </a>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-2 space-y-2">

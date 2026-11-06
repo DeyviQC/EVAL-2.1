@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Command } from 'cmdk';
-import { Search, BookOpen, ClipboardList, Calendar, Library, TrendingUp, LogOut, Sun, Moon, Home } from 'lucide-react';
+import { Search, BookOpen, ClipboardList, Calendar, Library, TrendingUp, LogOut, Sun, Moon, Home, FileText } from 'lucide-react';
+import type { DashboardRole } from '../role-dashboards.js';
 
 type Props = {
   open: boolean;
@@ -8,10 +9,10 @@ type Props = {
   onSelectSection: (id: string | null) => void;
   onLogout: () => void;
   isDark: boolean;
-  onToggleTheme: () => void;
+  onToggleTheme: () => void; role?: DashboardRole | undefined;
 };
 
-export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, isDark, onToggleTheme }: Props) {
+export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, isDark, onToggleTheme, role = 'student' }: Props) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -65,10 +66,10 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
               </Command.Item>
               <Command.Item
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary-soft hover:text-primary transition-colors"
-                onSelect={() => { onSelectSection('my_enrollments'); onOpenChange(false); }}
+                onSelect={() => { onSelectSection(role === 'teacher' ? 'my_assignments' : 'my_enrollments'); onOpenChange(false); }}
               >
                 <BookOpen className="w-4 h-4 text-primary" />
-                <span>Mis cursos</span>
+                <span>{role === 'teacher' ? 'Cursos y aulas' : 'Mis cursos'}</span>
               </Command.Item>
               <Command.Item
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary-soft hover:text-primary transition-colors"
@@ -79,10 +80,10 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
               </Command.Item>
               <Command.Item
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary-soft hover:text-primary transition-colors"
-                onSelect={() => { onSelectSection('weeks'); onOpenChange(false); }}
+                onSelect={() => { onSelectSection('materials'); onOpenChange(false); }}
               >
-                <Calendar className="w-4 h-4 text-info" />
-                <span>Calendario de semanas</span>
+                <FileText className="w-4 h-4 text-info" />
+                <span>{role === 'teacher' ? 'Publicar materiales' : 'Materiales educativos'}</span>
               </Command.Item>
               <Command.Item
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-primary-soft hover:text-primary transition-colors"
@@ -96,7 +97,7 @@ export function CommandPalette({ open, onOpenChange, onSelectSection, onLogout, 
                 onSelect={() => { onSelectSection('history'); onOpenChange(false); }}
               >
                 <TrendingUp className="w-4 h-4 text-accent" />
-                <span>Mi progreso académico</span>
+                <span>{role === 'teacher' ? 'Historial docente' : 'Mi progreso académico'}</span>
               </Command.Item>
             </Command.Group>
 

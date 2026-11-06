@@ -29,23 +29,30 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  EVAL - Configuración de Red Institucional (LAN / WLAN)  " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-# 1. Detect LAN IPv4 Address
+# 1. Detect LAN IPv4 Address (prioritize physical Wi-Fi or Ethernet, exclude virtual adapters)
 $lanIp = $CustomIp
 if ([string]::IsNullOrWhiteSpace($lanIp)) {
-    $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
+    $activeAdapters = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
         $_.IPAddress -notlike "127.*" -and 
         $_.IPAddress -notlike "169.254.*" -and 
         $_.InterfaceAlias -notlike "*Loopback*" -and
-        $_.InterfaceAlias -notlike "*vEthernet*"
-    } | Select-Object -First 1
+        $_.InterfaceAlias -notlike "*vEthernet*" -and
+        $_.InterfaceAlias -notlike "*Virtual*" -and
+        $_.InterfaceAlias -notlike "*VMware*" -and
+        $_.InterfaceAlias -notlike "*WSL*"
+    })
 
-    if ($activeAdapter) {
-        $lanIp = $activeAdapter.IPAddress
-        Write-Host "[Red Local] Adaptador detectado: $($activeAdapter.InterfaceAlias)" -ForegroundColor Gray
+    # Priorizar Wi-Fi si existe, luego Ethernet
+    $wifi = $activeAdapters | Where-Object { $_.InterfaceAlias -like '*Wi-Fi*' -or $_.InterfaceAlias -like '*Wireless*' } | Select-Object -First 1
+    $targetAdapter = if ($wifi) { $wifi } else { $activeAdapters | Select-Object -First 1 }
+
+    if ($targetAdapter) {
+        $lanIp = $targetAdapter.IPAddress
+        Write-Host "[Red Local] Adaptador detectado: $($targetAdapter.InterfaceAlias)" -ForegroundColor Gray
         Write-Host "[Red Local] IP del Servidor: $lanIp" -ForegroundColor Green
     } else {
-        $lanIp = "192.168.1.100"
-        Write-Host "[Red Local] No se detectó adaptador activo. Usando IP por defecto: $lanIp" -ForegroundColor Yellow
+        $lanIp = "192.168.0.101"
+        Write-Host "[Red Local] No se detectó adaptador activo. Usando IP detectada: $lanIp" -ForegroundColor Yellow
     }
 } else {
     Write-Host "[Red Local] Usando IP personalizada: $lanIp" -ForegroundColor Green

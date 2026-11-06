@@ -18,7 +18,7 @@ final class LocalAccountService {
         $this->authority($actor,false);$profile=$this->db->table('retained_identity_profiles')->where('identity_id',$actor->identityId)->value('display_name');
         $isDirector=$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->where('role','director_admin')->exists();
         $mustChange=false;
-        if(!$isDirector&&$this->db->getSchemaBuilder()->hasTable('local_account_events')){
+        if(!$isDirector&&!in_array('student',$actor->roles,true)&&$this->db->getSchemaBuilder()->hasTable('local_account_events')){
             $lastProvision=$this->db->table('local_account_events')->where('target_id',$actor->identityId)->whereIn('operation',['created','password_reset'])->max('id');
             if($lastProvision!==null){
                 $lastChanged=$this->db->table('local_account_events')->where('target_id',$actor->identityId)->where('operation','password_changed')->max('id');
