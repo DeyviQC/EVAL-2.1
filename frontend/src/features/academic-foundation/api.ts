@@ -29,6 +29,7 @@ export function createAcademicClient(transport:typeof fetch,csrf:()=>string) {
   }
   const locator=decimalId;
   return {
+    directorActivities:<T>(assignmentId:string,decode:(value:unknown)=>T,after:string|null=null)=>request('director-activities?assignment_id='+locator(assignmentId)+(after?'&after='+locator(after):''),decode),
     history:<T>(kind:'enrollments'|'assignments',decode:(value:unknown)=>T,after:string|null=null)=>{if(!['enrollments','assignments'].includes(kind))throw new Error('Invalid history');return request('history?kind='+kind+(after?'&after='+locator(after):''),decode);},
     auditLedger:<T>(decode:(value:unknown)=>T,after:string|null=null,entityType?:string,search?:string)=>{
       const params=new URLSearchParams();

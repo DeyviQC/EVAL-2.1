@@ -15,7 +15,7 @@ type AcademicClient = ReturnType<typeof createAcademicClient>;
 type Period = ReturnType<typeof period>;
 const uncertainClosures=new WeakMap<AcademicClient,string>();
 
-export function ReportWorkspace({ client, academic, onExpired }: { client: ReportClient; academic: AcademicClient; onExpired: () => void }) {
+export function ReportWorkspace({ client, academic, onExpired, initialTab='consolidado' }: { client: ReportClient; academic: AcademicClient; onExpired: () => void; initialTab?: 'consolidado'|'nomina' }) {
   const feedback=useActionFeedback();
   const [uncertainPeriod,setUncertainPeriod]=useState<string|null>(()=>uncertainClosures.get(academic)??null);
   const [bimestersReady,setBimestersReady]=useState(false);
@@ -35,7 +35,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
   const [reopenError, setReopenError] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'consolidado' | 'nomina'>('consolidado');
+  const [activeTab, setActiveTab] = useState<'consolidado' | 'nomina'>(initialTab);
 
   // Filtros interactivos del reporte
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,17 +155,17 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
   const nowLima = new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' });
 
   return (
-    <section aria-label="Reportes" aria-busy={busy}>
+    <section className="eval-reports-workspace" aria-label="Reportes" aria-busy={busy}>
       <div className="eval-screen-only">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Reportes Institucionales</h2>
             <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Consulta el avance del aula y descarga consolidados oficiales para la I.E. Nuestra Señora de las Mercedes.
+              1. Elige el período, grado y sección. 2. Consulta el aula. 3. Revisa estudiantes o calificaciones y descarga el resultado.
             </p>
           </div>
           {report && task!=='bimesters' && (
-            <div className="flex items-center gap-2">
+            <details className="eval-export-options"><summary>Descargar o imprimir reporte</summary><div className="flex flex-wrap items-center gap-2">
               <a
                 href={client.officialUrl ? client.officialUrl(period, grade, section) : officialClassroomReportUrl(period, grade, section)}
                 target="_blank"
@@ -174,7 +174,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 title="Abrir Acta Oficial generada por el Servidor con Sello Digital Criptográfico SHA-256"
               >
                 <span>🛡️</span>
-                <span>Acta Oficial Servidor</span>
+                <span>Acta oficial</span>
               </a>
               <button
                 type="button"
@@ -203,7 +203,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 <span>📊</span>
                 <span>Exportar CSV</span>
               </button>
-            </div>
+            </div></details>
           )}
         </div>
 
@@ -414,7 +414,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{report.totals.received}</p>
               </article>
               <article aria-label="Pendientes de calificar" className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-3.5 shadow-sm">
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Pendientes</span>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Por calificar</span>
                 <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{report.totals.pending}</p>
               </article>
               <article aria-label="Calificadas" className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 p-3.5 shadow-sm">
@@ -558,7 +558,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Condición</th>
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-36">Avance</th>
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Calificadas</th>
-                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Pendientes</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-28">Por calificar</th>
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center w-32">Estado</th>
                       </tr>
                     </thead>
@@ -572,7 +572,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                           <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
                             <td className="p-3 text-center text-xs text-slate-400 font-mono">{idx + 1}</td>
                             <td className="p-3">
-                              <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
+                              <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span><details><summary>Ver resumen de estudiante</summary><p>{row.historical?"Registro histórico":"Matrícula actual"} · {report.scope.grade_name} / {report.scope.section_name}</p><p>{row.received} entregas recibidas · {row.graded} calificadas · {row.pending} pendientes de calificar.</p><p>Las entregas sin presentar no se calculan con este reporte.</p></details>
                               <span className="block text-[11px] font-mono text-slate-400 mt-0.5">DNI/ID: {row.id}</span>
                             </td>
                             <td className="p-3 text-center">
@@ -640,7 +640,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                   <div className="w-full sm:w-72">
                     <input
                       type="text"
-                      placeholder="Buscar estudiante..."
+                      aria-label="Buscar estudiante en esta página" placeholder="Buscar en esta página..."
                       className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
@@ -662,7 +662,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                       onChange={e => setPendingFilter(e.target.value as typeof pendingFilter)}
                     >
                       <option value="all">Entregas: Todas</option>
-                      <option value="pending">Con pendientes</option>
+                      <option value="pending">Pendientes de calificar</option>
                     </select>
                   </div>
                 </div>
@@ -676,14 +676,14 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">Estudiante</th>
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Entregas</th>
                         <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Calificadas</th>
-                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Pendientes</th>
+                        <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">Por calificar</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {filteredItems.map(row => (
                         <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
                           <td className="p-3">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">{row.name}</span><details><summary>Ver resumen de estudiante</summary><p>{row.historical?"Registro histórico":"Matrícula actual"} · {report.scope.grade_name} / {report.scope.section_name}</p><p>{row.received} entregas recibidas · {row.graded} calificadas · {row.pending} pendientes de calificar.</p><p>Las entregas sin presentar no se calculan con este reporte.</p></details>
                             {row.historical && (
                               <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded">
                                 Histórico
@@ -781,7 +781,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
               <tr>
                 <th>Entregas Recibidas</th>
                 <th>Calificadas</th>
-                <th>Pendientes</th>
+                <th>Por calificar</th>
                 <th>AD (Destacado)</th>
                 <th>A (Esperado)</th>
                 <th>B (Proceso)</th>
@@ -812,7 +812,7 @@ export function ReportWorkspace({ client, academic, onExpired }: { client: Repor
                 <th style={{ width: '80px', textAlign: 'center' }}>Condición</th>
                 <th style={{ width: '70px', textAlign: 'center' }}>Entregas</th>
                 <th style={{ width: '70px', textAlign: 'center' }}>Calificadas</th>
-                <th style={{ width: '70px', textAlign: 'center' }}>Pendientes</th>
+                <th style={{ width: '70px', textAlign: 'center' }}>Por calificar</th>
                 <th style={{ width: '90px', textAlign: 'center' }}>Firma/Conformidad</th>
               </tr>
             </thead>
