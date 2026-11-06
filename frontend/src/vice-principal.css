@@ -676,6 +676,12 @@
 .eval-layout[data-role="vice_principal"] .vp-task-content form button:not([type]) { background:#28599B; color:#fff; border-color:#28599B; }
 .eval-layout[data-role="vice_principal"] :is(.vp-person-search,.vp-person-filter) { display:flex; flex-direction:column; gap:.45rem; min-width:0; }
 .eval-layout[data-role="vice_principal"] .vp-person-search small { color:var(--text-muted); font-size:.75rem; }
+.eval-layout[data-role="vice_principal"] .vp-person-search { position:relative; }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-person-search .vp-person-value { position:absolute; width:1px; height:1px; padding:0; border:0; opacity:0; pointer-events:none; }
+.eval-layout[data-role="vice_principal"] .vp-person-options { position:absolute; z-index:30; top:calc(100% - 1.5rem); left:0; right:0; max-height:15rem; overflow-y:auto; padding:.3rem; border:1px solid var(--primary); border-radius:.7rem; background:var(--surface); box-shadow:0 10px 24px color-mix(in srgb,var(--text) 18%,transparent); }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-person-options button { display:block; width:100%; min-height:44px; text-align:left; border-radius:.45rem; background:var(--surface); color:var(--text); }
+.eval-layout[data-role="vice_principal"] .eval-workspace .vp-person-options button:is(:hover,[aria-selected="true"]) { background:color-mix(in srgb,var(--primary) 17%,var(--surface)); color:var(--text); }
+.eval-layout[data-role="vice_principal"] .vp-person-options p { padding:.75rem; color:var(--text-muted); }
 .eval-layout[data-role="vice_principal"] .eval-workspace .vp-task-content { border-color:color-mix(in srgb,var(--vp-module-color) 32%,var(--border)); background:color-mix(in srgb,var(--vp-module-color) 3%,var(--surface)); }
 .eval-layout[data-role="vice_principal"] .eval-workspace .vp-task-content article { border-color:color-mix(in srgb,var(--vp-module-color) 24%,var(--border)); background:color-mix(in srgb,var(--vp-module-color) 5%,var(--surface)); }
 .eval-layout[data-role="vice_principal"] .vp-users-table tbody tr:nth-child(even) { background:color-mix(in srgb,var(--primary) 5%,var(--surface)); }
