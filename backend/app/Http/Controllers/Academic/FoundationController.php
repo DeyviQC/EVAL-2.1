@@ -33,6 +33,10 @@ final class FoundationController
             if(!$actor){throw new AcademicCommandFailure('unauthenticated');}
             $authorization=new AcademicAuthorization($this->db,$this->references);$policy=new AcademicPolicy($authorization);
             $path=$request->getPathInfo();$method=$request->getMethod();$input=$this->input($request);
+            if($method==='GET'&&$path==='/academic/director-activities'){
+                FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),['assignment_id','after'],['assignment_id']);
+                return $this->ok((new \App\Application\Academic\Queries\DirectorActivityQuery($this->db))->page($actor,$this->locator($request->query->all()['assignment_id']),isset($request->query->all()['after'])?$this->locator($request->query->all()['after']):null));
+            }
             if($method==='GET'&&$path==='/academic/my-course-classrooms'){
                 FoundationCommandChecks::fields($input,[]);FoundationCommandChecks::fields($request->query->all(),[]);
                 return $this->ok((new \App\Application\Academic\Queries\MyCoursesQuery($this->db,new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db)))->classrooms($actor));

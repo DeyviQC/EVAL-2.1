@@ -33,9 +33,9 @@ function DirectorHome({name,onSelect,client}:{client:AccountClient|undefined;nam
   <section className="eval-director-hero" aria-labelledby="eval-director-hero-title">
    <div className="eval-director-hero-copy">
     <p className="eval-director-hero-kicker">VISIÓN INSTITUCIONAL</p>
-    <h3 id="eval-director-hero-title">Acompaña el avance de la comunidad educativa.</h3>
-    <p>Consulta reportes e información académica autorizada desde un solo lugar.</p>
-    <span className="eval-director-readonly"><Icon name="lock"/> {roleLabels.director_admin} · Solo lectura</span>
+    <h3 id="eval-director-hero-title">Encuentra un curso. Conoce cómo avanza su aula.</h3>
+    <p>Revisa docentes y actividades, consulta las estudiantes del aula o encuentra los cursos en el historial.</p>
+    <div className="eval-director-hero-actions"><button onClick={()=>onSelect('reports')}>Ver estudiantes y docentes →</button><button onClick={()=>onSelect('history')}>Encontrar cursos en el historial</button></div><span className="eval-director-readonly"><Icon name="lock"/> {roleLabels.director_admin} · Solo lectura</span>
    </div>
    <div className="eval-director-hero-art" aria-hidden="true"><span/><Icon name="home"/><small>EVAL · INSTITUCIÓN</small></div>
   </section>
