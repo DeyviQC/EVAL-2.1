@@ -8,6 +8,7 @@ import {studentPage,type studentRow} from './enrollments.js';
 import {periodPage,catalogPage,type CatalogRow} from './directory.js';
 import type {period} from './contracts.js';
 import {ClassroomFilters} from './ClassroomFilters.js';
+import {SearchablePersonSelect} from './SearchablePersonSelect.js';
 import type {DirectoryFilters} from './directory-filters.js';
 type Assignment=ReturnType<typeof assignmentRow>;
 type Teacher=ReturnType<typeof studentRow>;
@@ -115,7 +116,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
     {uncertain&&<p role="alert">Operaciones suspendidas para evitar duplicados. Verifica los registros antes de continuar.</p>}
     {(task===null||task==='create')&&<form ref={gate.form} onInput={gate.inspect} onChange={gate.inspect} onSubmit={create} aria-label="Planificar asignación" className="my-5 rounded-xl border p-5">
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">Nueva asignación planificada</legend>
-        <label>Docente <select aria-label="Docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+        <SearchablePersonSelect label="Docente" name="teacher_id" people={options.teachers} className={control}/>
         <label>Período <select aria-label="Período" name="academic_period_id" required className={control} value={createPeriod} onChange={event=>{setCreatePeriod(event.target.value);setGrade('');setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un período</option>{options.periods.map(row=><option key={row.id} value={row.id}>{row.name} ({row.state==='active'?'activo':'planificado'})</option>)}</select></label>
         <label>Materia o área <select aria-label="Materia o área" name="instructional_entry_id" required className={control}><option value="">Selecciona una materia o área</option>{options.entries.map(row=><option key={row.id} value={row.id}>{row.name} ({row.kind==='area'?'área':'materia'})</option>)}</select></label>
         <label>Grado <select aria-label="Grado" required disabled={!createPeriod} className={control} value={grade} onChange={event=>{setGrade(event.target.value);setSection('');setStartDate('');setEndDate('');}}><option value="">Selecciona un grado</option>{options.grades.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
@@ -134,7 +135,7 @@ export function AssignmentWorkspace({client,onExpired}:{client:AcademicClient;on
       <fieldset disabled={disabled} className="flex flex-wrap gap-4"><legend className="mb-3 font-semibold">{({activate:'Activar asignación',close:'Cerrar asignación',replace:'Reemplazar docente'})[action.kind]}: {action.row.teacher_name}</legend>
         <p className="w-full">{action.kind==='replace'?'El reemplazo se aplica al confirmar el servidor y conserva la autoría anterior.':action.kind==='close'?'El cierre conserva la asignación y sus recursos históricos.':'El servidor comprobará el período, fechas y conflictos antes de activar.'}</p>
         {action.kind==='close'&&<label>Fecha de cierre <input name="effective_until" type="date" required min={action.row.effective_from} max={todayInLima()} className={control}/></label>}
-        {action.kind==='replace'&&<label>Nuevo docente <select aria-label="Nuevo docente" name="teacher_id" required className={control}><option value="">Selecciona un docente</option>{options.teachers.filter(row=>row.id!==action.row.teacher_id).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>}
+        {action.kind==='replace'&&<SearchablePersonSelect label="Nuevo docente" name="teacher_id" people={options.teachers} excludedId={action.row.teacher_id} className={control}/>}
         <button type="submit" className={control}>Confirmar {({activate:'activación',close:'cierre',replace:'reemplazo'})[action.kind]}</button><button type="button" className={control} onClick={()=>setAction(null)}>Cancelar</button>
       </fieldset>
     </form>}

@@ -24,7 +24,7 @@ export function VicePrincipalWorkspace({section,children,initialTask=null}:{sect
  useEffect(()=>{window.scrollTo({top:0,behavior:'instant'});title.current?.focus({preventScroll:true});},[menu,task]);
  if(!config)return <>{children}</>;
  const current=config.choices.find(choice=>choice.id===task);
- return <section ref={root} className="vp-workflow" aria-label={'Opciones de '+config.title}>
+ return <section ref={root} className="vp-workflow" data-section={section} aria-label={'Opciones de '+config.title}>
   <header className="vp-workflow-heading"><span className="vp-workflow-eyebrow">SUBDIRECCIÓN</span><h2 ref={title} tabIndex={-1}>{config.title}</h2><p>{menu?'¿Qué deseas hacer?':current?.label}</p></header>
   {menu&&<nav className="vp-action-grid" aria-label={'Acciones de '+config.title}>{config.choices.map(({id,label,description,icon:Icon})=><button key={id} type="button" onClick={()=>{setTask(id);setMenu(false);}}><span className="vp-action-icon"><Icon size={25} strokeWidth={1.6} aria-hidden="true"/></span><strong>{label}</strong><span>{description}</span><ArrowRight size={20} aria-hidden="true"/></button>)}</nav>}
   {!menu&&<nav className="vp-flow-path" aria-label="Ubicación del módulo"><button type="button" disabled={pending} onClick={()=>{if(root.current?.querySelector('[aria-busy="true"]'))return;setMenu(true);}}><ArrowLeft size={18} aria-hidden="true"/> Volver a opciones</button><span>{config.title} / {current?.label}</span></nav>}
@@ -43,6 +43,6 @@ export function ClassroomSteps({period,grade,section,periods,grades,sections,onC
    {grade&&<button type="button" disabled={disabled} onClick={()=>onChange(period,'','')}>{grades.find(item=>item.id===grade)?.name??'Grado'} · Cambiar</button>}
    {section&&<button type="button" disabled={disabled} onClick={()=>onChange(period,grade,'')}>Sección {sections.find(item=>item.id===section)?.name} · Cambiar</button>}
   </nav>
-  {step&&<><h3>Selecciona {step==='Año académico'?'el año académico':step==='Grado'?'el grado':'la sección'}</h3><div className="vp-choice-grid">{choices.map(item=><button type="button" disabled={disabled} key={item.id} onClick={()=>!period?onChange(item.id,'',''):!grade?onChange(period,item.id,''):onChange(period,grade,item.id)}>{step==='Sección'?'Sección ':''}{item.name}<ArrowRight size={18} aria-hidden="true"/></button>)}</div>{!choices.length&&<p role="status">{disabled?'Cargando opciones…':'No hay opciones cargadas. Actualiza o carga más registros.'}</p>}</>}
+  {step&&<><h3>Selecciona {step==='Año académico'?'el año académico':step==='Grado'?'el grado':'la sección'}</h3><div className="vp-choice-grid">{choices.map(item=><button type="button" disabled={disabled} key={item.id} onClick={()=>!period?onChange(item.id,'',''):!grade?onChange(period,item.id,''):onChange(period,grade,item.id)}><span className="vp-choice-badge">{step}</span><strong>{step==='Sección'?'Sección ':''}{item.name}</strong><span className="vp-choice-footer">Seleccionar <ArrowRight size={17} aria-hidden="true"/></span></button>)}</div>{!choices.length&&<p role="status">{disabled?'Cargando opciones…':'No hay opciones cargadas. Actualiza o carga más registros.'}</p>}</>}
  </section>;
 }

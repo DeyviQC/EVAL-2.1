@@ -35,12 +35,16 @@ final class LocalAccountService {
         return ['role'=>$roles[0]];
     }
     public function directory(AuthenticatedActor $actor,array $query):array {
-        $this->authority($actor,false);if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');Checks::fields($query,['after','username','search','role','status']);$after=$query['after']??null;
+        $this->authority($actor,false);if(!$this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->whereIn('role',['director_admin','vice_principal'])->exists())throw new AcademicCommandFailure('forbidden');Checks::fields($query,['after','username','search','role','status','grade_id','section_id']);$after=$query['after']??null;
         if($after!==null){try{$after=AcademicLockSet::id($after);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}}
         if(isset($query['username'])&&(!is_string($query['username'])||strlen($query['username'])>64))throw new AcademicCommandFailure('invalid_input');
         if(array_key_exists('search',$query)&&(!is_string($query['search'])||!mb_check_encoding($query['search'],'UTF-8')||mb_strlen($query['search'])>100))throw new AcademicCommandFailure('invalid_input');
         if(array_key_exists('role',$query)&&!in_array($query['role'],['student','teacher'],true))throw new AcademicCommandFailure('invalid_input');
         if(array_key_exists('status',$query)&&!in_array($query['status'],['active','inactive'],true))throw new AcademicCommandFailure('invalid_input');
+        if(isset($query['section_id'])&&!isset($query['grade_id']))throw new AcademicCommandFailure('invalid_input');
+        if(isset($query['grade_id'])&&($query['role']??'student')!=='student')throw new AcademicCommandFailure('invalid_input');
+        foreach(['grade_id','section_id'] as $field)if(isset($query[$field])){try{$query[$field]=AcademicLockSet::id($query[$field]);}catch(\InvalidArgumentException){throw new AcademicCommandFailure('invalid_input');}}
+        if(isset($query['section_id'])&&!$this->db->table('sections')->where('id',$query['section_id'])->where('grade_id',$query['grade_id'])->exists())throw new AcademicCommandFailure('invalid_input');
         $rows=$this->db->table('retained_identities as i')->join('local_credentials as c','c.id','=','i.id')->join('retained_identity_profiles as p','p.identity_id','=','i.id')
             ->join('local_role_grants as r','r.identity_id','=','i.id')->whereIn('r.role',['teacher','student'])
             ->whereNotExists(function($q){$q->selectRaw('1')->from('local_role_grants as extra')->whereColumn('extra.identity_id','i.id')->whereNotIn('extra.role',['teacher','student']);});
@@ -52,9 +56,22 @@ final class LocalAccountService {
         }
         if(isset($query['role']))$rows->where('r.role',$query['role']);
         if(isset($query['status']))$rows->where('i.credential_status',$query['status']==='active'?'active':'deactivated');
+        if(isset($query['grade_id']))$rows->where('r.role','student')->whereExists(function($q)use($query){
+            $q->selectRaw('1')->from('student_enrollments as e')->whereColumn('e.student_id','i.id')->where('e.state','active')->where('e.grade_id',$query['grade_id']);
+            if(isset($query['section_id']))$q->where('e.section_id',$query['section_id']);
+        });
         $rows=$rows->orderBy('i.id')->limit(51)->get(['i.id','p.display_name','c.login','r.role','i.credential_status']);
         $more=$rows->count()>50;$rows=$rows->take(50);
-        $items=$rows->map(fn($row)=>['id'=>(string)$row->id,'name'=>$row->display_name,'username'=>$row->login,'role'=>$row->role,'active'=>$row->credential_status==='active'])->values()->all();
+        $studentIds=$rows->filter(fn($row)=>$row->role==='student')->pluck('id')->all();
+        $currentPeriod=$this->db->table('academic_periods')->where('state','active')->value('id');
+        $classrooms=[];
+        if($studentIds&&$currentPeriod!==null){
+            $enrollments=$this->db->table('student_enrollments as e')->join('grades as g','g.id','=','e.grade_id')->join('sections as s','s.id','=','e.section_id')
+                ->where('e.academic_period_id',$currentPeriod)->where('e.state','active')->whereIn('e.student_id',$studentIds)
+                ->get(['e.student_id','g.name as grade_name','s.name as section_name']);
+            foreach($enrollments as $enrollment)$classrooms[(string)$enrollment->student_id]=['grade'=>$enrollment->grade_name,'section'=>$enrollment->section_name];
+        }
+        $items=$rows->map(fn($row)=>['id'=>(string)$row->id,'name'=>$row->display_name,'username'=>$row->login,'role'=>$row->role,'active'=>$row->credential_status==='active','classroom'=>$row->role==='student'?($classrooms[(string)$row->id]??null):null])->values()->all();
         return ['items'=>$items,'next_after'=>$more?end($items)['id']:null];
     }
     public function execute(AuthenticatedActor $actor,string $operation,?string $target,array $input):array {
