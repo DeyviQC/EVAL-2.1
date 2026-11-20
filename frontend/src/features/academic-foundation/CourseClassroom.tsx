@@ -76,7 +76,7 @@ export function CourseClassroom({course,materials,weeks,activities,teacherMode,o
     </nav>
 
     {view==='weeks'&&weeks&&activities?(
-      <WeeksPanel key={course.id} teacherMode={teacherMode} course={course} client={weeks} activities={activities} onExpired={onExpired}/>
+      <WeeksPanel key={course.id} teacherMode={teacherMode} course={course} client={weeks} activities={activities} materialClient={materials} onExpired={onExpired}/>
     ):view==='library'?(
        <LibraryPanel key={course.id} course={course} client={materials} teacherMode={teacherMode} onExpired={onExpired} initialPosition={libraryPosition} onPosition={onLibraryPosition}/>
     ):(

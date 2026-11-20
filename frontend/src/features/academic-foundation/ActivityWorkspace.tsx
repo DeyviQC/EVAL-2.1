@@ -5,6 +5,7 @@ import { DeliveryContext } from './DeliveryContext.js';
 import { AssessmentPanel } from './AssessmentPanel.js';
 import { AcademicApiError } from './api.js';
 import { evidenceUrl, type Activity, type ActivityClient, type Delivery, type DeliveryVersion } from './activities.js';
+import { ActivityAttachmentsList } from './ActivityAttachments.js';
 
 const button =
   'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text px-3.5 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed';
@@ -300,7 +301,14 @@ export function ActivityCard({
       aria-busy={busy}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h3 className="text-lg sm:text-xl font-bold text-text tracking-tight">{activity.title}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-bold text-text tracking-tight">{activity.title}</h3>
+          {current.attachments && current.attachments.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary-soft text-primary border border-primary/20">
+              📎 {current.attachments.length} {current.attachments.length === 1 ? 'material adjunto' : 'materiales adjuntos'}
+            </span>
+          )}
+        </div>
         <span
           className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
             closed
@@ -337,9 +345,16 @@ export function ActivityCard({
       </div>
 
       {panel === 'detail' && (
-        <div className="my-4 p-4 rounded-xl bg-surface-2 border border-border text-xs sm:text-sm text-text leading-relaxed whitespace-pre-wrap">
-          {activity.instructions}
+        <div className="my-4 space-y-3">
+          <div className="p-4 rounded-xl bg-surface-2 border border-border text-xs sm:text-sm text-text leading-relaxed whitespace-pre-wrap">
+            {activity.instructions}
+          </div>
+          <ActivityAttachmentsList attachments={current.attachments} />
         </div>
+      )}
+
+      {panel === 'deliveries' && (
+        <ActivityAttachmentsList attachments={current.attachments} />
       )}
 
       <p className="my-2 text-xs text-text-muted">

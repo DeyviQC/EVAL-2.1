@@ -4,9 +4,42 @@ namespace App\Application\Academic\Commands;
 use Illuminate\Database\Connection;
 use App\Infrastructure\Authentication\AuthenticatedActor;
 use App\Application\Academic\AcademicCommandFailure;
-use App\Infrastructure\Persistence\Academic\{AcademicLockSet,AcademicWriteTransaction,AcademicMutationResult,LifecycleEvent,AcademicTransactionFailure,LocalMaterialStorage,DeliveryFileValidator};
+use App\Infrastructure\Persistence\Academic\{AcademicLockSet,AcademicWriteTransaction,AcademicMutationResult,LifecycleEvent,AcademicTransactionFailure,LocalMaterialStorage,DeliveryFileValidator,MaterialFileValidator};
 final class ActivityDelivery {
- public function __construct(private Connection $db,private LocalMaterialStorage $storage){}
+ private ?bool $attachmentsTableExists=null;
+ public function __construct(private Connection $db,private LocalMaterialStorage $storage,private ?LocalMaterialStorage $materialStorage=null){}
+ private function attachmentStorage():LocalMaterialStorage {return $this->materialStorage??$this->storage;}
+ private function hasAttachmentsTable():bool {return $this->attachmentsTableExists??=$this->db->getSchemaBuilder()->hasTable('activity_attachments');}
+ private function attachmentView(array $r):array {return ['id'=>(string)$r['id'],'activity_id'=>(string)$r['activity_id'],'filename'=>$r['filename'],'mime'=>$r['mime'],'bytes'=>(int)$r['bytes'],'created_at'=>$r['created_at']];}
+ private function attachmentsForActivity(string $activityId):array {
+  if(!$this->hasAttachmentsTable())return [];
+  return $this->db->table('activity_attachments')->where('activity_id',$activityId)->orderBy('id')->get(['id','activity_id','filename','mime','bytes','created_at'])->map(fn($r)=>$this->attachmentView((array)$r))->values()->all();
+ }
+ public function attachments(AuthenticatedActor $actor,string $activityId):array {
+  $this->activity($actor,$activityId);
+  return ['items'=>$this->attachmentsForActivity(AcademicLockSet::id($activityId))];
+ }
+ public function attachmentFile(AuthenticatedActor $actor,string $attachmentId):array {
+  if(!$this->hasAttachmentsTable())throw new AcademicCommandFailure('not_found');
+  $row=$this->db->table('activity_attachments')->where('id',AcademicLockSet::id($attachmentId))->first();
+  if(!$row)throw new AcademicCommandFailure('not_found');
+  $this->activity($actor,(string)$row->activity_id);
+  return [$this->attachmentStorage()->verify((array)$row),(array)$row];
+ }
+ public function addAttachment(AuthenticatedActor $actor,string $activityId,string $path,string $filename):array {
+  if(!$this->hasAttachmentsTable())throw new AcademicCommandFailure('not_found');
+  $this->roles($actor);$activityId=AcademicLockSet::id($activityId);
+  $meta=(new MaterialFileValidator)->validate($path,$filename)+['filename'=>$filename];
+  [$key,$lock]=$this->attachmentStorage()->finalize($path);$meta['storage_key']=$key;$this->attachmentStorage()->verify($meta);$keep=false;
+  try{
+   $result=(new AcademicWriteTransaction($this->db))->execute($actor->identityId,
+    function()use($activityId){$act=(array)$this->db->table('activity_references')->where('id',$activityId)->first();$assignment=$act['teaching_assignment_id']??null;$a=$assignment===null?[]:(array)$this->db->table('teaching_assignments')->where('id',$assignment)->first();return new AcademicLockSet(['academic_periods'=>isset($a['academic_period_id'])?[$a['academic_period_id']]:[],'retained_identities'=>isset($a['teacher_id'])?[$a['teacher_id']]:[],'teaching_assignments'=>$assignment===null?[]:[$assignment],'activity_references'=>[$activityId]]);},
+    function($context)use($actor,$activityId){$roles=$this->roles($actor);$activity=$this->content($activityId);$a=$context->row('teaching_assignments',(string)$activity['teaching_assignment_id']);if($context->row('academic_periods',$a['academic_period_id'])['state']!=='active')throw new AcademicCommandFailure('period_not_active');if((string)$a['teacher_id']!==$actor->identityId||!in_array('teacher',$roles,true))throw new AcademicCommandFailure('forbidden');if($a['state']!=='active'||$activity['state']!=='open')throw new AcademicCommandFailure('invalid_transition');if($this->db->table('activity_attachments')->where('activity_id',$activityId)->count()>=10)throw new AcademicCommandFailure('invalid_input');return true;},
+    function($context,$boundary)use($actor,$activityId,$meta){$stamp=$boundary->timestamp->format('Y-m-d H:i:s.u');$assignment=(string)$this->content($activityId)['teaching_assignment_id'];$id=(string)$this->db->table('activity_attachments')->insertGetId($meta+['activity_id'=>$activityId,'author_id'=>$actor->identityId,'operation_key'=>$boundary->toServerKey(),'created_at'=>$stamp]);return new AcademicMutationResult($this->attachmentView($meta+['id'=>$id,'activity_id'=>$activityId,'created_at'=>$stamp]),[new LifecycleEvent('assignment',$assignment,'activity_attachment_added',null,null,['resource_id'=>$id,'activity_id'=>$activityId])]);}
+   );$keep=true;return $result;
+  }catch(AcademicTransactionFailure $e){$keep=in_array($e->category,['commit_outcome_unknown','rollback_outcome_unknown'],true);throw $e;}
+  finally{try{if(!$keep)$this->attachmentStorage()->remove($key);}finally{$this->attachmentStorage()->release($key,$lock);}}
+ }
  private function roles(AuthenticatedActor $actor):array {FoundationCommandChecks::credentials($this->db,$actor);if($this->db->table('retained_identities')->where('id',$actor->identityId)->value('credential_status')!=='active')throw new AcademicCommandFailure('forbidden');return $this->db->table('local_role_grants')->where('identity_id',$actor->identityId)->pluck('role')->all();}
  private function assignment(string $id):array {$row=$this->db->table('teaching_assignments')->where('id',AcademicLockSet::id($id))->first();if(!$row)throw new AcademicCommandFailure('not_found');return (array)$row;}
  private function content(string $id):array {$row=$this->db->table('activity_references as r')->join('activity_contents as c','c.activity_id','=','r.id')->where('r.id',AcademicLockSet::id($id))->first(['r.teaching_assignment_id','c.*']);if(!$row)throw new AcademicCommandFailure('not_found');return (array)$row;}
@@ -39,7 +72,8 @@ final class ActivityDelivery {
  public function view(AuthenticatedActor $actor,array $row):array {
   $a=$this->assignment((string)$row['teaching_assignment_id']);$roles=$this->roles($actor);$active=$this->db->table('academic_periods')->where('id',$a['academic_period_id'])->value('state')==='active';$e=$this->currentEnrollment($actor,$a);$delivery=$this->db->table('activity_deliveries as d')->join('submission_references as r','r.id','=','d.submission_id')->where('d.activity_id',$row['activity_id'])->where('d.student_id',$actor->identityId)->first();
   return ['id'=>(string)$row['activity_id'],'assignment_id'=>(string)$row['teaching_assignment_id'],'title'=>$row['title'],'instructions'=>$row['instructions'],'due_on'=>$row['due_on'],'state'=>$row['state'],'can_close'=>$active&&$row['state']==='open'&&(string)$a['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true),
-   'can_submit'=>$active&&$row['state']==='open'&&in_array('student',$roles,true)&&$e!==null&&(!$delivery||($delivery->current_assessment_id??null)===null&&(string)$delivery->accepted_under_enrollment_id===(string)$e['id'])];
+   'can_submit'=>$active&&$row['state']==='open'&&in_array('student',$roles,true)&&$e!==null&&(!$delivery||($delivery->current_assessment_id??null)===null&&(string)$delivery->accepted_under_enrollment_id===(string)$e['id']),
+   'attachments'=>$this->attachmentsForActivity((string)$row['activity_id'])];
  }
  public function activities(AuthenticatedActor $actor,string $assignment,?string $after):array {
   $a=$this->assignment($assignment);$roles=$this->roles($actor);$potential=(string)$a['teacher_id']===$actor->identityId&&in_array('teacher',$roles,true)||in_array('student',$roles,true)&&count($this->enrollments($actor,$a))>0;if(!$potential)throw new AcademicCommandFailure('not_found');

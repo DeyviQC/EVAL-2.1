@@ -21,6 +21,7 @@ try {
     $files[]=dirname(__DIR__).'/database/migrations/2026_10_08_000016_create_material_observations.php';
     $files[]=dirname(__DIR__).'/database/migrations/2026_10_08_000017_create_material_file_versions.php';
     $files[]=dirname(__DIR__).'/database/migrations/2026_11_20_000021_expand_material_size_for_videos.php';
+    $files[]=dirname(__DIR__).'/database/migrations/2026_11_20_000022_create_activity_attachments.php';
     $migrator->run($files);
     $stage='runtime_grants';
     $sql=file_get_contents(dirname(__DIR__).'/scripts/u11-runtime-grants.sql');
@@ -51,6 +52,7 @@ try {
     $db->unprepared("GRANT INSERT(observation_id,actor_id,material_revision_id,previous_event_id,operation,body,operation_key,created_at) ON eval_dev.material_observation_events TO 'eval_dev_runtime'@'127.0.0.1'");
     $db->unprepared("GRANT INSERT(observation_id,current_event_id), UPDATE(current_event_id) ON eval_dev.material_observation_states TO 'eval_dev_runtime'@'127.0.0.1'");
     $db->unprepared("GRANT INSERT(material_id,revision_id,filename,mime,bytes,sha256,storage_key) ON eval_dev.material_file_versions TO 'eval_dev_runtime'@'127.0.0.1'");
+    $db->unprepared("GRANT INSERT(activity_id,author_id,filename,storage_key,mime,bytes,sha256,operation_key,created_at) ON eval_dev.activity_attachments TO 'eval_dev_runtime'@'127.0.0.1'");
     $passwords=json_decode(stream_get_contents(STDIN),true,512,JSON_THROW_ON_ERROR);
     $actors=[];$hasher=new Illuminate\Hashing\BcryptHasher(['rounds'=>12]);
     $names=['director_admin'=>'Director de desarrollo','vice_principal'=>'Subdirector de desarrollo','teacher'=>'Docente de desarrollo','student'=>'Estudiante de desarrollo'];

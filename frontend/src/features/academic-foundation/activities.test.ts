@@ -1,4 +1,7 @@
-import { activity,delivery,deliveryVersion,educationCourse,createActivityClient,evidenceUrl } from './activities.js';
+import { activity,activityAttachment,activityAttachmentUrl,delivery,deliveryVersion,educationCourse,createActivityClient,evidenceUrl } from './activities.js';
+import { validateAttachmentSelection, NoticeBanner } from './ActivityAttachments.js';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { AcademicApiError } from './api.js';
 const assert=(value:unknown)=>{if(!value)throw new Error('Activity contract assertion failed');};
 function rejects(run:()=>unknown){try{run();}catch{return;}throw new Error('Expected activity rejection');}
@@ -31,4 +34,25 @@ activityCases.push(['assessment recovery does not accept an unrelated empty deli
 }]);
 activityCases.push(['pending academic write cannot overwrite another operation recovery target',async()=>{
  let rejectWrite!:(e:Error)=>void,calls=0;const client=createActivityClient(()=>'csrf',(async()=>{calls++;return new Promise<Response>((_resolve,reject)=>{rejectWrite=reject;});}) as typeof fetch);const first=client.submit('2',new FormData()).catch(()=>{});let denied=false;try{await client.close('3');}catch(e){denied=e instanceof AcademicApiError&&e.category==='operation_pending';}assert(denied&&calls===1);rejectWrite(Error('Lost'));await first;assert(client.isUncertain()&&!client.canReview());
+}]);
+activityCases.push(['activity attachments decode, validate files, build protected URLs and upload with CSRF',async()=>{
+ const att={id:'15',activity_id:'9007199254740993',filename:'guia.pdf',mime:'application/pdf',bytes:2048,created_at:'2026-11-20 12:00:00.000000'};
+ assert(activityAttachment(att).id==='15');
+ assert(activity({...sample,attachments:[att]}).attachments?.length===1);
+ rejects(()=>activityAttachment({...att,mime:'application/x-msdownload'}));
+ rejects(()=>activityAttachment({...att,filename:'../evil.pdf'}));
+ assert(activityAttachmentUrl('15','inline')==='/education/activity-attachments/15/file?disposition=inline');
+ assert(activityAttachmentUrl('15','attachment')==='/education/activity-attachments/15/file?disposition=attachment');
+ rejects(()=>activityAttachmentUrl('../15','inline'));
+ const okFile=new File(['%PDF-1.4\n%%EOF'],'guia.pdf',{type:'application/pdf'});
+ const badFile=new File(['exe'],'virus.exe',{type:'application/octet-stream'});
+ const sel=validateAttachmentSelection([okFile,badFile],[]);
+ assert(sel.accepted.length===1&&sel.errors.length===1);
+ let calls=0;
+ const client=createActivityClient(()=>'csrf',(async(path,options)=>{calls++;assert(path==='/education/activities/9007199254740993/attachments'&&options?.method==='POST');const headers=options?.headers as Record<string,string>;assert(headers['X-CSRF-TOKEN']==='csrf'&&headers['Content-Type']===undefined);assert(options?.body instanceof FormData);return new Response(JSON.stringify({data:att}),{status:201});}) as typeof fetch);
+ let reported=0;
+ const uploaded=await client.uploadAttachment('9007199254740993',okFile,p=>{reported=p;});
+ assert(uploaded.id==='15'&&calls===1&&reported===100);
+ const okBanner=renderToStaticMarkup(createElement(NoticeBanner,{tone:'success',text:'Material publicado en esta semana.'}));
+ assert(okBanner.includes('emerald')&&okBanner.includes('Material publicado en esta semana.')&&!okBanner.includes('⚠️'));
 }]);

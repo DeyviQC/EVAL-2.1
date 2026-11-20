@@ -4,13 +4,14 @@ import {AcademicApiError} from './api.js';
 import type {Activity} from './activities.js';
 import type {Course} from './courses.js';
 import {materialFileUrl,isVideoMime,type Material} from './materials.js';
+import {ActivityAttachmentsList} from './ActivityAttachments.js';
 import type {WeekPage,WeekSelection,WeeksClient} from './weeks.js';
 
 type Entry=WeekPage['items'][number];
 export function PresentationResource({entry}:{entry:Entry}){
  if(entry.association.kind==='activity'){
   const activity=entry.resource as Activity;
-  return <article className="eval-projection-sheet"><span>Actividad · {activity.state==='closed'?'Cerrada':'Publicada'}</span><h2>{activity.title}</h2><p className="eval-projection-instructions">{activity.instructions}</p><p>Fecha límite: {activity.due_on??'Sin fecha límite'}</p></article>;
+  return <article className="eval-projection-sheet"><span>Actividad · {activity.state==='closed'?'Cerrada':'Publicada'}</span><h2>{activity.title}</h2><p className="eval-projection-instructions">{activity.instructions}</p><p>Fecha límite: {activity.due_on??'Sin fecha límite'}</p><ActivityAttachmentsList attachments={activity.attachments} compact/></article>;
  }
  const material=entry.resource as Material;
  const inline=materialFileUrl(material.id,'inline');

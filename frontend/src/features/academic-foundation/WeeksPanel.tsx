@@ -6,9 +6,10 @@ import { AcademicDialog } from './AcademicDialog.js';
 import { ClassroomPresentation } from './ClassroomPresentation.js';
 import { progressLabels } from './learning-progress.js';
 import { AcademicApiError } from './api.js';
-import { materialFileUrl, isVideoMime, isInlineMime, type Material } from './materials.js';
+import { materialFileUrl, materialAccept, publicationForm, isVideoMime, isInlineMime, type createMaterialClient, type Material } from './materials.js';
 import { type Activity, type ActivityClient } from './activities.js';
 import { ActivityCard } from './ActivityWorkspace.js';
+import { ActivityAttachmentPicker, ActivityAttachmentsList, NoticeBanner, type UploadProgressState } from './ActivityAttachments.js';
 import { type Course } from './courses.js';
 import { initialWeek } from './weekly-navigation.js';
 import { type CourseCalendar, type WeeksClient, type WeekPage, type WeekSelection, type WeekAssociation } from './weeks.js';
@@ -17,12 +18,14 @@ export function WeeksPanel({
   course,
   client,
   activities,
+  materialClient,
   onExpired,
   teacherMode = false,
 }: {
   course: Course;
   client: WeeksClient;
   activities: ActivityClient;
+  materialClient?: ReturnType<typeof createMaterialClient> | undefined;
   onExpired: () => void;
   teacherMode?: boolean;
 }) {
@@ -32,7 +35,7 @@ export function WeeksPanel({
   const [materials, setMaterials] = useState<WeekPage | null>(null);
   const [tasks, setTasks] = useState<WeekPage | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [term, setTerm] = useState('');
   const [filter, setFilter] = useState('');
   const [editing, setEditing] = useState<WeekAssociation | null>(null);
@@ -41,6 +44,10 @@ export function WeeksPanel({
   const [reviewed, setReviewed] = useState<WeekAssociation | null>(null);
   const [contentView, setContentView] = useState<'all' | 'material' | 'activity'>('all');
   const [creating, setCreating] = useState(false);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [activityFiles, setActivityFiles] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const activityTrigger = useRef<HTMLElement | null>(null);
   const projectionTrigger = useRef<HTMLElement | null>(null);
   const [projecting, setProjecting] = useState(false);
@@ -49,11 +56,20 @@ export function WeeksPanel({
   const writing = useRef(false);
   const summary = useRef<HTMLHeadingElement>(null);
 
+  function showSuccess(text: string) {
+    setNotice({ tone: 'success', text });
+  }
+  function showError(text: string) {
+    setNotice({ tone: 'error', text });
+  }
+
   function fail(error: unknown) {
-    setMessage(
+    showError(
       error instanceof AcademicApiError && error.outcomeUnknown
         ? 'El recurso sigue publicado; no se pudo confirmar su semana. Consulta el resultado antes de continuar.'
-        : 'No se pudo consultar o guardar la organización. Consulta nuevamente.'
+        : error instanceof Error && !(error instanceof AcademicApiError)
+          ? error.message
+          : 'No se pudo consultar o guardar la organización. Consulta nuevamente.'
     );
     if (error instanceof AcademicApiError && [401, 419].includes(error.status ?? 0)) {
       onExpired();
@@ -128,7 +144,7 @@ export function WeeksPanel({
 
   async function edit(association: WeekAssociation) {
     setBusy(true);
-    setMessage('');
+    setNotice(null);
     try {
       const fresh = await client.consult(association.kind, association.resource_id);
       if (!alive.current) return;
@@ -147,14 +163,14 @@ export function WeeksPanel({
     const token=generation.current;
     writing.current = true;
     setBusy(true);
-    setMessage('');
+    setNotice(null);
     try {
       if (!await actionFeedback.confirm({title:'¿Cambiar la semana?',message:'Se actualizará la ubicación del recurso. Su contenido y entregas se conservarán.'}) || !alive.current || token!==generation.current) return;
       await client.set(editing, chosen ? calendar?.current?.id ?? null : null, chosen || null);
       if (!alive.current) return;
       setEditing(null);
       actionFeedback.success('Semana actualizada correctamente.');
-      setMessage('Semana guardada. El contenido y las entregas se conservan.');
+      showSuccess('Semana guardada. El contenido y las entregas se conservan.');
       await load(selection, filter, true);
     } catch (error) {
       if (alive.current) fail(error);
@@ -211,12 +227,16 @@ export function WeeksPanel({
     const data = new FormData(form);
     if (!form.checkValidity() || !String(data.get('title')??'').trim() || !String(data.get('instructions')??'').trim() || !selection.revision || !selection.week) return;
     const token=generation.current;
+    const queued = [...activityFiles];
     writing.current = true;
     setBusy(true);
-    setMessage('');
+    setNotice(null);
+    setAttachmentError('');
     let published = false;
+    let uploadedCount = 0;
     try {
-      if (!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+course.subject+' · '+heading}) || !alive.current || token!==generation.current) return;
+      const filesSummary = queued.length > 0 ? ` · ${queued.length} ${queued.length === 1 ? 'archivo adjunto' : 'archivos adjuntos'}` : '';
+      if (!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+course.subject+' · '+heading+filesSummary}) || !alive.current || token!==generation.current) return;
       const result = await activities.publish(
         course.id,
         String(data.get('title')),
@@ -224,24 +244,100 @@ export function WeeksPanel({
         String(data.get('due_on')) || null
       );
       published = true;
-      form.reset();
-      setCreating(false);
+
+      for (let i = 0; i < queued.length; i++) {
+        const file = queued[i]!;
+        if (alive.current) {
+          setUploadProgress({ currentIndex: i + 1, totalFiles: queued.length, filename: file.name, percent: 0 });
+        }
+        await activities.uploadAttachment(result.id, file, percent => {
+          if (alive.current) {
+            setUploadProgress({ currentIndex: i + 1, totalFiles: queued.length, filename: file.name, percent });
+          }
+        });
+        uploadedCount++;
+      }
+
       const association = await client.consult('activity', result.id);
       await client.set(association, selection.revision!, selection.week!);
-      actionFeedback.success('Actividad publicada en esta semana.');
+      const okMsg = queued.length > 0
+        ? `Actividad publicada en esta semana con ${queued.length} ${queued.length === 1 ? 'material adjunto' : 'materiales adjuntos'}.`
+        : 'Actividad publicada en esta semana.';
+      actionFeedback.success(okMsg);
       if (!alive.current) return;
-      setMessage('Actividad publicada en esta semana.');
+      form.reset();
+      setActivityFiles([]);
+      setCreating(false);
+      showSuccess(okMsg);
       await load(selection, filter, true);
     } catch (error) {
       if (published) {
         setCreating(false);
-        setMessage('La actividad ya está publicada. Revisa Otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarla.');
+        setActivityFiles([]);
+        if (queued.length > 0 && uploadedCount < queued.length) {
+          showError(
+            `La actividad ya se publicó (${uploadedCount} de ${queued.length} adjuntos cargados), pero falló el archivo "${queued[uploadedCount]?.name ?? ''}". Revisa la actividad antes de volver a subirlo.`
+          );
+        } else {
+          showError('La actividad ya está publicada. Revisa Otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarla.');
+        }
+        await load(selection, filter, true);
       } else {
         fail(error);
       }
     } finally {
       writing.current = false;
-      setBusy(false);
+      if (alive.current) {
+        setUploadProgress(null);
+        setBusy(false);
+      }
+    }
+  }
+
+  async function publishMaterial(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!materialClient || writing.current || materialClient.isUncertain(course.id) || client.isUncertain() || !course.can_publish || selection.bucket !== 'week') return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const file = data.get('file');
+    if (!(file instanceof File)) {
+      showError('Selecciona un archivo.');
+      return;
+    }
+    let payload: FormData;
+    try {
+      payload = publicationForm(String(data.get('title') ?? ''), String(data.get('description') ?? ''), file);
+    } catch (error) {
+      fail(error);
+      return;
+    }
+    const token = generation.current;
+    writing.current = true;
+    setBusy(true);
+    setNotice(null);
+    let published = false;
+    try {
+      if (!await actionFeedback.confirm({ title: '¿Publicar este material?', message: String(data.get('title')) + ' · ' + course.subject + ' · ' + heading }) || !alive.current || token !== generation.current) return;
+      const result = await materialClient.publish(course.id, payload);
+      published = true;
+      const association = await client.consult('material', result.id);
+      await client.set(association, selection.revision!, selection.week!);
+      actionFeedback.success('Material publicado en esta semana.');
+      if (!alive.current) return;
+      form.reset();
+      setUploadingMaterial(false);
+      showSuccess('Material publicado en esta semana.');
+      await load(selection, filter, true);
+    } catch (error) {
+      if (published) {
+        setUploadingMaterial(false);
+        showError('El material ya está publicado. Revisa Otros recursos → Sin semana antes de confirmar su organización; no vuelvas a publicarlo.');
+      } else {
+        fail(error);
+      }
+    } finally {
+      writing.current = false;
+      if (alive.current) setBusy(false);
     }
   }
 
@@ -336,14 +432,33 @@ export function WeeksPanel({
           </button>
 
           {teacherMode && course.can_publish && selection.bucket === 'week' && (
-            <button
-              className="eval-primary-action inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
-              disabled={busy || activities.isUncertain() || client.isUncertain()}
-              aria-expanded={creating}
-              onClick={() => setCreating(!creating)}
-            >
-              {creating ? '✕ Cancelar' : '＋ Crear actividad'}
-            </button>
+            <>
+              {materialClient && (
+                <button
+                  className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-semibold shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                  disabled={busy || materialClient.isUncertain(course.id) || client.isUncertain()}
+                  aria-expanded={uploadingMaterial}
+                  onClick={() => {
+                    setUploadingMaterial(!uploadingMaterial);
+                    setCreating(false);
+                  }}
+                >
+                  {uploadingMaterial ? '✕ Cancelar' : '＋ Subir material'}
+                </button>
+              )}
+              <button
+                className="eval-primary-action inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                disabled={busy || activities.isUncertain() || client.isUncertain()}
+                aria-expanded={creating}
+                onClick={() => {
+                  setCreating(!creating);
+                  setUploadingMaterial(false);
+                  setAttachmentError('');
+                }}
+              >
+                {creating ? '✕ Cancelar' : '＋ Crear actividad'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -368,12 +483,7 @@ export function WeeksPanel({
       </nav>
 
       {/* Alerts and Status */}
-      {message && (
-        <p role="alert" className="eval-inline-notice flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 p-3.5 text-xs text-amber-900 dark:text-amber-200">
-          <span>⚠️</span>
-          <span>{message}</span>
-        </p>
-      )}
+      {notice && <NoticeBanner tone={notice.tone} text={notice.text} />}
 
       {busy && (
         <div role="status" className="flex items-center gap-2 text-xs text-text-muted py-2">
@@ -443,16 +553,108 @@ export function WeeksPanel({
               />
             </div>
 
+            <ActivityAttachmentPicker
+              id={"weekly-attachments-"+course.id}
+              files={activityFiles}
+              onChange={setActivityFiles}
+              error={attachmentError}
+              onError={setAttachmentError}
+              disabled={busy || activities.isUncertain() || client.isUncertain()}
+              progress={uploadProgress}
+            />
+
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 className="eval-primary-action inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover transition-all cursor-pointer disabled:opacity-50"
                 type="submit"
               >
-                Publicar en esta semana
+                {uploadProgress ? 'Subiendo materiales…' : 'Publicar en esta semana'}
               </button>
               <button
                 type="button"
-                onClick={() => setCreating(false)}
+                onClick={() => {
+                  setCreating(false);
+                  setActivityFiles([]);
+                  setAttachmentError('');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-medium transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      )}
+
+      {/* Weekly Material Publishing Form */}
+      {uploadingMaterial && materialClient && course.can_publish && (
+        <form
+          className="eval-compact-form my-4 rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4 animate-in fade-in duration-200"
+          aria-label="Publicar material en esta semana"
+          onSubmit={event => void publishMaterial(event)}
+        >
+          <fieldset disabled={busy || materialClient.isUncertain(course.id) || client.isUncertain()} className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <legend className="text-sm font-semibold text-text">Material educativo · {title}</legend>
+              <button
+                type="button"
+                onClick={() => setUploadingMaterial(false)}
+                className="text-xs text-text-muted hover:text-text cursor-pointer p-1"
+                aria-label="Cerrar formulario de material"
+              >
+                ✕
+              </button>
+            </div>
+            <div>
+              <label htmlFor={"weekly-material-title-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Título del material
+              </label>
+              <input
+                id={"weekly-material-title-"+course.id}
+                name="title"
+                required
+                maxLength={255}
+                placeholder="Ej: Guía de aprendizaje o Video explicativo"
+                className="block w-full rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <label htmlFor={"weekly-material-desc-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Descripción o indicaciones (opcional)
+              </label>
+              <textarea
+                id={"weekly-material-desc-"+course.id}
+                name="description"
+                maxLength={10000}
+                rows={2}
+                placeholder="Orientaciones breves para revisar este recurso…"
+                className="block w-full rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div>
+              <label htmlFor={"weekly-material-file-"+course.id} className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                Archivo adjunto
+              </label>
+              <input
+                id={"weekly-material-file-"+course.id}
+                name="file"
+                type="file"
+                required
+                accept={materialAccept}
+                className="block w-full text-xs text-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover file:cursor-pointer cursor-pointer border border-border rounded-lg bg-surface-2 p-1.5"
+              />
+              <p className="mt-1 text-[11px] text-text-muted">PDF, Word, PowerPoint, Excel, JPG/PNG o Video (MP4/WebM/MOV/OGV) · Hasta 150 MiB · Sin macros</p>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                className="eval-primary-action inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold shadow-xs hover:bg-primary-hover transition-all cursor-pointer disabled:opacity-50"
+                type="submit"
+              >
+                {busy ? 'Subiendo archivo…' : 'Publicar material en esta semana'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadingMaterial(false)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-medium transition-all cursor-pointer"
               >
                 Cancelar
@@ -475,7 +677,7 @@ export function WeeksPanel({
                 await activities.activities(course.id);
                 if (activities.canReview()) {
                   activities.review();
-                  setMessage('Resultado consultado. Revisa la actividad antes de publicar otra.');
+                  showSuccess('Resultado consultado. Revisa la actividad antes de publicar otra.');
                   await load({ bucket: 'unassigned' }, '', true);
                 }
               } catch (error) {
@@ -647,6 +849,7 @@ export function WeeksPanel({
                   <p className="text-xs text-text-muted">
                     Fecha límite: <strong className="font-medium text-text">{(resource as Activity).due_on ?? 'Sin fecha límite'}</strong>
                   </p>
+                  <ActivityAttachmentsList attachments={(resource as Activity).attachments} compact />
                   {progress?.late && (
                     <span className="eval-late-badge inline-block text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
                       Entrega tardía
@@ -826,7 +1029,7 @@ export function WeeksPanel({
               setMaterials(null);
               setTasks(null);
               setCalendar(null);
-              setMessage('Tu acceso cambió. Consulta nuevamente el curso.');
+              showError('Tu acceso cambió. Consulta nuevamente el curso.');
             }}
           />
         </AcademicDialog>
