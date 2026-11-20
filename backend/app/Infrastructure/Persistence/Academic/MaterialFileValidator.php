@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Academic;
 use App\Application\Academic\AcademicCommandFailure;
 final class MaterialFileValidator {
-    public const LIMIT=25*1024*1024;
+    public const LIMIT=150*1024*1024;
     private int $limit;
     public function __construct(){ $policy=require dirname(__DIR__,4).'/config/course-materials.php';$this->limit=$policy['max_bytes'];
         if($this->limit<1||$this->limit>self::LIMIT)throw new \LogicException('Approved material bounds required.');}
@@ -13,17 +13,36 @@ final class MaterialFileValidator {
         $extension=strtolower(pathinfo($name,PATHINFO_EXTENSION));
         $types=['pdf'=>'application/pdf','doc'=>'application/msword','docx'=>'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'ppt'=>'application/vnd.ms-powerpoint','pptx'=>'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'xls'=>'application/vnd.ms-excel','xlsx'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png'];
+            'xls'=>'application/vnd.ms-excel','xlsx'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png',
+            'mp4'=>'video/mp4','webm'=>'video/webm','mov'=>'video/quicktime','ogv'=>'video/ogg'];
         if(!isset($types[$extension]))throw new AcademicCommandFailure('invalid_file');
-        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);$prefix=file_get_contents($path,false,null,0,16);
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);$prefix=file_get_contents($path,false,null,0,64);
         if($extension==='pdf'){
             $tail=file_get_contents($path,false,null,max(0,$size-2048));
             if($mime!=='application/pdf'||!str_starts_with($prefix,'%PDF-')||!str_contains($tail,'%%EOF'))throw new AcademicCommandFailure('invalid_file');
         }elseif(in_array($extension,['jpg','jpeg','png'],true)){
             $image=@getimagesize($path);if(!$image||($image['mime']??null)!==$types[$extension]||$mime!==$types[$extension])throw new AcademicCommandFailure('invalid_file');
+        }elseif(in_array($extension,['mp4','webm','mov','ogv'],true)){
+            $this->video($prefix,$extension,(string)$mime);
         }elseif(str_ends_with($extension,'x'))$this->openXml($path,$extension);
         else $this->compound($path,$extension);
         return ['bytes'=>$size,'mime'=>$types[$extension],'sha256'=>hash_file('sha256',$path)];
+    }
+    private function video(string|false $head,string $extension,string $mime):void {
+        if(!is_string($head)||strlen($head)<12)throw new AcademicCommandFailure('invalid_file');
+        if($extension==='mp4'){
+            if(substr($head,4,4)!=='ftyp'||!in_array($mime,['video/mp4','video/quicktime','audio/mp4','application/octet-stream'],true))throw new AcademicCommandFailure('invalid_file');
+            return;
+        }
+        if($extension==='mov'){
+            if(!in_array(substr($head,4,4),['ftyp','moov','mdat','wide','free','skip','pnot'],true)||!in_array($mime,['video/quicktime','video/mp4','application/octet-stream'],true))throw new AcademicCommandFailure('invalid_file');
+            return;
+        }
+        if($extension==='webm'){
+            if(substr($head,0,4)!=="\x1a\x45\xdf\xa3"||!str_contains(strtolower($head),'webm')||!in_array($mime,['video/webm','video/x-matroska','application/octet-stream'],true))throw new AcademicCommandFailure('invalid_file');
+            return;
+        }
+        if(!str_starts_with($head,'OggS')||!in_array($mime,['video/ogg','application/ogg','application/octet-stream'],true))throw new AcademicCommandFailure('invalid_file');
     }
     private function openXml(string $path,string $extension):void {
         $zip=new \ZipArchive;if($zip->open($path)!==true)throw new AcademicCommandFailure('invalid_file');

@@ -150,7 +150,7 @@ $assert($reopenResult['justification'] === $justification);
 $reopenedView = $query->getForPeriod($director, $periodId);
 $b1Reopened = $reopenedView['bimesters'][0];
 $assert($b1Reopened['state'] === 'open');
-$assert($b1Reopened['reopened_by'] === $director->identityId);
+$assert($b1Reopened['reopened_by'] === $subdirector->identityId);
 $assert($b1Reopened['justification'] === $justification);
 
 // 8. Append-only ledger has recorded both lifecycle events
@@ -212,11 +212,11 @@ $assert(count($newEvents) === 3);
 $assert($newEvents[0]->event_type === 'bimester_closed');
 $assert((int)$newEvents[0]->actor_id === (int)$subdirector->identityId);
 $assert($newEvents[1]->event_type === 'bimester_reopened');
-$assert((int)$newEvents[1]->actor_id === (int)$director->identityId);
+$assert((int)$newEvents[1]->actor_id === (int)$subdirector->identityId);
 $reopenMeta = json_decode((string)$newEvents[1]->metadata, true);
 $assert(str_contains($reopenMeta['justification'] ?? '', 'ciclo 2'));
 $assert($newEvents[2]->event_type === 'bimester_closed');
-$assert((int)$newEvents[2]->actor_id === (int)$director->identityId);
+$assert((int)$newEvents[2]->actor_id === (int)$subdirector->identityId);
 $assert((int)$newEvents[0]->operation_key < (int)$newEvents[1]->operation_key);
 $assert((int)$newEvents[1]->operation_key < (int)$newEvents[2]->operation_key);
 

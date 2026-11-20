@@ -73,6 +73,11 @@ final class CourseMaterialsTest extends SubmissionReferenceTestCase {
         $oversize=$this->directory.'/large.pdf';$file=fopen($oversize,'wb');ftruncate($file,MaterialFileValidator::LIMIT+1);fclose($file);
         $this->reject(fn()=>$validator->validate($oversize,'large.pdf'),'invalid_file');
         $empty=$this->directory.'/empty.pdf';file_put_contents($empty,'');$this->reject(fn()=>$validator->validate($empty,'empty.pdf'),'invalid_file');
+        $mp4=$this->directory.'/clase.mp4';file_put_contents($mp4,"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom");$this->assertSame('video/mp4',$validator->validate($mp4,'clase.MP4')['mime']);
+        $webm=$this->directory.'/clase.webm';file_put_contents($webm,"\x1a\x45\xdf\xa3\x9f\x42\x86\x81\x01\x42\x82\x84webm\x42\x87\x81\x02");$this->assertSame('video/webm',$validator->validate($webm,'clase.webm')['mime']);
+        $mov=$this->directory.'/clase.mov';file_put_contents($mov,"\x00\x00\x00\x14ftypqt  \x20\x05\x03\x00qt  ");$this->assertSame('video/quicktime',$validator->validate($mov,'clase.mov')['mime']);
+        $ogv=$this->directory.'/clase.ogv';file_put_contents($ogv,"OggS\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00");$this->assertSame('video/ogg',$validator->validate($ogv,'clase.ogv')['mime']);
+        foreach(['mp4','webm','mov','ogv'] as $videoExt)$this->reject(fn()=>$validator->validate($this->pdf,'spoofed.'.$videoExt),'invalid_file');
     }
     public function testStorageFailureAndMetadataRollbackLeaveNoVisibleMaterial():void {
         $fault=new class extends \Illuminate\Filesystem\Filesystem {public function move($path,$target){return false;}};

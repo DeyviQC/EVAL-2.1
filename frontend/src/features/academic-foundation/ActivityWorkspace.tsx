@@ -81,13 +81,25 @@ function VersionHistory({
               </p>
               <p className="whitespace-pre-wrap text-xs text-text">{v.answer}</p>
               {v.filename && (
-                <a
-                  className="inline-block mt-2 text-xs font-medium text-primary hover:underline"
-                  href={evidenceUrl(v.id)}
-                  download
-                >
-                  Descargar {v.filename}
-                </a>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {/\.(pdf|jpe?g|png)$/i.test(v.filename) && (
+                    <a
+                      className="inline-block text-xs font-medium text-primary hover:underline"
+                      href={evidenceUrl(v.id, 'inline')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      👁️ Abrir {v.filename}
+                    </a>
+                  )}
+                  <a
+                    className="inline-block text-xs font-medium text-primary hover:underline"
+                    href={evidenceUrl(v.id)}
+                    download
+                  >
+                    Descargar {v.filename}
+                  </a>
+                </div>
               )}
             </section>
           ))}
@@ -538,13 +550,25 @@ export function ActivityCard({
                     <RecordedTime value={d.version.recorded_at} />
                   </p>
                   {d.version.filename && (
-                    <a
-                      className={button + ' inline-block my-2'}
-                      href={evidenceUrl(d.version.id)}
-                      download
-                    >
-                      Descargar evidencia
-                    </a>
+                    <div className="flex flex-wrap gap-2 my-2">
+                      {/\.(pdf|jpe?g|png)$/i.test(d.version.filename) && (
+                        <a
+                          className={button}
+                          href={evidenceUrl(d.version.id, 'inline')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          👁️ Ver evidencia
+                        </a>
+                      )}
+                      <a
+                        className={button}
+                        href={evidenceUrl(d.version.id)}
+                        download
+                      >
+                        Descargar evidencia
+                      </a>
+                    </div>
                   )}
                   {
                     <AssessmentPanel
