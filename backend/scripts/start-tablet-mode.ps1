@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     EVAL - Servidor Institucional para Tablets y Red Local (LAN / WLAN)
     I.E. Nuestra Senora de las Mercedes - Ayacucho
@@ -154,6 +154,7 @@ Write-Host "    * Red:             $adapterName" -ForegroundColor Gray
 Write-Host "    * IP Servidor:     $lanIp" -ForegroundColor Gray
 Write-Host '    * Puerto:          8443 (HTTPS seguro con TLS multi-SAN)' -ForegroundColor Gray
 Write-Host '    * Base de Datos:   MySQL 8.4 (eval_dev, 38 tablas, 19 migraciones)' -ForegroundColor Gray
+Write-Host '    * Workers Backend: 8 procesos PHP paralelos (Balanceo Round-Robin)' -ForegroundColor Green
 Write-Host '    * Modo Offline:    100% OPERATIVO (sin dependencia de Internet)' -ForegroundColor Green
 Write-Host ''
 Write-Host '  [ENLACES DE ACCESO]' -ForegroundColor White

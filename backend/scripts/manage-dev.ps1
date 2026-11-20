@@ -8,6 +8,7 @@ param(
     [switch]$Tablet,
     [switch]$Console,
     [string]$LanIp,
+    [int]$Workers = 0,
     [ValidateSet('director_admin','vice_principal','teacher','student')][string]$Role='director_admin'
 )
 $ErrorActionPreference='Stop'
@@ -253,7 +254,7 @@ try {
     } elseif($Command -eq 'status'){
         $running=@($state.workers | Where-Object {Owned-Process $_})
         Save-State $state
-        Write-Output ('EVAL database: eval_dev; URL: '+$state.origin+'; app running: '+($running.Count -eq 2))
+        Write-Output ('EVAL database: eval_dev; URL: '+$state.origin+'; app running: '+($running.Count -ge 2))
         Write-Output ('Owned browser sessions: '+@($state.browsers | Where-Object {$_ -and (Owned-Process $_)}).Count)
     } elseif($Command -eq 'stop'){
         foreach($browserRecord in @($state.browsers)){
@@ -268,7 +269,9 @@ try {
         $null=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 "'+(Join-Path $repo 'backend\dev-runtime\inspect.php')+'"') (Db-Environment 'runtime') '' $null $true
         foreach($record in @($state.workers)){if(Owned-Process $record){throw 'EVAL already has owned workers; use status or stop.'}}
         if(!(Test-Path -LiteralPath (Join-Path $repo 'frontend\dist\index.html'))){throw 'Build frontend first.'}
-        foreach($port in @(8443,18080)){if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Application port is occupied; foreign process is retained.'}}
+        $workerCount = if($Workers -gt 0){ [Math]::Min([Math]::Max($Workers, 1), 16) } elseif($Tablet -or $LanIp){ [Math]::Min([Environment]::ProcessorCount, 8) } else { 1 }
+        $upstreamPorts = 18080..(18080 + $workerCount - 1)
+        foreach($port in (@(8443) + $upstreamPorts)){if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw "Application port $port is occupied; foreign process is retained."}}
         $stage='certificate'
         $actualLanIp = $LanIp
         if($Tablet -or $LanIp){
@@ -296,26 +299,32 @@ try {
         }
         $environment.EVAL_UI_ENABLED='1';$environment.EVAL_MATERIAL_ROOT=Join-Path $devRoot 'materials'
         $router=Join-Path $repo 'backend\dev-runtime\router.php';$proxy=Join-Path $repo 'backend\dev-runtime\https-proxy.mjs'
-        $stage='php_start';$worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=25M -d post_max_size=27M -S 127.0.0.1:18080 "'+$router+'"') $environment ''
-        $state.workers=@((Record-Process $worker $router));Save-State $state
+        $stage='php_start'
+        $phpWorkers = @()
+        foreach($port in $upstreamPorts){
+            $worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=25M -d post_max_size=27M -S 127.0.0.1:'+$port+' "'+$router+'"') $environment ''
+            $phpWorkers += (Record-Process $worker $router)
+        }
+        $state.workers = $phpWorkers;Save-State $state
         $proxyEnv=@{EVAL_PROXY_KEY=$secret;EVAL_UI_ENABLED='1'}
         if($Tablet -or $LanIp){
             $proxyEnv.EVAL_BIND_ADDRESS='0.0.0.0'
             $proxyEnv.EVAL_ALLOWED_HOSTS="127.0.0.1,localhost,$actualLanIp"
         }
-        $stage='proxy_start';$worker=Start-Child $node ('"'+$proxy+'" 8443 18080 "'+(Join-Path $devRoot 'cert.pem')+'" "'+(Join-Path $devRoot 'key.pem')+'"') $proxyEnv ''
+        $upstreamArg = ($upstreamPorts -join ',')
+        $stage='proxy_start';$worker=Start-Child $node ('"'+$proxy+'" 8443 '+$upstreamArg+' "'+(Join-Path $devRoot 'cert.pem')+'" "'+(Join-Path $devRoot 'key.pem')+'"') $proxyEnv ''
         $state.workers+=(Record-Process $worker $proxy);Save-State $state
         $deadline=[DateTime]::UtcNow.AddSeconds(8)
         do{Start-Sleep -Milliseconds 200;$ready=Get-NetTCPConnection -LocalPort 8443 -State Listen -ErrorAction SilentlyContinue}while(!$ready -and [DateTime]::UtcNow -lt $deadline)
         if(!$ready){throw 'HTTPS listener unavailable.'}
         if($Tablet -or $LanIp){
-            Write-Output ('EVAL started in Tablet/LAN Mode:`n  - Laptop:  '+$state.origin+'`n  - Tablets: https://'+$actualLanIp+':8443')
+            Write-Output ('EVAL started in Tablet/LAN Mode ('+$workerCount+' parallel PHP workers):`n  - Laptop:  '+$state.origin+'`n  - Tablets: https://'+$actualLanIp+':8443')
         } else {
-            Write-Output ('EVAL started: '+$state.origin)
+            Write-Output ('EVAL started ('+$workerCount+' parallel PHP workers): '+$state.origin)
         }
     } elseif($Command -eq 'open'){
         $stage='browser_open';$helper=Join-Path $repo 'backend\dev-runtime\open-browser.mjs'
-        if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before opening.'}
+        if(@($state.workers | Where-Object {Owned-Process $_}).Count -lt 2){throw 'Start EVAL before opening.'}
         foreach($browserRecord in @($state.browsers)){
             if($browserRecord -and $browserRecord.role -eq $Role){
                 $browserProcess=Owned-Process $browserRecord

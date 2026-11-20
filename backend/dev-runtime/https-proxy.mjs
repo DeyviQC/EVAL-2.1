@@ -5,14 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { resolve, sep } from 'node:path';
 
 const [portText, upstreamText, certPath, keyPath] = process.argv.slice(2);
-const port=Number(portText),upstream=Number(upstreamText);
-if(!Number.isInteger(port)||port<1024||port>65535||!Number.isInteger(upstream)||upstream<1024||upstream>65535||!process.env.EVAL_PROXY_KEY) throw new Error('Invalid isolated proxy configuration');
+const port=Number(portText);
+const upstreams = String(upstreamText).split(',').map(s => Number(s.trim())).filter(p => Number.isInteger(p) && p >= 1024 && p <= 65535);
+if(!Number.isInteger(port)||port<1024||port>65535||upstreams.length===0||!process.env.EVAL_PROXY_KEY) throw new Error('Invalid isolated proxy configuration');
 const allowedHosts = new Set([
   `127.0.0.1:${port}`,
   `localhost:${port}`,
   ...(process.env.EVAL_ALLOWED_HOSTS ? process.env.EVAL_ALLOWED_HOSTS.split(',').map(h => h.trim().includes(':') ? h.trim() : `${h.trim()}:${port}`) : [])
 ]);
 const uiRoot=fileURLToPath(new URL('../../frontend/dist/',import.meta.url));
+let rrIndex = 0;
 const server=https.createServer({cert:readFileSync(certPath),key:readFileSync(keyPath),minVersion:'TLSv1.2'},(request,response)=>{
   if(!allowedHosts.has(request.headers.host) || Object.keys(request.headers).some(name=>name==='forwarded'||name==='x-http-method-override'||name.startsWith('x-forwarded-')||name.startsWith('x-eval-'))){
     response.writeHead(400,{'Content-Type':'application/json'});response.end('{"error":"invalid_proxy_request"}');return;
@@ -33,6 +35,7 @@ const server=https.createServer({cert:readFileSync(certPath),key:readFileSync(ke
       response.end(readFileSync(target));return;
     }
   }
+  const upstream = upstreams[rrIndex++ % upstreams.length];
   const headers={...request.headers,host:`127.0.0.1:${upstream}`,'x-eval-proxy-key':process.env.EVAL_PROXY_KEY,'x-forwarded-host':request.headers.host};
   for(const name of String(request.headers.connection??'').split(',')) delete headers[name.trim().toLowerCase()];
   delete headers.connection;delete headers['proxy-authorization'];delete headers['proxy-connection'];
