@@ -113,7 +113,7 @@ export function validateStudentImport(
   rawHeaders: string[],
   rawRows: string[][],
   catalogGrades: { id: string; name: string }[] = [],
-  catalogSections: { id: string; name: string }[] = []
+  catalogSections: { id: string; name: string; grade_id?: string }[] = []
 ): StudentValidationResult {
   const errors: ImportError[] = [];
   const valid: ValidStudentRow[] = [];
@@ -204,7 +204,10 @@ export function validateStudentImport(
       seenUsernames.add(username);
     }
 
-    // 4. Validar Grado y Sección si están presentes
+    // Grado y sección son obligatorios: nunca crear una cuenta de estudiante sin aula.
+    if (!rawGrade) { errors.push({row:rowNum,field:'Grado',value:'',message:'Indica el grado de la estudiante.'}); rowValid=false; }
+    if (!rawSection) { errors.push({row:rowNum,field:'Sección',value:'',message:'Indica la sección de la estudiante.'}); rowValid=false; }
+    if (!catalogGrades.length || !catalogSections.length) { errors.push({row:rowNum,field:'Aula',value:'',message:'El catálogo de grados y secciones no está disponible.'}); rowValid=false; }
     let matchedGrade: { id: string; name: string } | undefined;
     if (rawGrade && catalogGrades.length > 0) {
       const normGrade = normalizeText(rawGrade);
@@ -223,13 +226,13 @@ export function validateStudentImport(
       }
     }
 
-    let matchedSection: { id: string; name: string } | undefined;
+    let matchedSection: { id: string; name: string; grade_id?: string } | undefined;
     if (rawSection && catalogSections.length > 0) {
       const normSection = normalizeText(rawSection);
-      matchedSection = catalogSections.find(s => {
+      matchedSection = catalogSections.find(s => (!s.grade_id || s.grade_id === matchedGrade?.id) && (() => {
         const normS = normalizeText(s.name);
         return normS === normSection || normS.includes(normSection) || normSection.includes(normS);
-      });
+      })());
       if (!matchedSection) {
         errors.push({
           row: rowNum,

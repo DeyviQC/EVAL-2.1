@@ -43,6 +43,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
   const [grades, setGrades] = useState<CatalogRow[]>([]);
   const [sections, setSections] = useState<CatalogRow[]>([]);
   const [activePeriodId, setActivePeriodId] = useState<string | null>(null);
+  const [activePeriodName, setActivePeriodName] = useState('');
 
   const [validationErrors, setValidationErrors] = useState<ImportError[]>([]);
   const [validStudents, setValidStudents] = useState<ValidStudentRow[]>([]);
@@ -58,7 +59,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
     let active = true;
     if (!academic) return;
 
-    void supervisionOptions(academic).then(data=>{if(!active)return;setGrades(data.grades.filter(row=>row.is_active));setSections(data.sections.filter(row=>row.is_active));setActivePeriodId(data.periods.find(row=>row.state==='active')?.id??null);setCatalogReady(true);}).catch(error=>{if(!active)return;setCatalogReady(false);setGeneralNotice('No se pudo comprobar el catálogo. No se importarán estudiantes hasta cargarlo correctamente.');if(error instanceof AcademicApiError&&[401,419].includes(error.status??0))onExpired();});
+    void supervisionOptions(academic).then(data=>{if(!active)return;const period=data.periods.find(row=>row.state==='active');setGrades(data.grades.filter(row=>row.is_active));setSections(data.sections.filter(row=>row.is_active));setActivePeriodId(period?.id??null);setActivePeriodName(period?.name??'');setCatalogReady(true);}).catch(error=>{if(!active)return;setCatalogReady(false);setGeneralNotice('No se pudo comprobar el catálogo. No se importarán estudiantes hasta cargarlo correctamente.');if(error instanceof AcademicApiError&&[401,419].includes(error.status??0))onExpired();});
 
     return () => {
       active = false;
@@ -118,8 +119,8 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
   async function executeImport() {
     const isStudent = importType === 'student';
     const total = isStudent ? validStudents.length : validTeachers.length;
-    if(total===0||writing.current||blocked||isStudent&&!catalogReady)return;writing.current=true;
-    if(!await feedback.confirm({title:'¿Importar '+total+' cuentas?',message:'Se crearán las filas válidas revisadas.'+(isStudent&&!activePeriodId?' No hay año activo: las cuentas quedarán sin matrícula.':'')})){writing.current=false;return;}
+    if(total===0||writing.current||blocked||isStudent&&(!catalogReady||!activePeriodId||!academic))return;writing.current=true;
+    if(!await feedback.confirm({title:'¿Importar '+total+' cuentas?',message:'Se crearán las filas válidas revisadas.'+(isStudent?` Se matricularán en ${activePeriodName} según su grado y sección.`:'')})){writing.current=false;return;}
 
     setProcessing(true);
     setProgress({ current: 0, total });
@@ -236,7 +237,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
                 Importación masiva de {importType === 'student' ? 'Estudiantes' : 'Docentes'}
               </h3>
               <p className="text-xs text-text-muted mt-0.5">
-                Carga múltiples cuentas institucionales y matrículas escolares desde archivos CSV o Excel.
+                Carga cuentas desde un archivo CSV y matricula estudiantes según grado y sección.
               </p>
             </div>
 
@@ -265,6 +266,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
             </div>
           </div>
         </header>
+        {importType==='student'&&<p role="status" className="rounded-xl border border-border bg-surface-2 p-3 text-sm text-text">{activePeriodId?<>Período de matrícula: <strong>{activePeriodName}</strong>. Revisa grado y sección en la vista previa antes de importar.</>: 'No hay un período académico activo. Activa uno antes de importar estudiantes.'}</p>}
 
         {/* Sección de Descarga de Plantillas Oficiales */}
         <div className="rounded-2xl border border-border/80 bg-surface-2/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -341,7 +343,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
               {validCount > 0 && (
                 <button
                   type="button"
-                  disabled={processing||blocked||(importType==='student'&&!catalogReady)}
+                  disabled={processing||blocked||(importType==='student'&&(!catalogReady||!activePeriodId||!academic))}
                   onClick={() => void executeImport()}
                   className={
                     button +
