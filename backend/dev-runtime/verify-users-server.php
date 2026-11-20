@@ -6,7 +6,7 @@ require dirname(__DIR__).'/bootstrap.php';
 $db=Illuminate\Database\Capsule\Manager::connection();$service=new App\Application\Accounts\LocalAccountService($db);$checks=0;
 $assert=function(bool $condition)use(&$checks){if(!$condition)throw new RuntimeException('Account verification failed');$checks++;};
 $actor=function(string $login)use($db){$row=$db->table('local_credentials')->where('login',$login)->first();return new App\Infrastructure\Authentication\AuthenticatedActor((string)$row->id,$db->table('local_role_grants')->where('identity_id',$row->id)->pluck('role')->all(),App\Infrastructure\Authentication\CredentialRevision::current($db,(string)$row->id,$row->password));};
-$manager=$actor('subdirector');$username='docente.verificacion.'.bin2hex(random_bytes(5));
+$manager=$actor('subdirector');$suffix=bin2hex(random_bytes(5));$username='docente.verificacion.'.$suffix;$studentUsername='estudiante.verificacion.'.$suffix;
 $deny=function(string $category,callable $operation)use($db,$assert){$before=[$db->table('local_account_events')->count(),$db->table('local_credentials')->count(),$db->table('academic_write_guard')->value('last_ordinal')];try{$operation();throw new RuntimeException('Expected account denial');}catch(App\Application\Academic\AcademicCommandFailure $e){$assert($e->category===$category);}$assert($before===[$db->table('local_account_events')->count(),$db->table('local_credentials')->count(),$db->table('academic_write_guard')->value('last_ordinal')]);};
 foreach(['docente','estudiante','director'] as $login){$unprivileged=$actor($login);$deny('forbidden',fn()=>$service->execute($unprivileged,'created',null,['name'=>'Unauthorized','username'=>$username,'role'=>'teacher']));}
 $deny('invalid_input',fn()=>$service->execute($manager,'created',null,['name'=>'Invalid','username'=>'correo@ejemplo.test','role'=>'teacher']));
@@ -17,12 +17,16 @@ $assert(strlen($result['password'])===20);$assert(password_verify($result['passw
 $assert(!$db->table('teaching_assignments')->where('teacher_id',$result['id'])->exists());
 $deny('username_unavailable',fn()=>$service->execute($manager,'created',null,['name'=>'Duplicate','username'=>$username,'role'=>'student']));
 $teacher=$actor($username);$assert($service->own($teacher)['must_change_password']===true);
+$studentResult=$service->execute($manager,'created',null,['name'=>'Estudiante de verificaciÃ³n de cuentas','username'=>$studentUsername,'role'=>'student']);
+$student=$actor($studentUsername);$assert($service->own($student)['must_change_password']===false);$assert($studentResult['password']===$studentUsername);
+$studentReset=$service->execute($manager,'password_reset',$student->identityId,[]);$assert(password_verify($studentReset['password'],$db->table('local_credentials')->where('id',$student->identityId)->value('password')));$assert($service->own($actor($studentUsername))['must_change_password']===false);
 $deny('password_unchanged',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>$result['password'],'password'=>$result['password']]));
 $deny('invalid_current_password',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>'wrong','password'=>'New-valid-password-2026']));
 $service->execute($manager,'deactivated',$teacher->identityId,[]);$service->execute($manager,'reactivated',$teacher->identityId,[]);
 $deny('forbidden',fn()=>$service->execute($teacher,'password_changed',null,['current_password'=>$result['password'],'password'=>'New-valid-password-2026']));
 $teacherFresh=$actor($username);$service->execute($teacherFresh,'password_changed',null,['current_password'=>$result['password'],'password'=>'New-valid-password-2026']);
 $assert($service->own($actor($username))['must_change_password']===false);
+$service->execute($manager,'password_reset',$teacherFresh->identityId,[]);$assert($service->own($actor($username))['must_change_password']===true);
 $assert($db->table('local_credentials')->where('id',$result['id'])->value('login')===$username);
 foreach([fn()=>$db->table('local_account_events')->where('target_id',$result['id'])->delete(),fn()=>$db->table('local_credentials')->where('id',$result['id'])->update(['login'=>'forged']),fn()=>$db->table('local_role_grants')->where('identity_id',$result['id'])->update(['role'=>'director_admin'])] as $operation){try{$operation();throw new RuntimeException('Forbidden runtime privilege');}catch(Illuminate\Database\QueryException){$assert(true);}}
 $assert($db->getSchemaBuilder()->getColumnListing('local_account_events')===['id','actor_id','target_id','operation','operation_key','recorded_at']);
