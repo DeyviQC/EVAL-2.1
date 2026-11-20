@@ -76,8 +76,9 @@ export function FoundationWorkspace({section,client,onExpired}:{section:'periods
       </fieldset>
     </form>}
     {phase==='ready'&&(section==='periods'?periods.length===0:rows.length===0)&&<p>No hay registros para mostrar.</p>}
-    {task!=='create'&&phase==='ready'&&section==='periods'&&periods.map(row=><article key={row.id} className="my-4 rounded-lg border p-4" aria-label={row.name}>
-      <h4 className="font-semibold whitespace-pre-wrap">{row.name}</h4><p>Estado: {({planned:'Planificado',active:'Activo',closed:'Cerrado'})[row.state]}</p><p>Inicio: {row.start_on} · Fin: {row.end_on}</p>
+    {task!=='create'&&phase==='ready'&&section==='periods'&&periods.map(row=><article key={row.id} className="vp-period-card" data-state={row.state} aria-label={row.name}>
+      <div className="vp-period-card-heading"><h4 className="font-semibold whitespace-pre-wrap">{row.name}</h4><span className="vp-period-status">{({planned:'Planificado',active:'Activo',closed:'Cerrado'})[row.state]}</span></div>
+      <dl className="vp-period-dates"><div><dt>Inicio</dt><dd>{row.start_on}</dd></div><div><dt>Fin</dt><dd>{row.end_on}</dd></div></dl>
       {row.state!=='closed'&&<button className={control} disabled={busy||uncertain} onClick={()=>void mutate(()=>client.transitionPeriod(row.id,row.state==='planned'?'activate':'close'),false,true,(row.state==='planned'?'¿Activar':'¿Cerrar')+' el período «'+row.name+'»?',row.state==='active')}>{row.state==='planned'?'Solicitar activación':'Solicitar cierre'}</button>}
     </article>)}
     {phase==='ready'&&cursor&&<button className={control} disabled={busy} onClick={()=>void load(cursor)}>Cargar más registros</button>}

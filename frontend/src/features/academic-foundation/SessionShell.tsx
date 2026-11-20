@@ -1,3 +1,5 @@
+const DirectorInstitution = lazy(() => import('./DirectorMonitoring.js').then(m => ({default:m.DirectorInstitution})));
+const DirectorMonitoring = lazy(() => import('./DirectorMonitoring.js').then(m => ({default:m.DirectorMonitoring})));
 import {ActionFeedbackProvider} from './ActionFeedback.js';
 import {browserHistoryPort,createViewHistory} from './view-history.js';
 import {roleMenus,roleLabels,allowedSection,StudentDashboard,TeacherDashboard,DirectorDashboard,VicePrincipalDashboard,type DashboardRole} from './role-dashboards.js';
@@ -85,8 +87,8 @@ export function SessionShell() {
       case 'my_assignments':case 'my_enrollments':case 'weeks':return <MyCourses key="courses" classroom={courseClassroom} onClassroomChange={setCourseClassroom} initialCourseId={courseTarget} client={academic} materials={materials} weeks={weeks} activities={activities} teacherMode={teacherMode} onExpired={controller.invalidate} studentSnapshot={role==='student'?studentSnapshot:null} studentName={role==='student'?own.name:''} studentId={role==='student'?own.id:''} studentError={studentError} onStudentRetry={()=>setStudentRevision(value=>value+1)} onActivity={id=>{choose('activities','all');setActivityTarget(id);}}/>;
       case 'materials':case 'library':return <MyCourses key={safeSelected} classroom={courseClassroom} onClassroomChange={setCourseClassroom} client={academic} materials={materials} teacherMode={teacherMode} materialsOnly={safeSelected==='materials'} libraryOnly={safeSelected==='library'} onExpired={controller.invalidate}/>;
       case 'activities':return role==='student'?<StudentTasksWorkspace accounts={accounts} activities={activities} initialActivityId={activityTarget} onExpired={controller.invalidate}/>:<ActivityWorkspace classroom={courseClassroom} onClassroomChange={setCourseClassroom} teacherMode={teacherMode} client={activities} mode="activities" initialFilter={activityFilter} initialActivityId={activityTarget} onExpired={controller.invalidate}/>;
-      case 'institution':return <InstitutionReadView client={academic} onExpired={controller.invalidate}/>;
-      case 'reports':return <ReportWorkspace client={reports} academic={academic} onExpired={controller.invalidate}/>;
+      case 'institution':return role==='director_admin'?<DirectorInstitution academic={academic} onExpired={controller.invalidate}/>:<InstitutionReadView client={academic} onExpired={controller.invalidate}/>;
+      case 'reports':return role==='director_admin'?<DirectorMonitoring academic={academic} reports={reports} onExpired={controller.invalidate}/>:<ReportWorkspace client={reports} academic={academic} onExpired={controller.invalidate}/>;
       case 'history':return <HistoryWorkspace client={academic} kinds={role==='director_admin'||role==='vice_principal'?['enrollments','assignments']:role==='student'?['enrollments']:['assignments']} onExpired={controller.invalidate}/>;
       case 'audit':return <AuditWorkspace client={academic} onExpired={controller.invalidate}/>;
       case 'periods':case 'catalog':return <FoundationWorkspace key={safeSelected} section={safeSelected} client={academic} onExpired={controller.invalidate}/>;

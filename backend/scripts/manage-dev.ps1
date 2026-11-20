@@ -5,8 +5,8 @@ param(
     [switch]$BrowserOnly,
     [switch]$ServerOnly,
     [switch]$Sample,
-    [switch]$Tablet,
     [switch]$Console,
+    [switch]$Tablet,
     [string]$LanIp,
     [int]$Workers = 0,
     [ValidateSet('director_admin','vice_principal','teacher','student')][string]$Role='director_admin'
@@ -276,9 +276,9 @@ try {
         $actualLanIp = $LanIp
         if($Tablet -or $LanIp){
             if(!$actualLanIp){
-                $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
-                    $_.IPAddress -notlike "127.*" -and 
-                    $_.IPAddress -notlike "169.254.*" -and 
+                $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+                    $_.IPAddress -notlike "127.*" -and
+                    $_.IPAddress -notlike "169.254.*" -and
                     $_.InterfaceAlias -notlike "*Loopback*" -and
                     $_.InterfaceAlias -notlike "*vEthernet*"
                 } | Select-Object -First 1
@@ -302,7 +302,7 @@ try {
         $stage='php_start'
         $phpWorkers = @()
         foreach($port in $upstreamPorts){
-            $worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=25M -d post_max_size=27M -S 127.0.0.1:'+$port+' "'+$router+'"') $environment ''
+            $worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=155M -d post_max_size=160M -d max_execution_time=120 -S 127.0.0.1:'+$port+' "'+$router+'"') $environment ''
             $phpWorkers += (Record-Process $worker $router)
         }
         $state.workers = $phpWorkers;Save-State $state

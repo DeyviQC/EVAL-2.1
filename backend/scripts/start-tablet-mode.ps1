@@ -59,9 +59,9 @@ $lanIp = $CustomIp
 $adapterName = 'Personalizado'
 
 if ([string]::IsNullOrWhiteSpace($lanIp)) {
-    $activeAdapters = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
-        $_.IPAddress -notlike '127.*' -and 
-        $_.IPAddress -notlike '169.254.*' -and 
+    $activeAdapters = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+        $_.IPAddress -notlike '127.*' -and
+        $_.IPAddress -notlike '169.254.*' -and
         $_.InterfaceAlias -notlike '*Loopback*' -and
         $_.InterfaceAlias -notlike '*vEthernet*' -and
         $_.InterfaceAlias -notlike '*Virtual*'

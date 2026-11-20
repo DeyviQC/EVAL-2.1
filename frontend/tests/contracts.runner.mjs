@@ -65,3 +65,16 @@ import {viewHistoryCases} from '../.test-build/features/academic-foundation/view
 for(const [name,run] of viewHistoryCases)test(name,run);
 import {workflowGateCases} from '../.test-build/features/academic-foundation/workflow-gates.test.js';
 for(const [name,run] of workflowGateCases)test(name,run);
+import {monitoringActivity} from '../.test-build/features/academic-foundation/DirectorMonitoring.js';
+test('director monitoring rejects inconsistent counts and invalid activity states',()=>{
+ const row={id:'1',title:'Actividad',instructions:'Consultar',due_on:null,state:'open',received:3,graded:1,pending:2};
+ assert.equal(monitoringActivity(row).pending,2);
+ for(const change of [{pending:3},{received:-1},{state:'draft'},{graded:0.5}])assert.throws(()=>monitoringActivity({...row,...change}));
+});
+import {consultationMatch} from '../.test-build/features/academic-foundation/consultation-search.js';
+test('consultation search matches accents and terms across course and teacher fields',()=>{
+ assert.equal(consultationMatch('matematica mercedes','Matemática','María Mercedes'),true);
+ assert.equal(consultationMatch('CIENCIAS','Ciencias Sociales'),true);
+ assert.equal(consultationMatch('historia','Matemática'),false);
+ assert.equal(consultationMatch('   ','Matemática'),true);
+});

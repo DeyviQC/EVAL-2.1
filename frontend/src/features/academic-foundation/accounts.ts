@@ -4,11 +4,11 @@ import {navigationSections} from './navigation.js';
 import {studentDashboard} from './student-dashboard.js';
 import {studentTasks} from './student-tasks.js';
 import { exact,text,decimalId } from './contracts.js';
-export type Account={id:string;name:string;username:string;role:'teacher'|'student';active:boolean};
-export type AccountDirectoryFilters={search?:string;role?:Account['role']|'';status?:'active'|'inactive'|''};
+export type Account={id:string;name:string;username:string;role:'teacher'|'student';active:boolean;classroom:{grade:string;section:string}|null};
+export type AccountDirectoryFilters={search?:string;role?:Account['role']|'';status?:'active'|'inactive'|'';grade_id?:string;section_id?:string};
 export type OwnAccount={id:string;name:string;username:string;can_manage:boolean;must_change_password?:boolean};
 export function ownAccount(wire:unknown):OwnAccount{const envelope=exact(wire,['data']),row=exact(envelope.data,['id','name','username','can_manage'],['must_change_password']);if(typeof row.can_manage!=='boolean')throw new Error('Invalid account');if(row.must_change_password!==undefined&&typeof row.must_change_password!=='boolean')throw new Error('Invalid account');return {id:decimalId(row.id),name:text(row.name),username:text(row.username),can_manage:row.can_manage,must_change_password:Boolean(row.must_change_password)};}
-export function accountDirectory(wire:unknown):{items:Account[];next_after:string|null}{const envelope=exact(wire,['data']),page=exact(envelope.data,['items','next_after']);if(!Array.isArray(page.items)||page.items.length>50)throw new Error('Invalid accounts');const items=page.items.map(value=>{const row=exact(value,['id','name','username','role','active']);if(!['teacher','student'].includes(row.role as string)||typeof row.active!=='boolean')throw new Error('Invalid account');return {id:decimalId(row.id),name:text(row.name),username:text(row.username),role:row.role as Account['role'],active:row.active};});return {items,next_after:page.next_after===null?null:decimalId(page.next_after)};}
+export function accountDirectory(wire:unknown):{items:Account[];next_after:string|null}{const envelope=exact(wire,['data']),page=exact(envelope.data,['items','next_after']);if(!Array.isArray(page.items)||page.items.length>50)throw new Error('Invalid accounts');const items=page.items.map(value=>{const row=exact(value,['id','name','username','role','active','classroom']);if(!['teacher','student'].includes(row.role as string)||typeof row.active!=='boolean')throw new Error('Invalid account');const classroom=row.classroom===null?null:exact(row.classroom,['grade','section']);if(row.role==='teacher'&&classroom!==null)throw new Error('Invalid account');return {id:decimalId(row.id),name:text(row.name),username:text(row.username),role:row.role as Account['role'],active:row.active,classroom:classroom===null?null:{grade:text(classroom.grade),section:text(classroom.section)}};});return {items,next_after:page.next_after===null?null:decimalId(page.next_after)};}
 export class AccountError extends Error{constructor(public category:string,public status:number|null,public uncertain=false){super(category);}}
 export function createAccountClient(csrf:()=>string,transport:typeof fetch=fetch){
  let uncertain=false;
@@ -30,6 +30,8 @@ export function createAccountClient(csrf:()=>string,transport:typeof fetch=fetch
   if(filters.search?.trim())params.set('search',filters.search.trim());
   if(filters.role)params.set('role',filters.role);
   if(filters.status)params.set('status',filters.status);
+  if(filters.grade_id)params.set('grade_id',decimalId(filters.grade_id));
+  if(filters.section_id)params.set('section_id',decimalId(filters.section_id));
   return accountDirectory(await request('/users?'+params));
  }
  return {bootstrap,overview:async()=>dashboardOverview(exact(await request('/account/overview'),['data']).data),studentDashboard:async()=>studentDashboard(exact(await request('/account/student-dashboard'),['data']).data),studentTasks:async()=>studentTasks(exact(await request('/account/student-tasks'),['data']).data),dashboardRole:async()=>decodeDashboardRole(await request('/account/role')),own:async()=>ownAccount(await request('/account')),directory,create:(name:string,username:string,role:Account['role'])=>mutation('/users',{name,username,role},true),action:(id:string,action:'reset-password'|'deactivate'|'reactivate')=>mutation('/users/'+decimalId(id)+'/'+action,{},action==='reset-password'),changePassword:(current_password:string,password:string)=>mutation('/account/password',{current_password,password}),acknowledgeReview:()=>{uncertain=false;}};

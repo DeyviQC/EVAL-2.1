@@ -234,8 +234,8 @@ extension=sodium
 extension=zip
 date.timezone=America/Lima
 memory_limit=512M
-upload_max_filesize=25M
-post_max_size=27M
+upload_max_filesize=155M
+post_max_size=160M
 "@
     [IO.File]::WriteAllText((Join-Path $runtimeRoot 'php.ini'), $phpIni.TrimStart(), [Text.UTF8Encoding]::new($false))
     $composerIni = $phpIni -replace '(?m)^extension=curl\r?\n', ''

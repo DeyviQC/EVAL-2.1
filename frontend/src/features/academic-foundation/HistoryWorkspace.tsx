@@ -1,3 +1,4 @@
+import {consultationMatch} from './consultation-search.js';
 import {useVicePrincipalTask} from './VicePrincipalWorkspace.js';
 import {useEffect,useRef,useState} from 'react';
 import {AcademicApiError,type AcademicClient} from './api.js';
@@ -8,10 +9,12 @@ type Row=ReturnType<typeof enrollmentRow>|ReturnType<typeof assignmentRow>;
 const labels={active:'Activo',planned:'Planificado',closed:'Cerrado',transferred:'Trasladado'};
 export function HistoryWorkspace({client,kinds,onExpired}:{client:AcademicClient;kinds:Kind[];onExpired:()=>void}){
  const task=useVicePrincipalTask();
+ const [search,setSearch]=useState(''),[stateFilter,setStateFilter]=useState(''),[periodFilter,setPeriodFilter]=useState('');
  const [kind,setKind]=useState<Kind>(kinds[0]!),[rows,setRows]=useState<Row[]>([]),[after,setAfter]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');const generation=useRef(0);
  useEffect(()=>{if(task==='enrollments'||task==='assignments')setKind(task);},[task]);
  async function load(cursor:string|null=null){const current=++generation.current;setBusy(true);setError('');setRows([]);setAfter(null);try{const page=kind==='enrollments'?await client.history(kind,enrollmentPage,cursor):await client.history(kind,assignmentPage,cursor);if(current!==generation.current)return;setRows(page.items);setAfter(page.next_after);}catch(e){if(current!==generation.current)return;if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}setError('No se pudo consultar el historial. Vuelve a consultar.');}finally{if(current===generation.current)setBusy(false);}}
  useEffect(()=>{void load();return ()=>{generation.current++;};},[client,kind]);
+ const shown=rows.filter(r=>consultationMatch(search,r.period_name,r.grade_name,r.section_name,'entry_name' in r?r.entry_name:r.student_name,'teacher_name' in r?r.teacher_name:'')&&(!stateFilter||r.state===stateFilter)&&(!periodFilter||r.academic_period_id===periodFilter));
  return <section aria-label="Historial académico" aria-busy={busy} className="space-y-6">
    <header className="border-b border-border/80 pb-5">
      <div className="flex items-center gap-2 mb-1.5">
@@ -20,7 +23,7 @@ export function HistoryWorkspace({client,kinds,onExpired}:{client:AcademicClient
        </span>
      </div>
      <h2 className="font-serif text-2xl sm:text-3xl font-normal text-text tracking-tight">Historial académico</h2>
-     <p className="text-xs sm:text-sm text-text-muted mt-1">Consulta los registros anteriores y sus fechas.</p>
+     <p className="text-xs sm:text-sm text-text-muted mt-1">Encuentra cursos, docentes y aulas; conserva el contexto de cada registro.</p>
    </header>
 
    <div className="bg-surface border border-border rounded-xl p-4 shadow-xs flex flex-wrap items-end gap-3 max-w-lg">
@@ -35,12 +38,14 @@ export function HistoryWorkspace({client,kinds,onExpired}:{client:AcademicClient
      </button>
    </div>
 
+   <div className="eval-find-panel"><label>Buscar curso, docente, estudiante o aula<input value={search} maxLength={100} onChange={e=>setSearch(e.target.value)} placeholder="Ej.: Matemática o nombre del docente" /></label><label>Período en esta página<select value={periodFilter} onChange={e=>setPeriodFilter(e.target.value)}><option value="">Todos</option>{[...new Map(rows.map(r=>[r.academic_period_id,r.period_name])).entries()].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>Estado<select value={stateFilter} onChange={e=>setStateFilter(e.target.value)}><option value="">Todos</option>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><button onClick={()=>{setSearch('');setStateFilter('');setPeriodFilter('');}}>Limpiar filtros</button><p role="status">{shown.length} de {rows.length} registros de esta página. Los filtros se aplican a la página visible.</p></div>
+   {!busy&&!error&&rows.length>0&&shown.length===0&&<p>No hay coincidencias en esta página. Limpia los filtros o consulta la siguiente página.</p>}
    {busy&&<div className="p-4 rounded-xl bg-surface border border-border text-xs text-text-muted flex items-center gap-2"><div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /><p role="status">Consultando historial…</p></div>}
    {error&&<div className="p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs"><p role="alert">{error}</p></div>}
    {!busy&&!error&&rows.length===0&&<div className="p-8 text-center bg-surface border border-border rounded-xl"><p className="text-xs text-text-muted">No hay registros para esta consulta.</p></div>}
 
-   <div className="space-y-4">
-     {rows.map(r=>{
+   <div className="eval-history-results space-y-4">
+     {shown.map(r=>{
        const stateLabel = labels[r.state] ?? r.state;
        const isStateActive = r.state === 'active';
        return (

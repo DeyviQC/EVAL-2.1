@@ -12,7 +12,7 @@ final class ActivityDeliveryController {
  public function handle(Request $r,AuthenticatedActor $actor):Response {
   try{$service=new ActivityDelivery($this->db,$this->storage);$path=$r->getPathInfo();
    if($r->isMethod('GET')){
-    FoundationCommandChecks::fields($r->query->all(),$path==='/education/courses'?['after','grade_id','section_id']:['after']);if($r->getContent()!==''||$r->files->all()||$r->request->all())throw new AcademicCommandFailure('invalid_input');$after=$r->query->all()['after']??null;if($after!==null)$after=AcademicLockSet::id($after);
+    FoundationCommandChecks::fields($r->query->all(),$path==='/education/courses'?['after','grade_id','section_id']:(preg_match('#^/education/versions/[1-9][0-9]*/file$#D',$path)?['disposition']:['after']));if($r->getContent()!==''||$r->files->all()||$r->request->all())throw new AcademicCommandFailure('invalid_input');$after=$r->query->all()['after']??null;if($after!==null)$after=AcademicLockSet::id($after);
     if($path==='/education/courses')$data=$service->courses($actor,$after,array_diff_key($r->query->all(),['after'=>true]));
     elseif($path==='/education/classrooms'){if($after!==null)throw new AcademicCommandFailure('invalid_input');$data=$service->classrooms($actor);}
     elseif(preg_match('#^/education/activities/([1-9][0-9]*)/pending-students$#D',$path,$m))$data=$service->pendingStudents($actor,$m[1],$after);
@@ -22,7 +22,7 @@ final class ActivityDeliveryController {
     elseif(preg_match('#^/education/deliveries/([1-9][0-9]*)/assessments$#D',$path,$m))$data=(new \App\Application\Academic\Commands\DeliveryAssessment($this->db))->history($actor,$m[1],$after);
     elseif(preg_match('#^/education/deliveries/([1-9][0-9]*)/versions$#D',$path,$m))$data=$service->versions($actor,$m[1],$after);
     elseif(preg_match('#^/education/versions/([1-9][0-9]*)/file$#D',$path,$m)){
-     if($after!==null)throw new AcademicCommandFailure('invalid_input');[$file,$row]=$service->file($actor,$m[1]);$response=new BinaryFileResponse($file);$response->setContentDisposition('attachment',$row['filename'],'evidence');$response->headers->set('Content-Type',$row['mime']);$response->headers->set('X-Content-Type-Options','nosniff');$response->headers->set('Content-Security-Policy',"sandbox; default-src 'none'");$response->headers->set('Cache-Control','no-store, private');return $response;
+     $disposition=$r->query->all()['disposition']??'attachment';if(!in_array($disposition,['attachment','inline'],true))throw new AcademicCommandFailure('invalid_input');[$file,$row]=$service->file($actor,$m[1]);if($disposition==='inline'&&!in_array($row['mime'],['application/pdf','image/jpeg','image/png'],true))$disposition='attachment';$response=new BinaryFileResponse($file);$response->setContentDisposition($disposition,$row['filename'],'evidence');$response->headers->set('Content-Type',$row['mime']);$response->headers->set('X-Content-Type-Options','nosniff');$response->headers->set('Content-Security-Policy',"sandbox; default-src 'none'");$response->headers->set('Cache-Control','no-store, private');return $response;
     }else throw new AcademicCommandFailure('not_found');return new JsonResponse(['data'=>$data]);
    }
    if(!$r->isMethod('POST')||$r->query->all())throw new AcademicCommandFailure('invalid_input');

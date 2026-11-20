@@ -32,9 +32,9 @@ Write-Host "==========================================================" -Foregro
 # 1. Detect LAN IPv4 Address
 $lanIp = $CustomIp
 if ([string]::IsNullOrWhiteSpace($lanIp)) {
-    $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
-        $_.IPAddress -notlike "127.*" -and 
-        $_.IPAddress -notlike "169.254.*" -and 
+    $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+        $_.IPAddress -notlike "127.*" -and
+        $_.IPAddress -notlike "169.254.*" -and
         $_.InterfaceAlias -notlike "*Loopback*" -and
         $_.InterfaceAlias -notlike "*vEthernet*"
     } | Select-Object -First 1

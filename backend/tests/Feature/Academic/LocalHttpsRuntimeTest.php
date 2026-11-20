@@ -30,7 +30,7 @@ final class LocalHttpsRuntimeTest extends SubmissionReferenceTestCase
         $environment['EVAL_UI_ENABLED']='1';
         $environment['EVAL_MATERIAL_ROOT']=$this->directory.'/private-materials';
         $backend=dirname(__DIR__,3);$ini=dirname((string)getenv('EVAL_VENDOR_DIR')).'/php.ini';
-        $this->start([PHP_BINARY,'-c',$ini,'-d','display_errors=0','-d','upload_max_filesize=25M','-d','post_max_size=27M','-S','127.0.0.1:'.$this->upstream,$backend.'/dev-runtime/router.php'],$environment,'php');
+        $this->start([PHP_BINARY,'-c',$ini,'-d','display_errors=0','-d','upload_max_filesize=155M','-d','post_max_size=160M','-S','127.0.0.1:'.$this->upstream,$backend.'/dev-runtime/router.php'],$environment,'php');
         // Node gets no database credentials or encryption key.
         $nodeEnvironment=array_intersect_key($environment,array_flip(['PATH','Path','SystemRoot','TEMP','TMP','EVAL_PROXY_KEY','EVAL_UI_ENABLED']));
         $this->start(['node',$backend.'/dev-runtime/https-proxy.mjs',(string)$port,(string)$this->upstream,$this->directory.'/cert.pem',$this->directory.'/key.pem'],$nodeEnvironment,'node');

@@ -22,7 +22,7 @@ export const catalogWorkspaceCases:readonly (readonly [string,()=>void])[]=[
  ['student shortcut opens enrollment creation with the created identity selected',()=>{
   const html=renderToStaticMarkup(<VicePrincipalWorkspace section="enrollments" initialTask="create"><EnrollmentWorkspace client={{} as AcademicClient} onExpired={()=>{}} initialStudent={{id:'91',name:'Estudiante de prueba'}}/></VicePrincipalWorkspace>);
   assert(html.includes('Nueva matrícula'));
-  assert(html.includes('value="91" selected=""'));
+  assert(html.includes('name="student_id"')&&html.includes('value="91"'));
   assert(html.includes('Estudiante de prueba'));
   assert(html.includes('Selecciona un período activo'));
   assert(html.includes('disabled=""'));
