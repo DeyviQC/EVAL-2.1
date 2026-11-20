@@ -46,10 +46,10 @@ final class MaterialController {
                 if($request->getContent()!==''||$request->request->all()||$request->files->all())throw new AcademicCommandFailure('invalid_input');
                 if(!isset($match[2]))return $this->response($service->view($service->material($actor,$match[1])));
                 $disposition=$request->query->all()['disposition']??'attachment';if(!in_array($disposition,['attachment','inline'],true))throw new AcademicCommandFailure('invalid_input');
-                $revision=$request->query->all()['revision']??null;if($revision!==null&&!is_string($revision))throw new AcademicCommandFailure('invalid_input');[$file,$row]=$revision===null?$service->file($actor,$match[1]):(new \App\Application\Academic\Commands\MaterialFiles($this->db,$this->storage))->file($actor,$match[1],$revision==='original'?null:\App\Infrastructure\Persistence\Academic\AcademicLockSet::id($revision));if($disposition==='inline'&&!in_array($row['mime'],['application/pdf','image/jpeg','image/png'],true))$disposition='attachment';
+                $revision=$request->query->all()['revision']??null;if($revision!==null&&!is_string($revision))throw new AcademicCommandFailure('invalid_input');[$file,$row]=$revision===null?$service->file($actor,$match[1]):(new \App\Application\Academic\Commands\MaterialFiles($this->db,$this->storage))->file($actor,$match[1],$revision==='original'?null:\App\Infrastructure\Persistence\Academic\AcademicLockSet::id($revision));if($disposition==='inline'&&!in_array($row['mime'],['application/pdf','image/jpeg','image/png','video/mp4','video/webm','video/quicktime','video/ogg'],true))$disposition='attachment';
                 $response=new BinaryFileResponse($file);$response->setContentDisposition($disposition,$row['filename'],'material');
                 $response->headers->set('Content-Type',$row['mime']);$response->headers->set('Cache-Control','private, no-store');$response->headers->set('X-Content-Type-Options','nosniff');
-                $response->headers->set('Content-Security-Policy',"sandbox; default-src 'none'");return $response;
+                $response->headers->set('Content-Security-Policy',str_starts_with($row['mime'],'video/')?"sandbox; default-src 'none'; media-src 'self'":"sandbox; default-src 'none'");return $response;
             }
             throw new AcademicCommandFailure('not_found');
         }catch(\InvalidArgumentException){return FoundationController::failure(new AcademicCommandFailure('invalid_input'));}

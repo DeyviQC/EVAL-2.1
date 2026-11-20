@@ -3,7 +3,7 @@ import {createPortal,flushSync} from 'react-dom';
 import {AcademicApiError} from './api.js';
 import type {Activity} from './activities.js';
 import type {Course} from './courses.js';
-import {materialFileUrl,type Material} from './materials.js';
+import {materialFileUrl,isVideoMime,type Material} from './materials.js';
 import type {WeekPage,WeekSelection,WeeksClient} from './weeks.js';
 
 type Entry=WeekPage['items'][number];
@@ -17,6 +17,7 @@ export function PresentationResource({entry}:{entry:Entry}){
  return <div className="eval-projection-media">
   {material.mime==='application/pdf'?<iframe key={material.id} src={inline} title={material.title} referrerPolicy="same-origin"/>:
    ['image/jpeg','image/png'].includes(material.mime)?<img key={material.id} alt={material.title} src={inline}/>:
+   isVideoMime(material.mime)?<video key={material.id} src={inline} controls preload="metadata" className="max-h-full max-w-full rounded-xl bg-black"/>:
    <div className="eval-projection-sheet"><h2>{material.filename}</h2><p>Este formato se consulta descargando el archivo.</p></div>}
   <a href={materialFileUrl(material.id,'attachment')} download>Descargar {material.filename}</a>
  </div>;

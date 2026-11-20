@@ -4,7 +4,7 @@ import { MaterialOptions } from './MaterialOptions.js';
 import { RecordedTime } from './RecordedTime.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AcademicApiError } from './api.js';
-import { publicationForm, materialFileUrl, type createMaterialClient, type Material } from './materials.js';
+import { publicationForm, materialFileUrl, materialAccept, isVideoMime, isInlineMime, type createMaterialClient, type Material } from './materials.js';
 import type { Course } from './courses.js';
 
 type View = { phase: 'loading' | 'ready' | 'error'; items: Material[]; cursor: string | null };
@@ -25,6 +25,9 @@ function getFileTypeInfo(filename: string, mime: string) {
   }
   if (['JPG', 'JPEG', 'PNG'].includes(ext) || mime.startsWith('image/')) {
     return { ext, bg: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800' };
+  }
+  if (['MP4', 'WEBM', 'MOV', 'OGV'].includes(ext) || mime.startsWith('video/')) {
+    return { ext, bg: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800' };
   }
   return { ext, bg: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' };
 }
@@ -272,14 +275,14 @@ export function MaterialsPanel({
                 name="file"
                 type="file"
                 required
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png"
+                accept={materialAccept}
                 aria-describedby="material-file-help"
                 className="block w-full text-xs text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover file:cursor-pointer cursor-pointer border border-border rounded-lg bg-surface-2 p-2"
               />
               <p id="material-file-help" className="mt-1.5 text-xs text-text-muted flex flex-wrap items-center gap-1.5">
                 <span>Formatos permitidos:</span>
-                <span className="font-medium text-text">PDF, Word, PowerPoint, Excel o JPG/PNG</span>
-                <span>· Hasta 25 MiB · Sin macros</span>
+                <span className="font-medium text-text">PDF, Word, PowerPoint, Excel, JPG/PNG o Video (MP4/WebM/MOV/OGV)</span>
+                <span>· Hasta 150 MiB · Sin macros</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
@@ -359,6 +362,15 @@ export function MaterialsPanel({
                       {item.description}
                     </p>
                   )}
+
+                  {isVideoMime(item.mime) && (
+                    <video
+                      controls
+                      preload="metadata"
+                      src={materialFileUrl(item.id, 'inline')}
+                      className="mt-3 w-full max-h-64 rounded-xl bg-black border border-border"
+                    />
+                  )}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-border/60">
@@ -368,14 +380,14 @@ export function MaterialsPanel({
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {['application/pdf', 'image/jpeg', 'image/png'].includes(item.mime) && (
+                    {isInlineMime(item.mime) && (
                       <a
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface text-text hover:bg-surface-2 text-xs font-semibold transition-all cursor-pointer"
                         href={materialFileUrl(item.id, 'inline')}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        👁️ Abrir
+                        {isVideoMime(item.mime) ? '🎬 Abrir video' : '👁️ Abrir'}
                       </a>
                     )}
                     <a

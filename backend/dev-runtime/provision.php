@@ -20,6 +20,7 @@ try {
     $files[]=dirname(__DIR__).'/database/migrations/2026_10_08_000015_create_material_revisions.php';
     $files[]=dirname(__DIR__).'/database/migrations/2026_10_08_000016_create_material_observations.php';
     $files[]=dirname(__DIR__).'/database/migrations/2026_10_08_000017_create_material_file_versions.php';
+    $files[]=dirname(__DIR__).'/database/migrations/2026_11_20_000021_expand_material_size_for_videos.php';
     $migrator->run($files);
     $stage='runtime_grants';
     $sql=file_get_contents(dirname(__DIR__).'/scripts/u11-runtime-grants.sql');

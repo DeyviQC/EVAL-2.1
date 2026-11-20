@@ -6,7 +6,7 @@ use App\Infrastructure\Authentication\AuthenticatedActor;
 use App\Application\Academic\AcademicCommandFailure;
 use App\Infrastructure\Persistence\Academic\{AcademicLockSet,AcademicWriteTransaction,AcademicMutationResult,LifecycleEvent,AcademicTransactionFailure,LocalMaterialStorage,MaterialFileValidator};
 final class CourseMaterials {
-    private ?MaterialMaintenance $revisions;
+    private ?MaterialMaintenance $revisions;private array $authorCache=[];
     public function __construct(private Connection $db,private LocalMaterialStorage $storage){$this->revisions=$db->getSchemaBuilder()->hasTable('material_states')?new MaterialMaintenance($db):null;}
     public function publish(AuthenticatedActor $actor,string $assignment,array $input,string $path,string $filename):string {
         FoundationCommandChecks::credentials($this->db,$actor);FoundationCommandChecks::fields($input,['title','description'],['title']);
@@ -61,7 +61,7 @@ final class CourseMaterials {
         $base=$this->retained($actor,$id);$visible=$this->revisions?$this->revisions->visible($actor,$base):$base;if($visible===null)throw new AcademicCommandFailure('not_found');return $visible;
     }
     public function view(array $row):array {
-        $this->storage->verify($row);$author=(new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db))->displayName((string)$row['author_id']);
+        $path=$this->storage->path($row['storage_key']);if(!is_file($path)||is_link($path)||filesize($path)!==(int)$row['bytes'])throw new AcademicCommandFailure('storage_unavailable');$authorId=(string)$row['author_id'];$author=array_key_exists($authorId,$this->authorCache)?$this->authorCache[$authorId]:($this->authorCache[$authorId]=(new \App\Infrastructure\Persistence\Academic\LocalIdentityLabels($this->db))->displayName($authorId));
         if($author===null)throw new AcademicCommandFailure('reference_unavailable');return ['id'=>(string)$row['id'],'assignment_id'=>(string)$row['assignment_id'],'author_id'=>(string)$row['author_id'],'author_name'=>$author,
             'title'=>$row['title'],'description'=>$row['description'],'filename'=>$row['filename'],'mime'=>$row['mime'],'bytes'=>(int)$row['bytes'],'published_at'=>$row['published_at']];
     }

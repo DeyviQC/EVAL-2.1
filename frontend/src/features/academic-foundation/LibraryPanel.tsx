@@ -1,7 +1,7 @@
 import { RecordedTime } from './RecordedTime.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AcademicApiError } from './api.js';
-import { materialFileUrl, type Material, type createMaterialClient } from './materials.js';
+import { materialFileUrl, isVideoMime, type Material, type createMaterialClient } from './materials.js';
 import type { Course } from './courses.js';
 import { MaterialsPanel } from './MaterialsPanel.js';
 import { Search, Download, ExternalLink, FileText, ArrowLeft, RefreshCw, UploadCloud, BookOpen } from 'lucide-react';
@@ -13,6 +13,7 @@ function getFileBadge(filename: string) {
   if (['PPT', 'PPTX'].includes(ext)) return { ext, color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' };
   if (['XLS', 'XLSX'].includes(ext)) return { ext, color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' };
   if (['JPG', 'JPEG', 'PNG'].includes(ext)) return { ext, color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800' };
+  if (['MP4', 'WEBM', 'MOV', 'OGV'].includes(ext)) return { ext, color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' };
   return { ext, color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
 }
 
@@ -161,6 +162,15 @@ export function LibraryPanel({client,course,onExpired,teacherMode=false,initialP
                       <p className="my-2.5 text-xs text-text-muted line-clamp-3 whitespace-pre-wrap leading-relaxed">
                         {r.description}
                       </p>
+                    )}
+
+                    {isVideoMime(r.mime) && (
+                      <video
+                        controls
+                        preload="metadata"
+                        src={materialFileUrl(r.id, 'inline')}
+                        className="mt-3 w-full max-h-56 rounded-xl bg-black border border-border"
+                      />
                     )}
 
                     <div className="mt-3 pt-3 border-t border-border/60 text-[11px] text-text-muted space-y-1">

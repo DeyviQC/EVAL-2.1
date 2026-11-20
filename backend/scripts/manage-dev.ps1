@@ -5,9 +5,7 @@ param(
     [switch]$BrowserOnly,
     [switch]$ServerOnly,
     [switch]$Sample,
-    [switch]$Tablet,
     [switch]$Console,
-    [string]$LanIp,
     [ValidateSet('director_admin','vice_principal','teacher','student')][string]$Role='director_admin'
 )
 $ErrorActionPreference='Stop'
@@ -269,50 +267,17 @@ try {
         foreach($record in @($state.workers)){if(Owned-Process $record){throw 'EVAL already has owned workers; use status or stop.'}}
         if(!(Test-Path -LiteralPath (Join-Path $repo 'frontend\dist\index.html'))){throw 'Build frontend first.'}
         foreach($port in @(8443,18080)){if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Application port is occupied; foreign process is retained.'}}
-        $stage='certificate'
-        $actualLanIp = $LanIp
-        if($Tablet -or $LanIp){
-            if(!$actualLanIp){
-                $activeAdapter = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
-                    $_.IPAddress -notlike "127.*" -and 
-                    $_.IPAddress -notlike "169.254.*" -and 
-                    $_.InterfaceAlias -notlike "*Loopback*" -and
-                    $_.InterfaceAlias -notlike "*vEthernet*"
-                } | Select-Object -First 1
-                $actualLanIp = if($activeAdapter){$activeAdapter.IPAddress}else{'192.168.1.100'}
-            }
-            $setupLanScript = Join-Path $repo 'backend\scripts\setup-lan.ps1'
-            if(Test-Path -LiteralPath $setupLanScript){
-                & $setupLanScript -CustomIp $actualLanIp | Out-Null
-            }
-        } elseif(!(Test-Path -LiteralPath (Join-Path $devRoot 'cert.pem'))){
-            $null=Start-Child $php ('-c "'+$ini+'" "'+(Join-Path $repo 'backend\dev-runtime\certificate.php')+'" "'+$devRoot+'"') @{} '' $null $true
-        }
-        $secret=Secret;$environment=Db-Environment 'runtime';$environment.EVAL_PROXY_KEY=$secret;$environment.EVAL_RUNTIME_KEY=Decrypt $state.key
-        if($Tablet -or $LanIp){
-            $environment.EVAL_RUNTIME_ORIGIN="$($state.origin),https://${actualLanIp}:8443"
-        } else {
-            $environment.EVAL_RUNTIME_ORIGIN=$state.origin
-        }
-        $environment.EVAL_UI_ENABLED='1';$environment.EVAL_MATERIAL_ROOT=Join-Path $devRoot 'materials'
+        $stage='certificate';if(!(Test-Path -LiteralPath (Join-Path $devRoot 'cert.pem'))){$null=Start-Child $php ('-c "'+$ini+'" "'+(Join-Path $repo 'backend\dev-runtime\certificate.php')+'" "'+$devRoot+'"') @{} '' $null $true}
+        $secret=Secret;$environment=Db-Environment 'runtime';$environment.EVAL_PROXY_KEY=$secret;$environment.EVAL_RUNTIME_KEY=Decrypt $state.key;$environment.EVAL_RUNTIME_ORIGIN=$state.origin;$environment.EVAL_UI_ENABLED='1';$environment.EVAL_MATERIAL_ROOT=Join-Path $devRoot 'materials'
         $router=Join-Path $repo 'backend\dev-runtime\router.php';$proxy=Join-Path $repo 'backend\dev-runtime\https-proxy.mjs'
-        $stage='php_start';$worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=25M -d post_max_size=27M -S 127.0.0.1:18080 "'+$router+'"') $environment ''
+        $stage='php_start';$worker=Start-Child $php ('-c "'+$ini+'" -d display_errors=0 -d upload_max_filesize=155M -d post_max_size=160M -d max_execution_time=120 -S 127.0.0.1:18080 "'+$router+'"') $environment ''
         $state.workers=@((Record-Process $worker $router));Save-State $state
-        $proxyEnv=@{EVAL_PROXY_KEY=$secret;EVAL_UI_ENABLED='1'}
-        if($Tablet -or $LanIp){
-            $proxyEnv.EVAL_BIND_ADDRESS='0.0.0.0'
-            $proxyEnv.EVAL_ALLOWED_HOSTS="127.0.0.1,localhost,$actualLanIp"
-        }
-        $stage='proxy_start';$worker=Start-Child $node ('"'+$proxy+'" 8443 18080 "'+(Join-Path $devRoot 'cert.pem')+'" "'+(Join-Path $devRoot 'key.pem')+'"') $proxyEnv ''
+        $stage='proxy_start';$worker=Start-Child $node ('"'+$proxy+'" 8443 18080 "'+(Join-Path $devRoot 'cert.pem')+'" "'+(Join-Path $devRoot 'key.pem')+'"') @{EVAL_PROXY_KEY=$secret;EVAL_UI_ENABLED='1'} ''
         $state.workers+=(Record-Process $worker $proxy);Save-State $state
         $deadline=[DateTime]::UtcNow.AddSeconds(8)
         do{Start-Sleep -Milliseconds 200;$ready=Get-NetTCPConnection -LocalPort 8443 -State Listen -ErrorAction SilentlyContinue}while(!$ready -and [DateTime]::UtcNow -lt $deadline)
         if(!$ready){throw 'HTTPS listener unavailable.'}
-        if($Tablet -or $LanIp){
-            Write-Output ('EVAL started in Tablet/LAN Mode:`n  - Laptop:  '+$state.origin+'`n  - Tablets: https://'+$actualLanIp+':8443')
-        } else {
-            Write-Output ('EVAL started: '+$state.origin)
-        }
+        Write-Output ('EVAL started: '+$state.origin)
     } elseif($Command -eq 'open'){
         $stage='browser_open';$helper=Join-Path $repo 'backend\dev-runtime\open-browser.mjs'
         if(@($state.workers | Where-Object {Owned-Process $_}).Count -ne 2){throw 'Start EVAL before opening.'}

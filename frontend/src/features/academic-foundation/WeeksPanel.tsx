@@ -6,7 +6,7 @@ import { AcademicDialog } from './AcademicDialog.js';
 import { ClassroomPresentation } from './ClassroomPresentation.js';
 import { progressLabels } from './learning-progress.js';
 import { AcademicApiError } from './api.js';
-import { materialFileUrl, type Material } from './materials.js';
+import { materialFileUrl, isVideoMime, isInlineMime, type Material } from './materials.js';
 import { type Activity, type ActivityClient } from './activities.js';
 import { ActivityCard } from './ActivityWorkspace.js';
 import { type Course } from './courses.js';
@@ -614,13 +614,33 @@ export function WeeksPanel({
                   <p className="text-xs text-text-muted break-all">
                     {(resource as Material).filename}
                   </p>
-                  <a
-                    className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline pt-1"
-                    href={materialFileUrl(resource.id, 'attachment')}
-                    download
-                  >
-                    ↓ Descargar material
-                  </a>
+                  {isVideoMime((resource as Material).mime) && (
+                    <video
+                      controls
+                      preload="metadata"
+                      src={materialFileUrl(resource.id, 'inline')}
+                      className="w-full max-h-56 rounded-xl bg-black border border-border"
+                    />
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {isInlineMime((resource as Material).mime) && (
+                      <a
+                        className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                        href={materialFileUrl(resource.id, 'inline')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {isVideoMime((resource as Material).mime) ? '🎬 Abrir video' : '👁️ Abrir material'}
+                      </a>
+                    )}
+                    <a
+                      className="eval-resource-link inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                      href={materialFileUrl(resource.id, 'attachment')}
+                      download
+                    >
+                      ↓ Descargar material
+                    </a>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-2 space-y-2">
