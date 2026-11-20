@@ -86,6 +86,22 @@ export const bulkImportCases: [string, () => unknown][] = [
     },
   ],
   [
+    'student import requires a grade and a section belonging to that grade',
+    () => {
+      const grades=[{id:'1',name:'1° de Secundaria'},{id:'2',name:'2° de Secundaria'}];
+      const sections=[{id:'10',name:'Sección A',grade_id:'1'},{id:'20',name:'Sección B',grade_id:'2'}];
+      const result=validateStudentImport(['DNI','NOMBRE','GRADO','SECCION'],[
+        ['71234567','María Quispe','1',''],
+        ['72345678','Lucía Rojas','1','B'],
+        ['73456789','Ana Huamán','1','A'],
+      ],grades,sections);
+      assert.equal(result.valid.length,1);
+      assert.equal(result.valid[0]?.sectionId,'10');
+      assert.equal(result.errors.some(error=>error.row===2&&error.field==='Sección'),true);
+      assert.equal(result.errors.some(error=>error.row===3&&error.field==='Sección'),true);
+    },
+  ],
+  [
     'validateTeacherImport validates teacher roster and generates usernames',
     () => {
       const headers = ['DNI', 'APELLIDOS_Y_NOMBRES', 'USUARIO'];
