@@ -54,7 +54,7 @@ jobs:
           MYSQL_DATABASE: eval_dev
         ports:
           - 3307:3306
-        options: --health-cmd="mysqladmin ping -proot_ci_password" --health-interval=10s --health-timeout=5s --health-retries=5 --log-bin-trust-function-creators=1
+        options: --health-cmd="mysqladmin ping -proot_ci_password" --health-interval=10s --health-timeout=5s --health-retries=5
     defaults:
       run:
         working-directory: backend
