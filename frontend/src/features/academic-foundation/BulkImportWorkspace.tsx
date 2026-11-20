@@ -548,7 +548,7 @@ export function BulkImportWorkspace({ client, academic, onExpired }: Props) {
             <h1 className="eval-print-school">I.E. NUESTRA SEÑORA DE LAS MERCEDES - AYACUCHO</h1>
             <h2 className="eval-print-title">CREDENCIALES OFICIALES DE ACCESO INSTITUCIONAL (EVAL v2.1)</h2>
             <p className="eval-print-meta">
-              Fichas recortables individuales para estudiantes/docentes · Cambio obligatorio en el primer inicio de sesión.
+              Fichas recortables individuales para estudiantes/docentes · Los estudiantes pueden conservar su contraseña provisional; los docentes deben cambiarla al ingresar.
             </p>
           </header>
 

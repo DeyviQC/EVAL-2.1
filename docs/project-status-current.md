@@ -18,7 +18,7 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
 
 | Planned Module | Current Status | Implemented & Verified Capabilities | Remaining Institutional Work |
 |---|---|---|---|
-| **User Administration** | Implemented (~95%) | Real credentials for 4 roles, student login with DNI, mandatory initial password change (`must_change_password`), 30-minute session inactivity timeout, administrative batch CSV import, active/inactive states, identity retention, credential revocation, role policy guard. | Role succession audit trail and bulk XLSX templates if required. |
+| **User Administration** | Implemented (~95%) | Real credentials for 4 roles, student login with DNI, optional student self-service password change, teacher password-change requirement, 30-minute session inactivity timeout, administrative batch CSV import, active/inactive states, identity retention, credential revocation, role policy guard. | Role succession audit trail and bulk XLSX templates if required. |
 | **Academic Catalog & Periods** | Implemented (~95%) | Grades (strictly secondary 1.° to 5.°), sections (A–H), instructional entries, academic periods (active, draft, closed), MINEDU 2026 36-week teaching calendar, 4 bimesters. | Official school term rollover and catalog archive validation. |
 | **Teacher Assignments** | Substantially Implemented (~90%) | Planning, activation, closure, replacement, preserved historical lineage, scope isolation by grade and section. | Bulk assignment imports and multi-teacher joint teaching workflows if approved. |
 | **Educational Materials** | Substantially Implemented (~90%) | Upload, scoped access, protected downloads, metadata edit/withdraw/restore, attachment replacement with SHA-256 verification. | Long-term physical purge policy and storage quota controls. |
@@ -83,7 +83,7 @@ This assessment compares `openspec/config.yaml`, current approved change specifi
   - Students can log in using either their system username or their 8-digit National Identity Document (DNI).
   - Newly provisioned student accounts have their initial password set to their DNI.
   - The client adapter (`accounts.ts`) accepts passwords from 8 to 72 characters, removing earlier 20-character fixed constraints.
-  - The `must_change_password` flag forces students to establish a private password upon first successful login, securing account ownership.
+  - Students may keep the provisioned password or replace it voluntarily from their account. Teacher provisioning and reset flows continue to require a password change.
 
 ---
 
