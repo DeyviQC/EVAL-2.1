@@ -25,7 +25,7 @@ final class LocalMaterialStorage {
     public function reconcile(string $key,\Illuminate\Database\Connection $db):string {
         $lock=fopen($this->path($key).'.lock','c+b');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){if($lock)fclose($lock);return 'busy';}
         try{return $db->transaction(function()use($key,$db){$db->table('academic_write_guard')->where('id',1)->lockForUpdate()->first();
-            $row=$db->table('course_materials')->where('storage_key',$key)->first();if(!$row&&$db->getSchemaBuilder()->hasTable('material_file_versions'))$row=$db->table('material_file_versions')->where('storage_key',$key)->first();if($row){$this->verify((array)$row);return 'retained';}
+            $row=$db->table('course_materials')->where('storage_key',$key)->first();if(!$row&&$db->getSchemaBuilder()->hasTable('material_file_versions'))$row=$db->table('material_file_versions')->where('storage_key',$key)->first();if(!$row&&$db->getSchemaBuilder()->hasTable('activity_attachments'))$row=$db->table('activity_attachments')->where('storage_key',$key)->first();if($row){$this->verify((array)$row);return 'retained';}
             $this->remove($key);return 'orphan_removed';});}finally{$this->release($key,$lock);}
     }
 }

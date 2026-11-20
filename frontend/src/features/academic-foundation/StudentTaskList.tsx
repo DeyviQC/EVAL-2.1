@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { StudentTask, StudentTasks } from './student-tasks.js';
 import type { Activity } from './activities.js';
+import { ActivityAttachmentsList } from './ActivityAttachments.js';
 
 const control =
   'min-h-11 md:min-h-12 rounded-xl px-3.5 md:px-4 text-xs md:text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -356,6 +357,7 @@ export function StudentTaskDrawer({
         </div>
         <div className="mt-4 flex-1 space-y-5 overflow-y-auto">
           <div className="rounded-xl border border-border bg-surface-2/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">{activity?.instructions ?? (error ? 'No se pudo consultar esta tarea.' : 'Consultando tarea…')}</div>
+          <ActivityAttachmentsList attachments={activity?.attachments} />
           {status === 'graded' && task.delivery.grade && (
             <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-primary">Calificación</p>

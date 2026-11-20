@@ -2,6 +2,7 @@ import {todayInLima} from './form-gates.js';
 import {useActionFeedback} from './ActionFeedback.js';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {ActivityCard} from './ActivityWorkspace.js';
+import {ActivityAttachmentPicker,NoticeBanner,type UploadProgressState} from './ActivityAttachments.js';
 import {AcademicApiError} from './api.js';
 import {type Activity,type ActivityClient,type EducationCourse} from './activities.js';
 import {CourseClassroomButtons} from './CourseClassroomButtons.js';
@@ -37,9 +38,12 @@ export function IntegratedActivityWorkspace({
     [rows,setRows]=useState<Activity[]>([]),
     [after,setAfter]=useState<string|null>(null),
     [busy,setBusy]=useState(false),
-    [notice,setNotice]=useState(''),
+    [notice,setNotice]=useState<{tone:'success'|'error';text:string}|null>(null),
     [confirmed,setConfirmed]=useState(false),
     [creating,setCreating]=useState(false),
+    [activityFiles,setActivityFiles]=useState<File[]>([]),
+    [attachmentError,setAttachmentError]=useState(''),
+    [uploadProgress,setUploadProgress]=useState<UploadProgressState|null>(null),
     [blocked,setBlocked]=useState(client.isUncertain()),
     [tabFilter,setTabFilter]=useState<'all'|'pending'|'closed'>(initialFilter==='pending'?'pending':'all');
   const [target,setTarget]=useState<Activity|null>(null),[targetError,setTargetError]=useState(false),[targetBusy,setTargetBusy]=useState(!!initialActivityId);
@@ -54,7 +58,7 @@ export function IntegratedActivityWorkspace({
 
   function fail(e:unknown){
     if(e instanceof AcademicApiError&&[401,419].includes(e.status??0)){onExpired();return;}
-    setNotice(e instanceof AcademicApiError&&e.outcomeUnknown?'No se pudo confirmar la operación. Consulta el resultado antes de continuar.':'No se pudo completar la operación. Revisa los datos y vuelve a consultar.');
+    setNotice({tone:'error',text:e instanceof AcademicApiError&&e.outcomeUnknown?'No se pudo confirmar la operación. Consulta el resultado antes de continuar.':'No se pudo completar la operación. Revisa los datos y vuelve a consultar.'});
     setBlocked(client.isUncertain());
   }
 
@@ -139,22 +143,46 @@ export function IntegratedActivityWorkspace({
     const form=e.currentTarget,data=new FormData(form);
     if(!form.checkValidity()||!String(data.get('title')??'').trim()||!String(data.get('instructions')??'').trim())return;
     const token=generation.current;
+    const queued=[...activityFiles];
     writing.current=true;
     setBusy(true);
-    setNotice('');
+    setNotice(null);
+    setAttachmentError('');
+    let published=false;
+    let uploadedCount=0;
     try{
-      if(!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+courses.find(item=>item.id===selected)?.label})||token!==generation.current)return;
-      await client.publish(selected,String(data.get('title')),String(data.get('instructions')),String(data.get('due_on'))||null);
-      actionFeedback.success('Actividad publicada correctamente.');
+      const filesSummary=queued.length>0?` · ${queued.length} ${queued.length===1?'archivo adjunto':'archivos adjuntos'}`:'';
+      if(!await actionFeedback.confirm({title:'¿Publicar esta actividad?',message:String(data.get('title'))+' · '+courses.find(item=>item.id===selected)?.label+filesSummary})||token!==generation.current)return;
+      const created=await client.publish(selected,String(data.get('title')),String(data.get('instructions')),String(data.get('due_on'))||null);
+      published=true;
+      for(let i=0;i<queued.length;i++){
+        const file=queued[i]!;
+        if(token===generation.current)setUploadProgress({currentIndex:i+1,totalFiles:queued.length,filename:file.name,percent:0});
+        await client.uploadAttachment(created.id,file,percent=>{
+          if(token===generation.current)setUploadProgress({currentIndex:i+1,totalFiles:queued.length,filename:file.name,percent});
+        });
+        uploadedCount++;
+      }
+      const okMsg=queued.length>0?`Actividad publicada correctamente con ${queued.length} ${queued.length===1?'material adjunto':'materiales adjuntos'}.`:'Actividad publicada correctamente.';
+      actionFeedback.success(okMsg);
       if(token!==generation.current)return;
       form.reset();
+      setActivityFiles([]);
       setCreating(false);
-      setNotice('Actividad publicada correctamente.');
+      setNotice({tone:'success',text:okMsg});
       await load();
     }catch(error){
-      fail(error);
+      if(published&&queued.length>0&&uploadedCount<queued.length){
+        setCreating(false);
+        setActivityFiles([]);
+        setNotice({tone:'error',text:`La actividad se publicó (${uploadedCount} de ${queued.length} adjuntos cargados), pero falló "${queued[uploadedCount]?.name??''}".`});
+        await load();
+      }else{
+        fail(error);
+      }
     }finally{
       writing.current=false;
+      setUploadProgress(null);
       setBusy(false);
     }
   }
@@ -189,11 +217,7 @@ export function IntegratedActivityWorkspace({
         {target&&<ActivityCard key={target.id} activity={target} client={client} mode="activities" initialPanel="deliveries" teacherMode={teacherMode} onExpired={onExpired}/>}
       </section>}
 
-      {notice && (
-        <div className="p-3.5 rounded-xl bg-surface-2 border border-border text-xs text-text">
-          <p role="status">{notice}</p>
-        </div>
-      )}
+      {notice && <NoticeBanner tone={notice.tone} text={notice.text} />}
 
       {teacherMode && (
         <div className="bg-surface border border-border rounded-xl p-4 shadow-xs">
@@ -425,8 +449,17 @@ export function IntegratedActivityWorkspace({
               <input name="due_on" min={todayInLima()} className={field} type="date" />
             </label>
             <p className="text-xs text-text-muted">La fecha límite no cierra automáticamente las entregas.</p>
+            <ActivityAttachmentPicker
+              id={'integrated-activity-attachments-'+selected}
+              files={activityFiles}
+              onChange={setActivityFiles}
+              error={attachmentError}
+              onError={setAttachmentError}
+              disabled={busy || blocked}
+              progress={uploadProgress}
+            />
             <button className={button + ' bg-primary text-white hover:bg-primary-hover border-transparent'}>
-              Publicar actividad
+              {uploadProgress ? 'Subiendo materiales…' : 'Publicar actividad'}
             </button>
           </fieldset>
         </form>
